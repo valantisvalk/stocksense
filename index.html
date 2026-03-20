@@ -47,6 +47,11 @@ const DB = {
   XOM:  { name:"Exxon Mobil",           s:"Energy",            cap:"540B", vol:22.8, beta:0.98, pe:14.0, div:3.4, baseP:120.80, rg:1.4,  fcf:5.8, de:0.2, rs:"low",  ss:58, r:{2015:-17.0,2016:18.0,2017:-5.0,2018:-15.5,2019:5.6,2020:-41.3,2021:71.5,2022:87.4,2023:4.3,2024:16.0,2025:-2.4}, desc:"World's largest publicly traded oil and gas company." },
   BRK_B:{ name:"Berkshire Hathaway B",  s:"Financials",        cap:"1.0T", vol:16.8, beta:0.90, pe:22.0, div:0.0, baseP:471.20, rg:2.0,  fcf:3.8, de:0.3, rs:"pos",  ss:65, r:{2015:-12.5,2016:23.4,2017:21.9,2018:2.8,2019:11.0,2020:2.4,2021:29.6,2022:4.0,2023:15.8,2024:25.5,2025:18.2}, desc:"Warren Buffett's holding company owning hundreds of businesses." },
   SPY:  { name:"S&P 500 ETF (SPDR)",    s:"Index ETF",         cap:"560B", vol:14.8, beta:1.00, pe:22.0, div:1.3, baseP:536.02, rg:8.0,  fcf:3.5, de:0.5, rs:"med",  ss:65, r:{2015:1.4,2016:12.0,2017:21.8,2018:-4.4,2019:31.5,2020:18.4,2021:28.7,2022:-18.1,2023:26.3,2024:25.0,2025:-4.8}, desc:"Owns all 500 largest US companies — the world's most popular ETF." },
+  PLTR: { name:"Palantir Technologies", s:"Technology",    sector:"Technology",      cap:"270B", vol:58.1, beta:2.82, pe:220.0, div:0.0, baseP:118.0, rg:0.0, fcf:1.8, de:0.0, rs:"high", ss:72, r:{2015:0,2016:0,2017:0,2018:0,2019:0,2020:170.0,2021:-23.6,2022:-66.3,2023:167.5,2024:340.5,2025:12.0}, desc:"AI analytics platform for government and enterprise clients." },
+  ASML: { name:"ASML Holding",          s:"Semiconductors", sector:"Semiconductors",   cap:"290B", vol:28.4, beta:1.38, pe:34.2, div:1.5, baseP:720.0, rg:0.0, fcf:3.2, de:0.2, rs:"low",  ss:84, r:{2015:12.0,2016:8.0,2017:42.0,2018:-5.0,2019:98.0,2020:63.0,2021:74.0,2022:-26.0,2023:32.0,2024:8.0,2025:-18.0}, desc:"Only company making EUV chip lithography machines — a monopoly." },
+  BLK:  { name:"BlackRock Inc.",        s:"Financials",     sector:"Financials",       cap:"150B", vol:18.2, beta:1.32, pe:21.4, div:2.4, baseP:960.0, rg:0.0, fcf:4.2, de:0.8, rs:"low",  ss:74, r:{2015:-5.0,2016:18.0,2017:32.0,2018:-22.0,2019:30.0,2020:28.0,2021:30.0,2022:-32.0,2023:14.0,2024:22.0,2025:8.0}, desc:"World's largest asset manager with $10T+ AUM." },
+  KO:   { name:"Coca-Cola Co.",         s:"Consumer Staples",sector:"Consumer Staples",cap:"270B", vol:10.8, beta:0.58, pe:24.2, div:3.1, baseP:62.0,  rg:0.0, fcf:4.2, de:1.8, rs:"low",  ss:70, r:{2015:3.0,2016:2.0,2017:10.0,2018:-0.5,2019:18.0,2020:1.0,2021:8.0,2022:6.0,2023:10.0,2024:6.0,2025:4.0}, desc:"Global beverage giant, 60+ years of dividend growth." },
+  GLD:  { name:"SPDR Gold ETF",         s:"Commodities",    sector:"Commodities",      cap:"N/A",  vol:12.2, beta:-0.08,pe:0.0,  div:0.0, baseP:245.0, rg:0.0, fcf:0.0, de:0.0, rs:"low",  ss:65, r:{2015:-10.0,2016:8.0,2017:13.0,2018:-2.0,2019:18.0,2020:25.0,2021:-4.0,2022:0.0,2023:13.0,2024:28.0,2025:12.0}, desc:"Physical gold ETF — inflation hedge, negative correlation to tech." },
   QQQ:  { name:"Nasdaq 100 ETF",        s:"Index ETF",         cap:"310B", vol:19.8, beta:1.18, pe:28.0, div:0.6, baseP:468.20, rg:12.0, fcf:2.8, de:0.4, rs:"med",  ss:72, r:{2015:9.5,2016:7.0,2017:32.7,2018:-1.0,2019:39.0,2020:48.6,2021:27.4,2022:-32.6,2023:54.9,2024:25.7,2025:-8.2}, desc:"Tracks the 100 largest Nasdaq companies." },
 };
 const TICKERS = Object.keys(DB);
@@ -503,8 +508,10 @@ window._currentTicker = "AAPL";
 
 // ─── QUANT ENGINE ─────────────────────────────────────────────────────────────
 function clamp(v,lo,hi){return Math.max(lo,Math.min(hi,v));}
-function computeQuant(ticker,price){
+function computeQuant(ticker,price,livePrices){
   const s=DB[ticker];
+  // Live momentum boost from actual daily change
+  const liveChg=(livePrices&&livePrices[ticker])?livePrices[ticker].changePct||0:0;
   const vals=Object.values(s.r);
   const n=vals.length;
   const avg10=vals.reduce((a,b)=>a+b,0)/n;
@@ -529,7 +536,8 @@ function computeQuant(ticker,price){
   const spePE=SECTOR_PE[s.s]||22;
   const fS=clamp((spePE/Math.max(s.pe,1))*50+25+(s.rg>0?Math.min(s.rg,50)*0.5:0)+(s.fcf||0)*2,5,95);
   const maS=clamp(65*0.25+(s.beta<=1?60:clamp(60-(s.beta-1)*20,20,60))*0.25+(s.rs==="pos"?70:s.rs==="low"?62:s.rs==="med"?50:35)*0.25+(s.ss||60)*0.25,5,95);
-  const comp=Math.round(tS*0.25+mS*0.20+vS*0.15+fS*0.25+maS*0.15);
+  const liveBoost=Math.max(-8,Math.min(8,liveChg*1.5)); // live daily change ±8 pts max
+  const comp=Math.min(100,Math.max(0,Math.round(tS*0.25+mS*0.20+vS*0.15+fS*0.25+maS*0.15+liveBoost)));
   const sig=comp>=75?{l:"Strong Buy",c:"#34d399",bg:"rgba(52,211,153,0.1)",e:"🚀"}:comp>=60?{l:"Buy",c:"#a3e635",bg:"rgba(163,230,53,0.1)",e:"📈"}:comp>=45?{l:"Neutral",c:"#fbbf24",bg:"rgba(251,191,36,0.1)",e:"😐"}:comp>=30?{l:"Sell",c:"#f97316",bg:"rgba(249,115,22,0.1)",e:"📉"}:{l:"Strong Sell",c:"#f87171",bg:"rgba(248,113,113,0.1)",e:"🔴"};
   const ps2=[tS,mS,vS,fS,maS];
   const pm=ps2.reduce((a,b)=>a+b,0)/5;
@@ -1129,7 +1137,7 @@ function StockSense(){
   const stock=DB[ticker];
   const lp=prices[ticker]||{price:stock.baseP,changePct:0};
   const hist=priceHist[ticker]||[stock.baseP];
-  const q=useMemo(()=>computeQuant(ticker,lp.price),[ticker,lp.price]);
+  const q=useMemo(()=>computeQuant(ticker,lp.price,prices),[ticker,lp.price,prices]);
   const an=ANALYST[ticker]||{buy:0,hold:0,sell:0,target:0,eps:[],nextEarnings:"N/A"};
   // Live overrides from Finnhub
   const livePT   = window._pt   && window._pt[ticker];
@@ -1153,7 +1161,7 @@ function StockSense(){
 
   const allRanked=useMemo(()=>TICKERS.map(t=>{
     const p=prices[t]||{price:DB[t].baseP};
-    const qr=computeQuant(t,p.price);
+    const qr=computeQuant(t,p.price,prices);
     const rn=Math.min(Math.max((qr.rar+5)/20*100,0),100);
     return{ticker:t,buyScore:Math.round(qr.comp*0.6+rn*0.4),comp:qr.comp,sig:qr.sig,price:p.price,changePct:(prices[t]||{}).changePct||0};
   }).sort((a,b)=>b.buyScore-a.buyScore),[prices]);
@@ -1171,7 +1179,7 @@ function StockSense(){
   );
 
   return(
-    <div style={{minHeight:"100vh",background:"#05080f",color:"#e2e8f0",fontFamily:"Avenir Next,Avenir,Nunito,system-ui,sans-serif",display:"flex"}}>
+    <div className="app-container" style={{minHeight:"100vh",background:"#05080f",color:"#e2e8f0",fontFamily:"Avenir Next,Avenir,Nunito,system-ui,sans-serif",display:"flex"}}>
       <style>{`
         
         *{box-sizing:border-box;margin:0;padding:0} input,button,select{font-family:inherit} input,select{outline:none} button{cursor:pointer;border:none;background:none}
@@ -1179,7 +1187,18 @@ function StockSense(){
         .tr.act{background:rgba(56,189,248,0.07)!important;border-left-color:#38bdf8!important}
         @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
         @keyframes blink{0%,100%{opacity:1}50%{opacity:0.15}}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}
         ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:#090e18}::-webkit-scrollbar-thumb{background:#1a2538;border-radius:2px}
+        ::-webkit-scrollbar-horizontal{height:4px}
+        @media(max-width:768px){
+          .sidebar{width:100%!important;height:auto!important;flex-direction:row!important;overflow-x:auto!important;border-right:none!important;border-bottom:1px solid #101c2e!important;}
+          .main-content{width:100%!important;}
+          .app-container{flex-direction:column!important;}
+        }
+        a{color:#38bdf8;text-decoration:none}
+        a:hover{text-decoration:underline}
+        table{font-size:13px}
+        .badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700}
         select option{background:#0d1520}
       `}</style>
 
@@ -1217,7 +1236,7 @@ function StockSense(){
           {filtered.map(t=>{
             const p=prices[t]||{price:DB[t].baseP,changePct:0};
             const th=priceHist[t]||[];
-            const qr=computeQuant(t,p.price);
+            const qr=computeQuant(t,p.price,prices);
             const rank=showTop20?allRanked.findIndex(r=>r.ticker===t)+1:null;
             const rn=Math.min(Math.max((qr.rar+5)/20*100,0),100);
             const bs=Math.round(qr.comp*0.6+rn*0.4);
@@ -1294,7 +1313,7 @@ function StockSense(){
 
         {/* Tabs */}
         <div style={{display:"flex",background:"#08111e",borderBottom:"1px solid #101c2e",padding:"0 20px",overflowX:"auto"}}>
-          {[["overview","📊 Deck"],["charts","📈 Charts"],["analyst","🏦 Analyst"],["quant","🧮 Quant"],["prediction","🔮 Forecast"],["history","📅 10-Year"],["news","📰 News"],["financials","💰 Financials"],["portfolio","💼 Portfolio"],["guide","📖 Guide"]].map(([v,l])=>(
+          {[["overview","📊 Deck"],["charts","📈 Charts"],["analyst","🏦 Analyst"],["quant","🧮 Quant"],["prediction","🔮 Forecast"],["history","📅 10-Year"],["news","📰 News"],["financials","💰 Financials"],["portfolio","💼 Portfolio"],["macro","🌍 Macro"],["guide","📖 Guide"]].map(([v,l])=>(
             <button key={v} onClick={()=>setTab(v)} style={{padding:"10px 13px",fontSize:13,fontWeight:600,fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",color:tab===v?"#38bdf8":"#94a3b8",borderBottom:`2px solid ${tab===v?"#38bdf8":"transparent"}`,transition:"color 0.15s",whiteSpace:"nowrap"}}>
               {l}
             </button>
@@ -2129,6 +2148,39 @@ function StockSense(){
             return(
             <div style={{animation:"fadeUp 0.3s ease"}}>
 
+              {/* ── AUTO TRADER STATUS ── */}
+              <div style={{background:"linear-gradient(135deg,rgba(129,140,248,0.08),rgba(56,189,248,0.05))",border:"1px solid rgba(129,140,248,0.2)",borderRadius:14,padding:"14px 18px",marginBottom:14}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10}}>
+                  <div>
+                    <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:14,color:"#818cf8",marginBottom:4}}>🤖 Auto Trader v2 — Running on PythonAnywhere</div>
+                    <div style={{fontSize:12,color:"#94a3b8",lineHeight:1.6}}>
+                      Scanning every 30 min · Smart triggers on 3% moves · Stop loss -15% · Take profit +40%<br/>
+                      Buy threshold: score ≥ 68 · Sell threshold: score ≤ 38 · Max position: 12%
+                    </div>
+                  </div>
+                  <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                    <div style={{background:"rgba(52,211,153,0.1)",border:"1px solid rgba(52,211,153,0.2)",borderRadius:8,padding:"8px 14px",textAlign:"center"}}>
+                      <div style={{fontSize:10,color:"#475569",fontWeight:700,textTransform:"uppercase"}}>Status</div>
+                      <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:13,color:"#34d399",marginTop:2}}>🟢 LIVE</div>
+                    </div>
+                    <div style={{background:"rgba(56,189,248,0.08)",border:"1px solid rgba(56,189,248,0.15)",borderRadius:8,padding:"8px 14px",textAlign:"center"}}>
+                      <div style={{fontSize:10,color:"#475569",fontWeight:700,textTransform:"uppercase"}}>Started</div>
+                      <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:13,color:"#38bdf8",marginTop:2}}>Mar 13</div>
+                    </div>
+                    <div style={{background:"rgba(251,191,36,0.08)",border:"1px solid rgba(251,191,36,0.15)",borderRadius:8,padding:"8px 14px",textAlign:"center"}}>
+                      <div style={{fontSize:10,color:"#475569",fontWeight:700,textTransform:"uppercase"}}>Go Live</div>
+                      <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:13,color:"#fbbf24",marginTop:2}}>Jun 2026</div>
+                    </div>
+                  </div>
+                </div>
+                <div style={{marginTop:10,fontSize:11,color:"#475569",display:"flex",gap:16,flexWrap:"wrap"}}>
+                  <span>📱 Alerts → @Stocksense0205bot</span>
+                  <span>🧠 Engine → 5-pillar quant + live momentum</span>
+                  <span>📊 Universe → 26 stocks</span>
+                  <span>🎯 Target → Beat SPY by Jun 2026</span>
+                </div>
+              </div>
+
               {/* ── HEADER SUMMARY ── */}
               <div style={{background:"linear-gradient(135deg,rgba(52,211,153,0.08),rgba(56,189,248,0.05))",border:"1px solid rgba(52,211,153,0.2)",borderRadius:16,padding:"20px 24px",marginBottom:14}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:14}}>
@@ -2526,6 +2578,54 @@ function StockSense(){
                 ))}
               </div>
 
+            {/* ── REBALANCE ALERTS ── */}
+            {(()=>{
+              const totalInvested = portfolio.reduce((s,p)=>s+p.shares*p.entryPrice,0);
+              const alerts = [];
+              portfolio.forEach(p=>{
+                const cur   = (prices[p.ticker]||{price:p.entryPrice}).price;
+                const pnl   = (cur-p.entryPrice)/p.entryPrice*100;
+                const val   = p.shares*cur;
+                const pct   = val/(totalCurrentVal+STARTING_CASH)*100;
+                const qr    = computeQuant(p.ticker,(prices[p.ticker]||{price:p.entryPrice}).price);
+                if(qr.comp<=38)  alerts.push({ticker:p.ticker,type:"SELL",   color:"#f87171",icon:"🔴",msg:`Quant score ${qr.comp} — below sell threshold. Review position.`});
+                else if(qr.comp<=50) alerts.push({ticker:p.ticker,type:"REVIEW", color:"#fbbf24",icon:"🟡",msg:`Quant score ${qr.comp} — weakening signal. Monitor closely.`});
+                if(pnl<=-15)     alerts.push({ticker:p.ticker,type:"STOP LOSS",color:"#f87171",icon:"🛑",msg:`Down ${pnl.toFixed(1)}% from entry — stop loss triggered at -15%.`});
+                if(pnl>=40)      alerts.push({ticker:p.ticker,type:"TRIM",   color:"#34d399",icon:"✂️", msg:`Up ${pnl.toFixed(1)}% — consider trimming 25% to lock in gains.`});
+                if(pct>14)       alerts.push({ticker:p.ticker,type:"OVERWEIGHT",color:"#f97316",icon:"⚖️",msg:`${pct.toFixed(1)}% of portfolio — overweight. Max recommended 12%.`});
+              });
+              if(alerts.length===0) return(
+                <div style={{background:"rgba(52,211,153,0.06)",border:"1px solid rgba(52,211,153,0.2)",borderRadius:12,padding:"14px 18px",marginBottom:12,display:"flex",gap:12,alignItems:"center"}}>
+                  <div style={{fontSize:20}}>✅</div>
+                  <div>
+                    <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:700,fontSize:13,color:"#34d399",marginBottom:2}}>Portfolio Healthy — No Rebalance Needed</div>
+                    <div style={{fontSize:12,color:"#94a3b8"}}>All positions within risk parameters. No stop losses, no overweight positions, all quant scores above threshold.</div>
+                  </div>
+                </div>
+              );
+              return(
+                <div style={{marginBottom:12}}>
+                  <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:700,fontSize:11,color:"#f87171",textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:8}}>
+                    🚨 Rebalance Alerts ({alerts.length})
+                  </div>
+                  <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                    {alerts.map((a,i)=>(
+                      <div key={i} style={{background:"#0a1421",border:`1px solid ${a.color+"44"}`,borderRadius:10,padding:"11px 14px",display:"flex",gap:12,alignItems:"flex-start",borderLeft:`3px solid ${a.color}`}}>
+                        <div style={{fontSize:16,flexShrink:0}}>{a.icon}</div>
+                        <div>
+                          <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:3}}>
+                            <span style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:14,color:a.color}}>{a.ticker}</span>
+                            <span style={{fontSize:10,fontWeight:700,color:a.color,background:a.color+"22",padding:"1px 7px",borderRadius:4}}>{a.type}</span>
+                          </div>
+                          <div style={{fontSize:12,color:"#94a3b8",lineHeight:1.6}}>{a.msg}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── RISK METRICS ── */}
             <div style={{marginTop:16}}>
               {lbl("⚡ Risk Metrics","#f97316")}
@@ -2768,6 +2868,241 @@ function StockSense(){
 
             );
           })()}
+
+
+          {tab==="macro"&&(
+            <div style={{animation:"fadeUp 0.3s ease"}}>
+
+              {/* ── MACRO HEADER ── */}
+              <div style={{background:"linear-gradient(135deg,rgba(56,189,248,0.08),rgba(129,140,248,0.06))",border:"1px solid rgba(56,189,248,0.15)",borderRadius:16,padding:"18px 22px",marginBottom:14}}>
+                {lbl("🌍 Global Macro Dashboard","#38bdf8")}
+                <div style={{fontSize:13,color:"#94a3b8",lineHeight:1.7}}>
+                  Live macro indicators and their impact on your portfolio. Updated every 30 seconds.
+                </div>
+              </div>
+
+              {/* ── MACRO INDICATORS ── */}
+              {(()=>{
+                const macroTickers = ["GLD","USO","VIXY","TLT"];
+                const macroLabels  = {
+                  GLD:  {name:"Gold",       unit:"$",    icon:"🥇", desc:"Safe haven — rises on fear, inflation, war"},
+                  USO:  {name:"Oil (WTI)",  unit:"$",    icon:"🛢️", desc:"Energy prices — high oil = inflation pressure"},
+                  VIXY: {name:"VIX (Fear)", unit:"",     icon:"😨", desc:"Market fear gauge — above 20 = elevated risk"},
+                  TLT:  {name:"10Y Bond",   unit:"$",    icon:"🏦", desc:"Long bonds — price drops when yields rise"},
+                };
+                const macroImpact = {
+                  GLD: {
+                    high: {threshold:250, signal:"⚠️ Gold surging — markets pricing in fear/inflation. Defensives outperform.", color:"#fbbf24"},
+                    low:  {threshold:200, signal:"✅ Gold calm — risk appetite healthy. Growth stocks favored.", color:"#34d399"},
+                  },
+                  USO: {
+                    high: {threshold:85,  signal:"🚨 Oil above $85 — inflation risk rising. Bad for consumer stocks (AMZN, COST, WMT).", color:"#f87171"},
+                    low:  {threshold:65,  signal:"✅ Oil contained — consumer spending healthy. Good for your portfolio.", color:"#34d399"},
+                  },
+                  VIXY: {
+                    high: {threshold:30,  signal:"🚨 VIX above 30 — extreme fear. Hold cash, avoid buying growth stocks.", color:"#f87171"},
+                    med:  {threshold:20,  signal:"⚠️ VIX elevated (20-30) — caution. Reduce position sizes.", color:"#fbbf24"},
+                    low:  {threshold:20,  signal:"✅ VIX below 20 — calm market. Good conditions for growth stocks.", color:"#34d399"},
+                  },
+                  TLT: {
+                    low:  {threshold:85,  signal:"⚠️ Bond prices low — yields high (4%+). Growth stocks under pressure (NVDA, META).", color:"#fbbf24"},
+                    high: {threshold:95,  signal:"✅ Bond prices high — yields falling. Growth stocks benefit.", color:"#34d399"},
+                  },
+                };
+
+                return(
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:12,marginBottom:16}}>
+                    {Object.entries(macroLabels).map(([ticker,info])=>{
+                      const lp2 = prices[ticker]||{price:0,changePct:0};
+                      const price2 = lp2.price||0;
+                      const chg    = lp2.changePct||0;
+                      const impact = macroImpact[ticker];
+                      let signal = {signal:"Fetching live data...", color:"#475569"};
+                      if(price2>0 && impact){
+                        if(ticker==="VIXY"){
+                          signal = price2>=impact.high.threshold?impact.high:price2>=impact.med.threshold?impact.med:impact.low;
+                        } else if(ticker==="TLT"){
+                          signal = price2<=impact.low.threshold?impact.low:impact.high;
+                        } else {
+                          signal = price2>=impact.high.threshold?impact.high:impact.low;
+                        }
+                      }
+                      return(
+                        <div key={ticker} style={{background:"#0a1421",border:`1px solid ${signal.color+"33"}`,borderRadius:13,padding:"16px 18px"}}>
+                          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+                            <div>
+                              <div style={{fontSize:11,color:"#475569",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em"}}>{info.icon} {info.name}</div>
+                              <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:26,color:"#e2e8f0",marginTop:2}}>{info.unit}{price2>0?price2.toFixed(2):"—"}</div>
+                              <div style={{fontSize:13,color:chg>=0?"#34d399":"#f87171",fontWeight:600}}>{chg>=0?"+":""}{chg.toFixed(2)}% today</div>
+                            </div>
+                            <div style={{fontSize:11,color:"#475569",textAlign:"right",maxWidth:120,lineHeight:1.5}}>{info.desc}</div>
+                          </div>
+                          <div style={{background:"#090f1a",borderRadius:8,padding:"10px 12px",borderLeft:`3px solid ${signal.color}`}}>
+                            <div style={{fontSize:12,color:signal.color,fontWeight:600,lineHeight:1.6}}>{signal.signal}</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+
+              {/* ── WAR & GEOPOLITICAL IMPACT ── */}
+              <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:13,padding:"16px 18px",marginBottom:12}}>
+                {lbl("⚔️ Geopolitical Risk Monitor","#f87171")}
+                <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                  {[
+                    {
+                      event:"US-Iran Conflict (Oil Tankers)",
+                      status:"🔴 Active",
+                      statusColor:"#f87171",
+                      impact:"Oil above $95/barrel. Inflationary. Bad for consumer discretionary (AMZN, COST). Good for XOM.",
+                      yourPortfolio:"⚠️ Your portfolio: AMZN, COST, WMT at risk from consumer spending pressure. No energy exposure.",
+                      action:"Consider adding XOM or energy ETF as hedge."
+                    },
+                    {
+                      event:"Fed Independence / Rate Policy",
+                      status:"🟡 Elevated",
+                      statusColor:"#fbbf24",
+                      impact:"Fed under political pressure. 10Y yield at 4.25%. High rates compress growth stock valuations.",
+                      yourPortfolio:"⚠️ Your portfolio: NVDA (P/E 45x), META (P/E 24x), COST (P/E 48x) most affected by high rates.",
+                      action:"Watch Fed meetings. Rate cuts = strong buy signal for growth stocks."
+                    },
+                    {
+                      event:"AI Chip Export Controls (China)",
+                      status:"🟡 Ongoing",
+                      statusColor:"#fbbf24",
+                      impact:"US restricting Nvidia chip exports to China. Limits NVDA revenue growth.",
+                      yourPortfolio:"⚠️ Your portfolio: NVDA directly affected (China was ~17% of revenue). AVGO also exposed.",
+                      action:"Monitor quarterly earnings for China revenue guidance."
+                    },
+                    {
+                      event:"GLP-1 Drug Market (Obesity)",
+                      status:"🟢 Positive",
+                      statusColor:"#34d399",
+                      impact:"Ozempic/Wegovy market growing 40%+ annually. LLY and NVO are dominant players.",
+                      yourPortfolio:"✅ Your portfolio: LLY is your best performing position. Thesis intact.",
+                      action:"Hold LLY. Consider adding NVO for diversification within the same theme."
+                    },
+                  ].map((item,i)=>(
+                    <div key={i} style={{background:"#090f1a",borderRadius:10,padding:"12px 14px",borderLeft:`3px solid ${item.statusColor}`}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                        <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:700,fontSize:13,color:"#e2e8f0"}}>{item.event}</div>
+                        <div style={{fontSize:12,color:item.statusColor,fontWeight:700,flexShrink:0,marginLeft:8}}>{item.status}</div>
+                      </div>
+                      <div style={{fontSize:12,color:"#94a3b8",marginBottom:6,lineHeight:1.6}}>{item.impact}</div>
+                      <div style={{fontSize:12,color:item.statusColor,marginBottom:4,fontWeight:600}}>{item.yourPortfolio}</div>
+                      <div style={{fontSize:11,color:"#475569",fontStyle:"italic"}}>{item.action}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* ── INFLATION IMPACT ── */}
+              <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:13,padding:"16px 18px",marginBottom:12}}>
+                {lbl("📈 Inflation Impact on Your Portfolio","#fbbf24")}
+                <div style={{fontSize:12,color:"#94a3b8",marginBottom:12,lineHeight:1.6}}>
+                  Current inflation: ~3.2% (above Fed 2% target). Oil at $97 adds upward pressure. Fed unlikely to cut rates soon.
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8}}>
+                  {[
+                    {label:"NVDA",  impact:"Negative",  reason:"High P/E growth stock — inflation keeps rates high, compresses valuation", color:"#f87171"},
+                    {label:"META",  impact:"Negative",  reason:"Ad spending falls when consumers tighten budgets in inflationary periods", color:"#f87171"},
+                    {label:"GOOGL", impact:"Neutral",   reason:"Ad revenue partly resilient, cloud growth offsets consumer weakness", color:"#fbbf24"},
+                    {label:"MSFT",  impact:"Neutral",   reason:"Enterprise software recurring revenue provides stability", color:"#fbbf24"},
+                    {label:"WMT",   impact:"Positive",  reason:"Consumers trade down to cheaper options — Walmart wins in inflation", color:"#34d399"},
+                    {label:"COST",  impact:"Positive",  reason:"Membership model + bulk buying = inflation-resistant business", color:"#34d399"},
+                    {label:"LLY",   impact:"Positive",  reason:"Healthcare demand inelastic — people need drugs regardless of inflation", color:"#34d399"},
+                    {label:"JPM",   impact:"Positive",  reason:"Banks earn more on loans when rates are high", color:"#34d399"},
+                    {label:"AVGO",  impact:"Neutral",   reason:"AI infrastructure demand continues regardless of inflation level", color:"#fbbf24"},
+                    {label:"AMZN",  impact:"Mixed",     reason:"AWS positive, retail margins squeezed by higher costs", color:"#fbbf24"},
+                  ].map((item,i)=>(
+                    <div key={i} style={{background:"#090f1a",borderRadius:8,padding:"10px 12px",display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
+                      <div>
+                        <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:700,fontSize:13,color:"#e2e8f0"}}>{item.label}</div>
+                        <div style={{fontSize:11,color:"#475569",marginTop:2,lineHeight:1.5}}>{item.reason}</div>
+                      </div>
+                      <div style={{fontSize:11,fontWeight:700,color:item.color,flexShrink:0,background:item.color+"15",padding:"2px 8px",borderRadius:4}}>{item.impact}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* ── CORRELATION MATRIX ── */}
+              <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:13,padding:"16px 18px",marginBottom:12}}>
+                {lbl("🔗 Correlation Matrix — Your Portfolio vs Macro","#818cf8")}
+                <div style={{fontSize:12,color:"#94a3b8",marginBottom:12}}> 
+                  How each position responds to macro moves. Green = moves with indicator. Red = moves against.
+                </div>
+                <div style={{overflowX:"auto"}}>
+                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                    <thead>
+                      <tr>
+                        {["Stock","vs Gold","vs Oil","vs VIX","vs Rates","Overall Risk"].map((h,i)=>(
+                          <th key={i} style={{textAlign:i===0?"left":"center",padding:"8px 10px",fontSize:10,color:"#475569",fontWeight:700,textTransform:"uppercase",borderBottom:"1px solid #101c2e"}}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        {s:"NVDA",  gold:-0.2, oil:-0.3, vix:-0.7, rates:-0.6, risk:"High"},
+                        {s:"AVGO",  gold:-0.1, oil:-0.2, vix:-0.6, rates:-0.5, risk:"Med"},
+                        {s:"LLY",   gold: 0.1, oil:-0.1, vix:-0.2, rates:-0.3, risk:"Low"},
+                        {s:"MSFT",  gold:-0.1, oil:-0.2, vix:-0.5, rates:-0.5, risk:"Med"},
+                        {s:"META",  gold:-0.2, oil:-0.3, vix:-0.6, rates:-0.5, risk:"Med"},
+                        {s:"COST",  gold: 0.0, oil:-0.1, vix:-0.2, rates:-0.2, risk:"Low"},
+                        {s:"GOOGL", gold:-0.1, oil:-0.2, vix:-0.5, rates:-0.4, risk:"Med"},
+                        {s:"AMZN",  gold:-0.1, oil:-0.3, vix:-0.5, rates:-0.4, risk:"Med"},
+                        {s:"WMT",   gold: 0.1, oil:-0.1, vix:-0.1, rates:-0.1, risk:"Low"},
+                        {s:"JPM",   gold:-0.1, oil: 0.1, vix:-0.3, rates: 0.5, risk:"Low"},
+                      ].map((row,i)=>{
+                        const riskColor = row.risk==="High"?"#f87171":row.risk==="Low"?"#34d399":"#fbbf24";
+                        const cell = (v)=>{
+                          const c = v>=0.3?"#34d399":v<=-0.3?"#f87171":"#475569";
+                          return <td key={v} style={{textAlign:"center",padding:"8px 10px",color:c,fontWeight:600}}>{v>=0?"+":""}{v.toFixed(1)}</td>;
+                        };
+                        return(
+                          <tr key={i} style={{borderBottom:"1px solid #0d1826"}}>
+                            <td style={{padding:"8px 10px",color:"#e2e8f0",fontWeight:700}}>{row.s}</td>
+                            {cell(row.gold)}{cell(row.oil)}{cell(row.vix)}{cell(row.rates)}
+                            <td style={{textAlign:"center",padding:"8px 10px"}}>
+                              <span style={{color:riskColor,fontWeight:700,fontSize:11,background:riskColor+"15",padding:"2px 8px",borderRadius:4}}>{row.risk}</span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <div style={{fontSize:11,color:"#334155",marginTop:10,lineHeight:1.6}}>
+                  Values show correlation coefficient (-1 to +1). Negative vs VIX means stock falls when fear rises — normal for growth stocks.
+                  Your portfolio has HIGH negative correlation to VIX and rates — it suffers most in fear/high-rate environments.
+                </div>
+              </div>
+
+              {/* ── MACRO RECOMMENDATIONS ── */}
+              <div style={{background:"rgba(56,189,248,0.05)",border:"1px solid rgba(56,189,248,0.15)",borderRadius:13,padding:"16px 18px"}}>
+                {lbl("💡 Macro-Based Recommendations","#38bdf8")}
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  {[
+                    {action:"ADD GLD",    reason:"Oil war + inflation = gold outperforms. Add 5-8% allocation as portfolio hedge.", urgency:"High", color:"#fbbf24"},
+                    {action:"ADD XOM",    reason:"With oil at $97, energy stocks benefit directly. XOM pays 3.8% dividend.", urgency:"High", color:"#fbbf24"},
+                    {action:"ADD JNJ/KO", reason:"Defensives protect in war/inflation environment. Low beta, stable dividends.", urgency:"Med",  color:"#38bdf8"},
+                    {action:"TRIM NVDA",  reason:"High P/E + high rates = valuation risk. Consider reducing from 11% to 8%.", urgency:"Med",  color:"#38bdf8"},
+                    {action:"HOLD LLY",   reason:"Healthcare inelastic to macro. GLP-1 growth story intact regardless of oil/rates.", urgency:"Low",  color:"#34d399"},
+                    {action:"HOLD JPM",   reason:"Banks benefit from high rates. JPM is your best macro hedge already in portfolio.", urgency:"Low",  color:"#34d399"},
+                  ].map((item,i)=>(
+                    <div key={i} style={{display:"flex",gap:12,background:"#090f1a",borderRadius:9,padding:"11px 14px",alignItems:"flex-start"}}>
+                      <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:14,color:item.color,minWidth:90,flexShrink:0}}>{item.action}</div>
+                      <div style={{fontSize:12,color:"#94a3b8",flex:1,lineHeight:1.6}}>{item.reason}</div>
+                      <div style={{fontSize:10,fontWeight:700,color:item.color,flexShrink:0,background:item.color+"15",padding:"2px 8px",borderRadius:4,alignSelf:"center"}}>{item.urgency}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+          )}
 
 
           {tab==="guide"&&(
