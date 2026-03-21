@@ -237,7 +237,7 @@ async function fetchRecommendations(ticker) {
     }
 
 // ── Live price target ─────────────────────────────────────────────────────────
-async function fetchPriceTarget(ticker) {
+window.fetchPriceTarget = async function fetchPriceTarget(ticker) {
   const sym = FH_MAP[ticker]||ticker;
   try {
     const d = await fetch("https://finnhub.io/api/v1/stock/price-target?symbol="+sym+"&token=d6raaohr01qgdhqdptvgd6raaohr01qgdhqdpu00").then(r=>r.json());
@@ -249,7 +249,8 @@ async function fetchPriceTarget(ticker) {
 }
 
 // ── Live earnings calendar ────────────────────────────────────────────────────
-async function fetchEarningsCalendar(ticker) {
+const fetchEarningsCalendar = async (ticker) => { try{ return await window.fetchEarningsCalendar(ticker); }catch(e){} };
+window.fetchEarningsCalendar = async function fetchEarningsCalendar(ticker) {
   const sym = FH_MAP[ticker]||ticker;
   try {
     const from=new Date().toISOString().split("T")[0];
@@ -264,7 +265,8 @@ async function fetchEarningsCalendar(ticker) {
 }
 
 // ── Live EPS forward estimates ────────────────────────────────────────────────
-async function fetchEpsEstimates(ticker) {
+const fetchEpsEstimates = async (ticker) => { try{ return await window.fetchEpsEstimates(ticker); }catch(e){} };
+window.fetchEpsEstimates = async function fetchEpsEstimates(ticker) {
   const sym = FH_MAP[ticker]||ticker;
   try {
     const d = await fetch("https://finnhub.io/api/v1/stock/eps-estimates?symbol="+sym+"&freq=quarterly&token=d6raaohr01qgdhqdptvgd6raaohr01qgdhqdpu00").then(r=>r.json());
@@ -276,7 +278,8 @@ async function fetchEpsEstimates(ticker) {
 }
 
 // ── Live financials from SEC filings ─────────────────────────────────────────
-async function fetchLiveFinancials(ticker) {
+const fetchLiveFinancials = async (ticker) => { try{ return await window.fetchLiveFinancials(ticker); }catch(e){} };
+window.fetchLiveFinancials = async function fetchLiveFinancials(ticker) {
   const sym = FH_MAP[ticker]||ticker;
   try {
     const d = await fetch("https://finnhub.io/api/v1/stock/financials-reported?symbol="+sym+"&freq=annual&token=d6raaohr01qgdhqdptvgd6raaohr01qgdhqdpu00").then(r=>r.json());
@@ -288,7 +291,8 @@ async function fetchLiveFinancials(ticker) {
 }
 
 // ── Live company profile ──────────────────────────────────────────────────────
-async function fetchProfile(ticker) {
+const fetchProfile = async (ticker) => { try{ return await window.fetchProfile(ticker); }catch(e){} };
+window.fetchProfile = async function fetchProfile(ticker) {
   const sym = FH_MAP[ticker]||ticker;
   try {
     const d = await fetch("https://finnhub.io/api/v1/stock/profile2?symbol="+sym+"&token=d6raaohr01qgdhqdptvgd6raaohr01qgdhqdpu00").then(r=>r.json());
@@ -1131,14 +1135,14 @@ function StockSense(){
     await Promise.all([
       fetchNews(t),
       fetchMetrics(t),
-      fetchEarnings(t),
+      (window.fetchEarnings||fetchEarnings)(t),
       fetchRecommendations(t),
     ]);
     // Run these sequentially to avoid scope issues
-    try{ if(typeof fetchEarningsCalendar==="function") await fetchEarningsCalendar(t); }catch(e){}
-    try{ if(typeof fetchEpsEstimates==="function") await fetchEpsEstimates(t); }catch(e){}
-    try{ if(typeof fetchLiveFinancials==="function") await fetchLiveFinancials(t); }catch(e){}
-    try{ if(typeof fetchProfile==="function") await fetchProfile(t); }catch(e){}
+    try{ if(window.fetchEarningsCalendar) await window.fetchEarningsCalendar(t); }catch(e){}
+    try{ if(window.fetchEpsEstimates) await window.fetchEpsEstimates(t); }catch(e){}
+    try{ if(window.fetchLiveFinancials) await window.fetchLiveFinancials(t); }catch(e){}
+    try{ if(window.fetchProfile) await window.fetchProfile(t); }catch(e){}
   };
 
   useEffect(()=>{
