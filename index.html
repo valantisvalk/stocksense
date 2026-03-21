@@ -995,7 +995,7 @@ function StockSense(){
   const[prices,setPrices]=useState(()=>{const p={};TICKERS.forEach(t=>{p[t]={price:DB[t].baseP,changePct:0};});return p;});
   const[priceHist,setPriceHist]=useState(()=>{const h={};TICKERS.forEach(t=>{h[t]=[];});return h;});
   const[lastRefresh,setLastRefresh]=useState(new Date());
-  const[countdown,setCountdown]=useState(30);
+  const[countdown,setCountdown]=useState(60);
   const[pillarW,setPillarW]=useState({trend:25,momentum:20,volatility:15,fundamental:25,macro:15})
   // ── Auto trader portfolio state (must be at component level) ──
   const[autoPortfolio,setAutoPortfolio]=useState(null);
@@ -1096,10 +1096,10 @@ function StockSense(){
   // Fetch live prices from Finnhub
   const fetchAllPrices = async () => {
     // Fetch prices in batches of 4 (rate limit friendly)
-    for(let i=0;i<TICKERS.length;i+=3){
-      const batch=TICKERS.slice(i,i+3);
+    for(let i=0;i<TICKERS.length;i+=2){
+      const batch=TICKERS.slice(i,i+2);
       await Promise.all(batch.map(t=>fetchFinnhub(t)));
-      if(i+4<TICKERS.length) await new Promise(r=>setTimeout(r,800));
+      if(i+2<TICKERS.length) await new Promise(r=>setTimeout(r,1200));
     }
     // Use Finnhub live data only — no simulation tick()
     setPrices(prev=>{
