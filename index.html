@@ -1129,10 +1129,16 @@ function StockSense(){
     const fetchTickerDetail = async (t) => {
     window._currentTicker = t;
     await Promise.all([
-      fetchNews(t), fetchMetrics(t), fetchEarnings(t), fetchRecommendations(t),
-      fetchEarningsCalendar(t), fetchEpsEstimates(t),
-      fetchLiveFinancials(t), fetchProfile(t),
+      fetchNews(t),
+      fetchMetrics(t),
+      fetchEarnings(t),
+      fetchRecommendations(t),
     ]);
+    // Run these sequentially to avoid scope issues
+    try{ if(typeof fetchEarningsCalendar==="function") await fetchEarningsCalendar(t); }catch(e){}
+    try{ if(typeof fetchEpsEstimates==="function") await fetchEpsEstimates(t); }catch(e){}
+    try{ if(typeof fetchLiveFinancials==="function") await fetchLiveFinancials(t); }catch(e){}
+    try{ if(typeof fetchProfile==="function") await fetchProfile(t); }catch(e){}
   };
 
   useEffect(()=>{
