@@ -53,6 +53,12 @@ const DB = {
   KO:   { name:"Coca-Cola Co.",         s:"Consumer Staples",sector:"Consumer Staples",cap:"270B", vol:10.8, beta:0.58, pe:24.2, div:3.1, baseP:62.0,  rg:0.0, fcf:4.2, de:1.8, rs:"low",  ss:70, r:{2015:3.0,2016:2.0,2017:10.0,2018:-0.5,2019:18.0,2020:1.0,2021:8.0,2022:6.0,2023:10.0,2024:6.0,2025:4.0}, desc:"Global beverage giant, 60+ years of dividend growth." },
   GLD:  { name:"SPDR Gold ETF",         s:"Commodities",    sector:"Commodities",      cap:"N/A",  vol:12.2, beta:-0.08,pe:0.0,  div:0.0, baseP:245.0, rg:0.0, fcf:0.0, de:0.0, rs:"low",  ss:65, r:{2015:-10.0,2016:8.0,2017:13.0,2018:-2.0,2019:18.0,2020:25.0,2021:-4.0,2022:0.0,2023:13.0,2024:28.0,2025:12.0}, desc:"Physical gold ETF — inflation hedge, negative correlation to tech." },
   QQQ:  { name:"Nasdaq 100 ETF",        s:"Index ETF",         cap:"310B", vol:19.8, beta:1.18, pe:28.0, div:0.6, baseP:468.20, rg:12.0, fcf:2.8, de:0.4, rs:"med",  ss:72, r:{2015:9.5,2016:7.0,2017:32.7,2018:-1.0,2019:39.0,2020:48.6,2021:27.4,2022:-32.6,2023:54.9,2024:25.7,2025:-8.2}, desc:"Tracks the 100 largest Nasdaq companies." },
+  SLV:  { name:"Silver ETF",              s:"Commodities",    sector:"Commodities",      cap:"N/A",  vol:18.2, beta:0.12, pe:0.0,  div:0.0, baseP:28.0,  rg:0.0, fcf:0.0, de:0.0, rs:"med", ss:58, r:{2015:-11.0,2016:15.0,2017:5.0,2018:-8.0,2019:15.0,2020:47.0,2021:-12.0,2022:-15.0,2023:0.0,2024:22.0,2025:14.0}, desc:"Silver ETF — inflation hedge, more volatile than gold." },
+  CVX:  { name:"Chevron Corp.",           s:"Energy",         sector:"Energy",           cap:"280B", vol:14.2, beta:0.92, pe:14.1, div:4.1, baseP:155.0, rg:0.0, fcf:3.6, de:0.1, rs:"low", ss:63, r:{2015:-17.0,2016:26.0,2017:-5.0,2018:-15.0,2019:14.0,2020:-26.0,2021:46.0,2022:53.0,2023:-17.0,2024:4.0,2025:10.0}, desc:"Major integrated oil and gas company, 4.1% dividend." },
+  JNJ:  { name:"Johnson & Johnson",       s:"Healthcare",     sector:"Healthcare",       cap:"380B", vol:12.4, beta:0.54, pe:14.8, div:3.2, baseP:145.0, rg:0.0, fcf:4.8, de:0.4, rs:"low", ss:68, r:{2015:1.0,2016:11.0,2017:12.0,2018:-5.0,2019:15.0,2020:8.0,2021:8.0,2022:3.0,2023:0.0,2024:-4.0,2025:6.0}, desc:"Diversified healthcare — pharma, medtech, consumer health." },
+  PG:   { name:"Procter & Gamble",        s:"Consumer Staples",sector:"Consumer Staples",cap:"360B", vol:10.2, beta:0.52, pe:26.4, div:2.4, baseP:168.0, rg:0.0, fcf:4.4, de:0.6, rs:"low", ss:70, r:{2015:-5.0,2016:8.0,2017:11.0,2018:-7.0,2019:36.0,2020:13.0,2021:14.0,2022:-6.0,2023:5.0,2024:12.0,2025:4.0}, desc:"Consumer staples giant — Tide, Gillette, Pampers. Recession proof." },
+  CRM:  { name:"Salesforce Inc.",         s:"AI Disruptors",  sector:"AI Disruptors",    cap:"290B", vol:22.4, beta:1.38, pe:28.4, div:0.0, baseP:320.0, rg:0.0, fcf:3.2, de:0.2, rs:"med", ss:70, r:{2015:23.0,2016:14.0,2017:28.0,2018:47.0,2019:19.0,2020:47.0,2021:13.0,2022:-48.0,2023:99.0,2024:22.0,2025:-8.0}, desc:"Enterprise CRM and AI cloud platform." },
+  DIS:  { name:"Walt Disney Co.",         s:"Communication",  sector:"Communication",    cap:"195B", vol:18.8, beta:1.02, pe:24.8, div:0.0, baseP:108.0, rg:0.0, fcf:2.8, de:0.8, rs:"med", ss:62, r:{2015:17.0,2016:2.0,2017:3.0,2018:-3.0,2019:33.0,2020:25.0,2021:-15.0,2022:-44.0,2023:7.0,2024:22.0,2025:4.0}, desc:"Entertainment giant — parks, streaming, studios." },
 };
 const TICKERS = Object.keys(DB);
 const SECTOR_PE = {
@@ -353,6 +359,7 @@ async function fetchMarketStatus() {
 }
 
 async function fetchFinnhub(ticker) {
+  if(!DB[ticker] && !['SPY','QQQ','GLD','USO','VIXY','TLT','UUP'].includes(ticker)) return;
   const sym = FINNHUB_MAP[ticker] || ticker;
   try {
     const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${sym}&token=${FINNHUB_KEY}`);
@@ -992,10 +999,10 @@ function StockSense(){
   const[overlays,setOverlays]=useState({ma50:true,ma200:true,bb:false,vol:true,macd:true,rsi:true});
   const[showTop20,setShowTop20]=useState(false);
   const[showRevolut,setShowRevolut]=useState(false);
-  const[prices,setPrices]=useState(()=>{const p={};TICKERS.forEach(t=>{p[t]={price:DB[t].baseP,changePct:0};});return p;});
+  const[prices,setPrices]=useState(()=>{const p={};TICKERS.forEach(t=>{p[t]={price:(DB[t]&&DB[t].baseP)||100,changePct:0};});return p;});
   const[priceHist,setPriceHist]=useState(()=>{const h={};TICKERS.forEach(t=>{h[t]=[];});return h;});
   const[lastRefresh,setLastRefresh]=useState(new Date());
-  const[countdown,setCountdown]=useState(60);
+  const[countdown,setCountdown]=useState(90);
   const[pillarW,setPillarW]=useState({trend:25,momentum:20,volatility:15,fundamental:25,macro:15})
   // ── Auto trader portfolio state (must be at component level) ──
   const[autoPortfolio,setAutoPortfolio]=useState(null);
@@ -1095,20 +1102,15 @@ function StockSense(){
 
   // Fetch live prices from Finnhub
   const fetchAllPrices = async () => {
-    // Only fetch prices for portfolio stocks + key benchmarks to stay within rate limits
-    // Full universe fetched lazily when user clicks a stock
+    // Minimal priority list to stay well within Finnhub 60/min limit
     const PRIORITY = [...new Set([
-      // Your portfolio
-      ...PORTFOLIO_INIT.map(p=>p.ticker),
-      // Key benchmarks and macro
-      "SPY","QQQ","GLD","USO","VIXY","TLT",
-      // Top picks by quant score
-      "NVDA","META","GOOGL","MSFT","LLY","AMZN",
+      ...PORTFOLIO_INIT.map(p=>p.ticker),  // your 10 portfolio stocks
+      "SPY","GLD","USO","VIXY",            // macro essentials only
     ])];
-    for(let i=0;i<PRIORITY.length;i+=3){
-      const batch=PRIORITY.slice(i,i+3);
+    for(let i=0;i<PRIORITY.length;i+=2){
+      const batch=PRIORITY.slice(i,i+2);
       await Promise.all(batch.map(t=>fetchFinnhub(t)));
-      if(i+3<PRIORITY.length) await new Promise(r=>setTimeout(r,1000));
+      if(i+2<PRIORITY.length) await new Promise(r=>setTimeout(r,1500));
     }
     // Use Finnhub live data only — no simulation tick()
     setPrices(prev=>{
