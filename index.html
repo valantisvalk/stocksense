@@ -992,7 +992,23 @@ function StockSense(){
   const[priceHist,setPriceHist]=useState(()=>{const h={};TICKERS.forEach(t=>{h[t]=[];});return h;});
   const[lastRefresh,setLastRefresh]=useState(new Date());
   const[countdown,setCountdown]=useState(30);
-  const[pillarW,setPillarW]=useState({trend:25,momentum:20,volatility:15,fundamental:25,macro:15});
+  const[pillarW,setPillarW]=useState({trend:25,momentum:20,volatility:15,fundamental:25,macro:15})
+  // ── Auto trader portfolio state (must be at component level) ──
+  const[autoPortfolio,setAutoPortfolio]=useState(null);
+  const[autoLoading,setAutoLoading]=useState(false);
+  const[autoError,setAutoError]=useState(null);
+  const[showAutoTrader,setShowAutoTrader]=useState(false);
+  const fetchAutoPortfolio=useCallback(async()=>{
+    setAutoLoading(true);setAutoError(null);
+    try{
+      const url="https://raw.githubusercontent.com/valantisvalk/stocksense/main/portfolio_summary.json";
+      const r=await fetch(url+"?t="+Date.now());
+      if(!r.ok) throw new Error("File not found — run paper_trader_v3.py first");
+      const data=await r.json();
+      setAutoPortfolio(data);
+    }catch(e){setAutoError(e.message);}
+    finally{setAutoLoading(false);}
+  },[]);;
 
   // ── PORTFOLIO STATE ───────────────────────────────────────────────────────
   // ── DIVIDEND DATA ─────────────────────────────────────────────────────────
@@ -2190,29 +2206,6 @@ function StockSense(){
           {/* ── GUIDE TAB ── */}
           {/* ── PORTFOLIO TAB ── */}
           {tab==="portfolio"&&(()=>{
-            // ── AUTO TRADER PORTFOLIO FETCH ──────────────────────────────────
-            const[autoPortfolio,setAutoPortfolio]=React.useState(null);
-            const[autoLoading,setAutoLoading]=React.useState(false);
-            const[autoError,setAutoError]=React.useState(null);
-            const[showAutoTrader,setShowAutoTrader]=React.useState(false);
-
-            const fetchAutoPortfolio=React.useCallback(async()=>{
-              setAutoLoading(true);
-              setAutoError(null);
-              try{
-                // Fetch from GitHub raw URL
-                const url="https://raw.githubusercontent.com/valantisvalk/stocksense/main/portfolio_summary.json";
-                const r=await fetch(url+"?t="+Date.now()); // cache bust
-                if(!r.ok) throw new Error("File not found — trader may not have saved yet");
-                const data=await r.json();
-                setAutoPortfolio(data);
-              }catch(e){
-                setAutoError(e.message);
-              }finally{
-                setAutoLoading(false);
-              }
-            },[]);
-
             // ── computed values ──────────────────────────────────────────────
             const totalDivReceived = portfolio.reduce((s,p)=>s+calcDividends(p.ticker,p.shares,p.entryDate),0);
             const totalDivAnnual   = portfolio.reduce((s,p)=>s+calcAnnualDivIncome(p.ticker,p.shares),0);
