@@ -1095,11 +1095,20 @@ function StockSense(){
 
   // Fetch live prices from Finnhub
   const fetchAllPrices = async () => {
-    // Fetch prices in batches of 4 (rate limit friendly)
-    for(let i=0;i<TICKERS.length;i+=2){
-      const batch=TICKERS.slice(i,i+2);
+    // Only fetch prices for portfolio stocks + key benchmarks to stay within rate limits
+    // Full universe fetched lazily when user clicks a stock
+    const PRIORITY = [...new Set([
+      // Your portfolio
+      ...PORTFOLIO_INIT.map(p=>p.ticker),
+      // Key benchmarks and macro
+      "SPY","QQQ","GLD","USO","VIXY","TLT",
+      // Top picks by quant score
+      "NVDA","META","GOOGL","MSFT","LLY","AMZN",
+    ])];
+    for(let i=0;i<PRIORITY.length;i+=3){
+      const batch=PRIORITY.slice(i,i+3);
       await Promise.all(batch.map(t=>fetchFinnhub(t)));
-      if(i+2<TICKERS.length) await new Promise(r=>setTimeout(r,1200));
+      if(i+3<PRIORITY.length) await new Promise(r=>setTimeout(r,1000));
     }
     // Use Finnhub live data only — no simulation tick()
     setPrices(prev=>{
