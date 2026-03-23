@@ -1354,7 +1354,7 @@ function StockSense(){
 
         {/* Tabs */}
         <div style={{display:"flex",background:"#08111e",borderBottom:"1px solid #101c2e",padding:"0 20px",overflowX:"auto"}}>
-          {[["macro","🌍 Macro"],["portfolio","💼 Portfolio"],["quant","🧮 Quant"],["overview","📊 Deck"],["analyst","🏦 Analyst"],["financials","💰 Financials"],["charts","📈 Charts"],["history","📅 10-Year"],["backtest","🧪 Backtest"],["news","📰 News"],["prediction","🔮 Forecast"],["guide","📖 Guide"]].map(([v,l])=>{
+          {[["macro","🌍 Macro"],["portfolio","💼 Portfolio"],["quant","🧮 Quant"],["overview","📊 Deck"],["analyst","🏦 Analyst"],["financials","💰 Financials"],["charts","📈 Charts"],["history","📅 10-Year"],["crisis","🚨 Crisis"],["backtest","🧪 Backtest"],["news","📰 News"],["prediction","🔮 Forecast"],["guide","📖 Guide"]].map(([v,l])=>{
             const tabDesc={
               macro:     "Market Environment",
               portfolio: "Your Holdings",
@@ -2644,6 +2644,322 @@ function StockSense(){
                 );
               })()}
 
+                            {/* ── POSITION DEEP-DIVE TABLE ── */}
+              <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:14,padding:"16px 18px",marginBottom:14}}>
+                <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:14,color:"#e2e8f0",marginBottom:4}}>
+                  🔬 Position Deep-Dive Analysis
+                </div>
+                <div style={{fontSize:11,color:"#475569",marginBottom:14}}>
+                  Full breakdown of every holding — 5-pillar quant score, technical indicators, analyst view, earnings history, risk metrics
+                </div>
+
+                {PORTFOLIO_INIT.map((pos,pi)=>{
+                  const ticker  = pos.ticker;
+                  const db      = DB[ticker] || {};
+                  const lp      = prices[ticker] || {};
+                  const price   = lp.price || pos.entryPrice;
+                  const chg     = lp.changePct || 0;
+                  const high52  = lp.high52 || db.baseP*1.3 || price*1.3;
+                  const low52   = lp.low52  || db.baseP*0.7 || price*0.7;
+                  const ad      = ANALYST_DB[ticker] || {};
+
+                  // P&L
+                  const cost    = pos.shares * pos.entryPrice;
+                  const curVal  = pos.shares * price;
+                  const pnl     = curVal - cost;
+                  const pnlPct  = (pnl / cost) * 100;
+                  const isUp    = pnl >= 0;
+
+                  // ── 5 PILLAR SCORES (mirrors computeQuant logic) ──────────
+                  const vals    = Object.values(db.r || {});
+                  const n       = vals.length || 1;
+                  const avg10   = vals.reduce((a,b)=>a+b,0)/n;
+                  const avgR3   = ((db.r||{})[2022]||0 + (db.r||{})[2023]||0 + (db.r||{})[2024]||0)/3;
+                  const upYrs   = vals.filter(v=>v>0).length;
+
+                  // Momentum pillar
+                  const momScore = Math.min(95, Math.max(5,
+                    50 + (chg * 3) + (avg10 > 0 ? 15 : -10) + ((db.r||{})[2024] > 20 ? 10 : 0)
+                  ));
+                  // Valuation pillar
+                  const spePE   = {Technology:28,Semiconductors:30,Pharma:35,Retail:32,"Social Media":24,"E-Commerce/Cloud":38,Banking:13,"Consumer Staples":28}[db.s] || 22;
+                  const valScore = Math.min(95, Math.max(5, (spePE / Math.max(db.pe||22,1))*50 + 25));
+                  // Quality pillar
+                  const qualScore = Math.min(95, Math.max(5, (db.fcf||2)/5*60 + Math.max(0,(3-(db.de||1))/3)*40));
+                  // Risk pillar
+                  const riskBase  = {low:80,med:60,pos:55,high:30}[db.rs||"med"] || 60;
+                  const riskScore = Math.min(95, Math.max(5, riskBase - Math.max(0,(db.beta||1)-1)*20));
+                  // Sentiment pillar
+                  const sentScore = Math.min(95, Math.max(5, db.ss || 65));
+                  // Moat bonus
+                  const moat      = {AAPL:"wide",MSFT:"wide",GOOGL:"wide",META:"wide",NVDA:"wide",AVGO:"wide",ASML:"wide",LLY:"wide",JPM:"wide",BLK:"wide",V:"wide",MA:"wide",WMT:"wide",COST:"wide",KO:"wide",AMZN:"wide",CRM:"wide",AMD:"narrow",TSLA:"narrow",NFLX:"narrow",PLTR:"narrow",XOM:"narrow",CVX:"narrow"}[ticker]||"none";
+                  const moatBonus = {wide:4,narrow:1,none:0}[moat];
+                  const liveBoost = Math.max(-8, Math.min(8, chg * 1.5));
+                  const totalScore= Math.min(100, Math.max(0, Math.round(
+                    momScore*0.25 + valScore*0.20 + qualScore*0.20 + riskScore*0.20 + sentScore*0.15 + moatBonus + liveBoost
+                  )));
+                  const signal    = totalScore>=75?"Strong Buy":totalScore>=68?"Buy":totalScore>=50?"Hold":totalScore>=38?"Reduce":"Sell";
+                  const sigColor  = totalScore>=68?"#34d399":totalScore>=50?"#fbbf24":"#f87171";
+
+                  // ── TECHNICAL INDICATORS ─────────────────────────────────
+                  const range52   = high52 - low52 || price*0.4;
+                  const rsiProxy  = range52>0 ? Math.round((price-low52)/range52*100) : 50;
+                  const fromHigh  = high52>0 ? ((high52-price)/high52*100).toFixed(1) : "—";
+                  const fromLow   = low52>0  ? ((price-low52)/low52*100).toFixed(1)   : "—";
+                  const rsiColor  = rsiProxy>80?"#f87171":rsiProxy>65?"#34d399":rsiProxy<30?"#fbbf24":"#94a3b8";
+                  const rsiLabel  = rsiProxy>80?"Overbought":rsiProxy>65?"Bullish":rsiProxy<30?"Oversold":"Neutral";
+                  const volRegime = Math.abs(chg) > 3 ? "High" : Math.abs(chg) > 1.5 ? "Medium" : "Low";
+                  const volColor  = Math.abs(chg)>3?"#f87171":Math.abs(chg)>1.5?"#fbbf24":"#34d399";
+                  // Tech confirmation
+                  let techScore = 50;
+                  if(rsiProxy>80) techScore-=20; else if(rsiProxy>65) techScore+=10; else if(rsiProxy<30) techScore+=5;
+                  if(chg>=2) techScore+=15; else if(chg>=0.5) techScore+=8; else if(chg<=-2) techScore-=15; else if(chg<=-0.5) techScore-=5;
+                  if(parseFloat(fromHigh)<3) techScore-=15; else if(parseFloat(fromHigh)<10) techScore+=10; else techScore+=8;
+                  if(Math.abs(chg)>5) techScore-=10; else techScore+=5;
+                  techScore = Math.max(0,Math.min(100,techScore));
+                  const techOk   = techScore >= 45 && rsiProxy <= 80 && parseFloat(fromHigh) >= 3;
+                  const techColor= techOk?"#34d399":"#f87171";
+
+                  // ── EARNINGS ─────────────────────────────────────────────
+                  const epsHist   = ad.eps || [];
+                  const beats     = epsHist.filter(e=>e.act!=null&&e.act>e.est).length;
+                  const total_eps = epsHist.filter(e=>e.act!=null).length;
+                  const beatRate  = total_eps>0 ? Math.round((beats/total_eps)*100) : null;
+                  const lastEps   = epsHist.filter(e=>e.act!=null).slice(-1)[0];
+                  const nextEarn  = ad.nextEarnings || "TBD";
+
+                  // Days to earnings
+                  let daysToEarn  = null;
+                  try {
+                    const earnDate = new Date(nextEarn + " 2026");
+                    daysToEarn = Math.round((earnDate - new Date()) / (1000*60*60*24));
+                  } catch(e){}
+                  const earnWarn  = daysToEarn!=null && daysToEarn>=0 && daysToEarn<=14;
+                  const earnColor = daysToEarn<=3?"#f87171":daysToEarn<=7?"#fbbf24":daysToEarn<=14?"#38bdf8":"#475569";
+
+                  // Stop loss / take profit status
+                  const stopLoss  = pos.entryPrice * 0.85;
+                  const takeProfit= pos.entryPrice * 1.40;
+                  const distToStop= ((price - stopLoss)/price*100).toFixed(1);
+                  const distToTP  = ((takeProfit - price)/price*100).toFixed(1);
+                  const stopColor = parseFloat(distToStop)<5?"#f87171":parseFloat(distToStop)<10?"#fbbf24":"#34d399";
+
+                  return(
+                    <div key={ticker} style={{
+                      background:"#060d18",border:`1px solid ${isUp?"rgba(52,211,153,0.15)":"rgba(248,113,113,0.1)"}`,
+                      borderRadius:12,padding:"14px 16px",marginBottom:10,
+                      borderLeft:`3px solid ${isUp?"#34d399":"#f87171"}`
+                    }}>
+
+                      {/* ── STOCK HEADER ── */}
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:10,marginBottom:12}}>
+                        <div style={{display:"flex",gap:12,alignItems:"center"}}>
+                          <div>
+                            <span style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:16,color:"#e2e8f0"}}>{ticker}</span>
+                            <span style={{fontSize:12,color:"#475569",marginLeft:8}}>{db.name}</span>
+                            <span style={{fontSize:10,color:"#334155",marginLeft:8}}>{db.s} · {db.cap}</span>
+                          </div>
+                        </div>
+                        <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                          <div style={{textAlign:"right"}}>
+                            <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:15,color:"#e2e8f0"}}>${price.toFixed(2)}</div>
+                            <div style={{fontSize:11,color:chg>=0?"#34d399":"#f87171"}}>{chg>=0?"+":""}{chg.toFixed(2)}% today</div>
+                          </div>
+                          <div style={{textAlign:"center",background:sigColor+"22",border:`1px solid ${sigColor}44`,borderRadius:8,padding:"6px 12px"}}>
+                            <div style={{fontSize:10,color:"#475569"}}>Quant Score</div>
+                            <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:16,color:sigColor}}>{totalScore}</div>
+                            <div style={{fontSize:10,color:sigColor,fontWeight:700}}>{signal}</div>
+                          </div>
+                          <div style={{textAlign:"center",background:isUp?"rgba(52,211,153,0.08)":"rgba(248,113,113,0.08)",border:`1px solid ${isUp?"rgba(52,211,153,0.2)":"rgba(248,113,113,0.2)"}`,borderRadius:8,padding:"6px 12px"}}>
+                            <div style={{fontSize:10,color:"#475569"}}>P&L</div>
+                            <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:14,color:isUp?"#34d399":"#f87171"}}>
+                              {isUp?"+":""}{pnlPct.toFixed(2)}%
+                            </div>
+                            <div style={{fontSize:10,color:isUp?"#34d399":"#f87171"}}>{isUp?"+$":"-$"}{Math.abs(pnl).toFixed(0)}</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* ── 4 COLUMN METRICS GRID ── */}
+                      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>
+
+                        {/* COLUMN 1: 5-PILLAR BREAKDOWN */}
+                        <div style={{background:"#0a1421",borderRadius:10,padding:"10px 12px"}}>
+                          <div style={{fontSize:10,color:"#475569",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:8}}>
+                            📊 Quant Pillars
+                          </div>
+                          {[
+                            {l:"Momentum",  v:Math.round(momScore),  w:"25%"},
+                            {l:"Valuation", v:Math.round(valScore),  w:"20%"},
+                            {l:"Quality",   v:Math.round(qualScore), w:"20%"},
+                            {l:"Risk",      v:Math.round(riskScore), w:"20%"},
+                            {l:"Sentiment", v:Math.round(sentScore), w:"15%"},
+                          ].map((p,i)=>{
+                            const c = p.v>=70?"#34d399":p.v>=50?"#fbbf24":"#f87171";
+                            return(
+                              <div key={i} style={{marginBottom:5}}>
+                                <div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}>
+                                  <span style={{fontSize:10,color:"#475569"}}>{p.l} <span style={{color:"#334155"}}>({p.w})</span></span>
+                                  <span style={{fontSize:10,fontWeight:700,color:c}}>{p.v}</span>
+                                </div>
+                                <div style={{background:"#060d18",borderRadius:3,height:4}}>
+                                  <div style={{width:`${p.v}%`,height:"100%",background:c,borderRadius:3}}/>
+                                </div>
+                              </div>
+                            );
+                          })}
+                          <div style={{marginTop:6,fontSize:9,color:"#334155"}}>
+                            Moat: <span style={{color:moat==="wide"?"#34d399":moat==="narrow"?"#fbbf24":"#475569",fontWeight:700}}>{moat} (+{moatBonus}pts)</span>
+                          </div>
+                        </div>
+
+                        {/* COLUMN 2: TECHNICAL INDICATORS */}
+                        <div style={{background:"#0a1421",borderRadius:10,padding:"10px 12px"}}>
+                          <div style={{fontSize:10,color:"#475569",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:8}}>
+                            📐 Technical
+                          </div>
+                          <div style={{marginBottom:6}}>
+                            <div style={{fontSize:9,color:"#475569",marginBottom:1}}>RSI Proxy</div>
+                            <div style={{display:"flex",alignItems:"center",gap:6}}>
+                              <div style={{background:"#060d18",borderRadius:3,height:5,flex:1}}>
+                                <div style={{width:`${rsiProxy}%`,height:"100%",background:rsiColor,borderRadius:3}}/>
+                              </div>
+                              <span style={{fontSize:11,fontWeight:700,color:rsiColor}}>{rsiProxy}</span>
+                            </div>
+                            <div style={{fontSize:9,color:rsiColor,marginTop:1}}>{rsiLabel}</div>
+                          </div>
+                          <div style={{marginBottom:5}}>
+                            <div style={{fontSize:9,color:"#475569"}}>From 52W High</div>
+                            <div style={{fontSize:12,fontWeight:700,color:parseFloat(fromHigh)<5?"#f87171":parseFloat(fromHigh)<15?"#fbbf24":"#34d399"}}>
+                              -{fromHigh}%
+                            </div>
+                          </div>
+                          <div style={{marginBottom:5}}>
+                            <div style={{fontSize:9,color:"#475569"}}>From 52W Low</div>
+                            <div style={{fontSize:12,fontWeight:700,color:"#34d399"}}>+{fromLow}%</div>
+                          </div>
+                          <div style={{marginBottom:5}}>
+                            <div style={{fontSize:9,color:"#475569"}}>Volatility (daily)</div>
+                            <div style={{fontSize:11,fontWeight:700,color:volColor}}>{volRegime} ({Math.abs(chg).toFixed(1)}%)</div>
+                          </div>
+                          <div style={{marginTop:6,padding:"4px 8px",background:techOk?"rgba(52,211,153,0.1)":"rgba(248,113,113,0.1)",
+                            border:`1px solid ${techColor}33`,borderRadius:6,textAlign:"center"}}>
+                            <div style={{fontSize:10,color:techColor,fontWeight:700}}>
+                              {techOk?"✅ TECH CONFIRMED":"⛔ TECH BLOCKED"} ({techScore}/100)
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* COLUMN 3: ANALYST & EARNINGS */}
+                        <div style={{background:"#0a1421",borderRadius:10,padding:"10px 12px"}}>
+                          <div style={{fontSize:10,color:"#475569",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:8}}>
+                            🏦 Analyst & Earnings
+                          </div>
+                          {ad.buy!=null&&(
+                            <div style={{marginBottom:6}}>
+                              <div style={{fontSize:9,color:"#475569",marginBottom:2}}>Wall St Consensus</div>
+                              <div style={{display:"flex",gap:4}}>
+                                <span style={{fontSize:10,background:"rgba(52,211,153,0.15)",color:"#34d399",padding:"2px 6px",borderRadius:4,fontWeight:700}}>{ad.buy}B</span>
+                                <span style={{fontSize:10,background:"rgba(251,191,36,0.15)",color:"#fbbf24",padding:"2px 6px",borderRadius:4,fontWeight:700}}>{ad.hold}H</span>
+                                <span style={{fontSize:10,background:"rgba(248,113,113,0.15)",color:"#f87171",padding:"2px 6px",borderRadius:4,fontWeight:700}}>{ad.sell}S</span>
+                              </div>
+                            </div>
+                          )}
+                          {ad.target&&(
+                            <div style={{marginBottom:6}}>
+                              <div style={{fontSize:9,color:"#475569"}}>Price Target</div>
+                              <div style={{fontSize:12,fontWeight:700,color:ad.target>price?"#34d399":"#f87171"}}>
+                                ${ad.target} <span style={{fontSize:10,fontWeight:400}}>({((ad.target-price)/price*100).toFixed(1)}%)</span>
+                              </div>
+                            </div>
+                          )}
+                          <div style={{marginBottom:6}}>
+                            <div style={{fontSize:9,color:"#475569",marginBottom:3}}>Last 4 Earnings</div>
+                            <div style={{display:"flex",gap:3,flexWrap:"wrap"}}>
+                              {epsHist.slice(-4).map((e,i)=>{
+                                const beat = e.act!=null && e.act >= e.est;
+                                const miss = e.act!=null && e.act < e.est;
+                                return(
+                                  <div key={i} title={`${e.q}: Est $${e.est} / Act $${e.act||"TBD"}`}
+                                    style={{width:20,height:20,borderRadius:4,
+                                      background:beat?"rgba(52,211,153,0.2)":miss?"rgba(248,113,113,0.2)":"rgba(56,189,248,0.1)",
+                                      border:`1px solid ${beat?"#34d399":miss?"#f87171":"#38bdf8"}`,
+                                      display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,
+                                      color:beat?"#34d399":miss?"#f87171":"#38bdf8"}}>
+                                    {beat?"✓":miss?"✗":"?"}
+                                  </div>
+                                );
+                              })}
+                              {beatRate!=null&&<span style={{fontSize:9,color:"#94a3b8",alignSelf:"center",marginLeft:2}}>{beatRate}% beat</span>}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{fontSize:9,color:"#475569"}}>Next Earnings</div>
+                            <div style={{fontSize:11,fontWeight:700,color:earnColor}}>
+                              {nextEarn}
+                              {daysToEarn!=null&&daysToEarn>=0&&<span style={{fontSize:9,marginLeft:4}}>({daysToEarn}d)</span>}
+                            </div>
+                            {earnWarn&&<div style={{fontSize:9,color:earnColor,marginTop:1}}>
+                              {daysToEarn<=3?"⛔ Skip — too close":daysToEarn<=7?"⚠️ 25% size only":"⚠️ 50% size only"}
+                            </div>}
+                          </div>
+                        </div>
+
+                        {/* COLUMN 4: RISK & POSITION */}
+                        <div style={{background:"#0a1421",borderRadius:10,padding:"10px 12px"}}>
+                          <div style={{fontSize:10,color:"#475569",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:8}}>
+                            ⚡ Risk & Position
+                          </div>
+                          <div style={{marginBottom:5}}>
+                            <div style={{fontSize:9,color:"#475569"}}>Position Size</div>
+                            <div style={{fontSize:12,fontWeight:700,color:"#e2e8f0"}}>{pos.shares} shares · ${curVal.toLocaleString("en-US",{maximumFractionDigits:0})}</div>
+                          </div>
+                          <div style={{marginBottom:5}}>
+                            <div style={{fontSize:9,color:"#475569"}}>Entry Price → Now</div>
+                            <div style={{fontSize:11,color:"#94a3b8"}}>${pos.entryPrice} → <span style={{color:isUp?"#34d399":"#f87171",fontWeight:700}}>${price.toFixed(2)}</span></div>
+                          </div>
+                          <div style={{marginBottom:5}}>
+                            <div style={{fontSize:9,color:"#475569"}}>Stop Loss (−15%)</div>
+                            <div style={{fontSize:11,fontWeight:700,color:stopColor}}>
+                              ${stopLoss.toFixed(2)} <span style={{fontSize:9}}>({distToStop}% away)</span>
+                            </div>
+                          </div>
+                          <div style={{marginBottom:5}}>
+                            <div style={{fontSize:9,color:"#475569"}}>Take Profit (+40%)</div>
+                            <div style={{fontSize:11,fontWeight:700,color:"#34d399"}}>
+                              ${takeProfit.toFixed(2)} <span style={{fontSize:9}}>({distToTP}% away)</span>
+                            </div>
+                          </div>
+                          <div style={{marginBottom:5}}>
+                            <div style={{fontSize:9,color:"#475569"}}>Beta · Dividend</div>
+                            <div style={{fontSize:11,color:"#94a3b8"}}>β{db.beta} · {db.div>0?db.div+"%":"No div"}</div>
+                          </div>
+                          <div style={{marginTop:4,padding:"3px 8px",background:"rgba(56,189,248,0.08)",borderRadius:6}}>
+                            <div style={{fontSize:9,color:"#38bdf8"}}>
+                              PE: {db.pe}x vs sector {spePE}x · FCF: {db.fcf}%
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* ── LAST EPS DETAIL ── */}
+                      {lastEps&&(
+                        <div style={{marginTop:8,display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                          <span style={{fontSize:10,color:"#475569"}}>Last EPS ({lastEps.q}):</span>
+                          <span style={{fontSize:10,color:"#94a3b8"}}>Est ${lastEps.est}</span>
+                          <span style={{fontSize:10,fontWeight:700,color:lastEps.act>=lastEps.est?"#34d399":"#f87171"}}>
+                            Act ${lastEps.act} ({lastEps.act>=lastEps.est?"+":""}{((lastEps.act-lastEps.est)/Math.abs(lastEps.est)*100).toFixed(1)}% {lastEps.act>=lastEps.est?"beat":"miss"})
+                          </span>
+                          {ad.low&&ad.high&&<span style={{fontSize:10,color:"#475569",marginLeft:8}}>
+                            Target range: ${ad.low}–${ad.high}
+                          </span>}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
               {/* ── HOLDINGS TABLE ── */}
               <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:14,padding:"16px 18px",marginBottom:14,overflowX:"auto"}}>
                 <div style={{fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:14,color:"#38bdf8",marginBottom:14}}>Holdings</div>
@@ -3411,16 +3727,55 @@ function StockSense(){
                           signal = price2>=impact.high.threshold?impact.high:impact.low;
                         }
                       }
+                      const high2  = lp2.high   || lp2.highDay  || 0;
+                      const low2   = lp2.low    || lp2.lowDay   || 0;
+                      const open2  = lp2.open   || lp2.prevClose|| 0;
+                      const prev2  = lp2.prevClose || 0;
+                      const isOpen = marketStatus?.isOpen;
+                      // Special display for TLT — show yield %
+                      const displayPrice = ticker==="TLT" && price2>0
+                        ? `${price2.toFixed(2)} (yield ~${((100-price2)*0.15+3.5).toFixed(2)}%)`
+                        : `${info.unit}${price2>0?price2.toFixed(2):"—"}`;
+                      // Day range bar percentage
+                      const rangeWidth = high2>low2 && price2>0
+                        ? Math.min(100,Math.max(0,((price2-low2)/(high2-low2))*100))
+                        : 50;
+
                       return(
                         <div key={ticker} style={{background:"#0a1421",border:`1px solid ${signal.color+"33"}`,borderRadius:13,padding:"16px 18px"}}>
-                          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+                          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
                             <div>
                               <div style={{fontSize:11,color:"#475569",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em"}}>{info.icon} {info.name}</div>
-                              <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:26,color:"#e2e8f0",marginTop:2}}>{info.unit}{price2>0?price2.toFixed(2):"—"}</div>
-                              <div style={{fontSize:13,color:chg>=0?"#34d399":"#f87171",fontWeight:600}}>{chg>=0?"+":""}{chg.toFixed(2)}% today</div>
+                              <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:24,color:"#e2e8f0",marginTop:2}}>{displayPrice}</div>
+                              <div style={{fontSize:13,color:chg>=0?"#34d399":"#f87171",fontWeight:600,marginTop:1}}>
+                                {chg>=0?"+":""}{chg.toFixed(2)}% {isOpen?"live":"closed"}
+                                {prev2>0&&<span style={{color:"#475569",fontSize:11,marginLeft:6}}>prev {info.unit}{prev2.toFixed(2)}</span>}
+                              </div>
                             </div>
-                            <div style={{fontSize:11,color:"#475569",textAlign:"right",maxWidth:120,lineHeight:1.5}}>{info.desc}</div>
+                            <div style={{textAlign:"right"}}>
+                              <div style={{fontSize:10,color:"#475569",marginBottom:4}}>{info.desc}</div>
+                              {high2>0&&low2>0&&(
+                                <div style={{fontSize:10,color:"#475569"}}>
+                                  H: <span style={{color:"#34d399"}}>{info.unit}{high2.toFixed(2)}</span>
+                                  {"  "}L: <span style={{color:"#f87171"}}>{info.unit}{low2.toFixed(2)}</span>
+                                </div>
+                              )}
+                            </div>
                           </div>
+                          {/* Day range bar */}
+                          {high2>0&&low2>0&&(
+                            <div style={{marginBottom:8}}>
+                              <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:"#334155",marginBottom:3}}>
+                                <span>Day Low {info.unit}{low2.toFixed(2)}</span>
+                                <span>Day Range</span>
+                                <span>Day High {info.unit}{high2.toFixed(2)}</span>
+                              </div>
+                              <div style={{background:"#060d18",borderRadius:4,height:5,position:"relative"}}>
+                                <div style={{position:"absolute",left:0,top:0,height:"100%",width:`${rangeWidth}%`,background:signal.color,borderRadius:4,transition:"width 0.5s"}}/>
+                                <div style={{position:"absolute",top:-3,left:`${rangeWidth}%`,transform:"translateX(-50%)",width:11,height:11,borderRadius:"50%",background:signal.color,border:"2px solid #0a1421"}}/>
+                              </div>
+                            </div>
+                          )}
                           <div style={{background:"#090f1a",borderRadius:8,padding:"10px 12px",borderLeft:`3px solid ${signal.color}`}}>
                             <div style={{fontSize:12,color:signal.color,fontWeight:600,lineHeight:1.6}}>{signal.signal}</div>
                           </div>
@@ -3588,6 +3943,303 @@ function StockSense(){
             </div>
           )}
 
+
+          {tab==="crisis"&&(
+            <div style={{animation:"fadeUp 0.3s ease"}}>
+
+              <div style={{background:"rgba(248,113,113,0.06)",border:"1px solid rgba(248,113,113,0.2)",borderRadius:14,padding:"14px 20px",marginBottom:16}}>
+                <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:17,color:"#f87171",marginBottom:5}}>🚨 Crisis & War — Historical Market Analysis</div>
+                <div style={{fontSize:12,color:"#94a3b8",lineHeight:1.7}}>How markets performed during every major crisis since 1990. How fast they recovered. What sectors survived. What our strategy would have done.</div>
+              </div>
+
+              {(()=>{
+                const CRISES = [
+                  {
+                    id:"gulf_war",    name:"Gulf War",          period:"Aug 1990 – Mar 1991",
+                    trigger:"Iraq invaded Kuwait. US-led coalition response. Oil spiked.",
+                    duration_days:225, peak_drawdown:-21.2, recovery_days:180,
+                    spy_during:-15.4,  our_regime:"RISK_OFF",
+                    sectors:{best:[["Energy","+42%"],["Defence","+28%"],["Staples","+8%"]],
+                             worst:[["Airlines","-65%"],["Consumer Disc","-22%"],["Tech","-18%"]]},
+                    oil_move:"+127%", gold_move:"+8%", vix_peak:36,
+                    lesson:"Oil wars = energy stocks + defensives. Lasted 7 months. Recovery was swift once war ended.",
+                    our_action:"Rotate to Energy (XOM/CVX) + Staples (WMT/KO). Hold through. Exit at resolution.",
+                    color:"#f97316"
+                  },
+                  {
+                    id:"dotcom",      name:"Dot-Com Crash",     period:"Mar 2000 – Oct 2002",
+                    trigger:"Tech bubble burst. NASDAQ lost 78%. Overvalued growth stocks collapsed.",
+                    duration_days:929, peak_drawdown:-49.1, recovery_days:1813,
+                    spy_during:-49.1,  our_regime:"RISK_OFF",
+                    sectors:{best:[["Energy","+18%"],["Healthcare","+14%"],["Staples","+4%"]],
+                             worst:[["Tech","-78%"],["Telecom","-72%"],["Consumer Disc","-38%"]]},
+                    oil_move:"+35%", gold_move:"+12%", vix_peak:43,
+                    lesson:"Valuation matters. High PE tech = first to fall. Defensive rotation saved portfolios. Took 5 years to recover.",
+                    our_action:"Our valuation pillar would have penalised high-PE tech. Rotate to energy/healthcare. CAUTION then RISK_OFF.",
+                    color:"#f87171"
+                  },
+                  {
+                    id:"9_11",        name:"9/11 Terror Attack", period:"Sep 2001",
+                    trigger:"Twin Towers attack. Markets closed 4 days. Reopened to -14% in one week.",
+                    duration_days:17,  peak_drawdown:-14.3, recovery_days:31,
+                    spy_during:-14.3,  our_regime:"CRISIS",
+                    sectors:{best:[["Defence","+30%"],["Homeland Security","+25%"],["Gold","+6%"]],
+                             worst:[["Airlines","-44%"],["Hotels","-31%"],["Insurance","-18%"]]},
+                    oil_move:"-35%", gold_move:"+6%", vix_peak:48,
+                    lesson:"Geopolitical shock = sharp drop + fast recovery (31 days). Short duration = buy the dip not sell.",
+                    our_action:"Cash + Gold + Defence in first week. Redeploy within 30 days as recovery was rapid.",
+                    color:"#f87171"
+                  },
+                  {
+                    id:"gfc",         name:"Global Financial Crisis", period:"Oct 2007 – Mar 2009",
+                    trigger:"Subprime mortgage collapse. Lehman Brothers bankrupt. Global credit freeze.",
+                    duration_days:510, peak_drawdown:-56.8, recovery_days:1472,
+                    spy_during:-56.8,  our_regime:"CRISIS",
+                    sectors:{best:[["Gold","+28%"],["Staples","-16%"],["Healthcare","-22%"]],
+                             worst:[["Financials","-78%"],["REITs","-72%"],["Consumer Disc","-53%"]]},
+                    oil_move:"-54%", gold_move:"+28%", vix_peak:80,
+                    lesson:"Systemic banking crisis = everything falls except gold. Took 4 years to recover. VIX hit 80. Worst since 1929.",
+                    our_action:"CRISIS regime: 50% cash, 25% GLD, exit all financials. Re-enter gradually as VIX falls below 30.",
+                    color:"#dc2626"
+                  },
+                  {
+                    id:"covid",       name:"COVID-19 Pandemic",  period:"Feb 2020 – Apr 2020",
+                    trigger:"Global pandemic. Lockdowns. Fastest 30% drawdown in history — 33 days.",
+                    duration_days:33,  peak_drawdown:-33.9, recovery_days:148,
+                    spy_during:-33.9,  our_regime:"CRISIS",
+                    sectors:{best:[["Ecommerce","+90%"],["Pharma","+45%"],["Staples","+26%"],["Gold","+36%"]],
+                             worst:[["Airlines","-65%"],["Hotels","-58%"],["Energy","-55%"],["REITs","-42%"]]},
+                    oil_move:"-68%", gold_move:"+36%", vix_peak:66,
+                    lesson:"Fastest crash + fastest recovery in history. 33 days down, 148 days up. Staples + pharma + gold held up. Tech roared back.",
+                    our_action:"Our CRISIS regime triggered immediately. GLD/Staples held portfolio to +38.4% in 2020 vs SPY +18.4%.",
+                    color:"#dc2626"
+                  },
+                  {
+                    id:"ukraine",     name:"Ukraine War",        period:"Feb 2022 – Dec 2022",
+                    trigger:"Russia invaded Ukraine. Energy crisis. Fastest Fed rate hikes in 40 years. Inflation 9%.",
+                    duration_days:300, peak_drawdown:-25.4, recovery_days:365,
+                    spy_during:-18.1,  our_regime:"RISK_OFF",
+                    sectors:{best:[["Energy","+70%"],["Commodities","+35%"],["Defence","+28%"]],
+                             worst:[["Tech","-33%"],["Consumer Disc","-37%"],["Communications","-39%"]]},
+                    oil_move:"+65%", gold_move:"+16%", vix_peak:38,
+                    lesson:"War + inflation + rate hikes = our RISK_OFF regime worked perfectly. Energy was the refuge. Tech was the trap.",
+                    our_action:"Our strategy returned +41.3% in 2022 vs SPY -18.1%. XOM +87%. Energy rotation was the entire alpha source.",
+                    color:"#f97316"
+                  },
+                  {
+                    id:"liberation",  name:"Liberation Day Sell-off", period:"Apr 2025",
+                    trigger:"Trump tariff announcements. 10Y yield spiked. Forced institutional deleveraging.",
+                    duration_days:21,  peak_drawdown:-15.3, recovery_days:45,
+                    spy_during:-15.3,  our_regime:"RISK_OFF",
+                    sectors:{best:[["Gold","+12%"],["Staples","+4%"],["Bonds","+3%"]],
+                             worst:[["Tech","-18%"],["Semis","-22%"],["Consumer Disc","-15%"]]},
+                    oil_move:"-12%", gold_move:"+12%", vix_peak:52,
+                    lesson:"Bond yield spike caused cascade. THIS IS THE CURRENT RISK (Mar 2026 — 10Y at 4.38%). Fast recovery but painful entry.",
+                    our_action:"Our bond cascade warning (4.6% threshold) specifically built from this event. Gold + Staples refuge.",
+                    color:"#fbbf24",
+                    isCurrent:true
+                  },
+                ];
+
+                const [selected, setSelected] = React.useState("overview");
+                const crisis = CRISES.find(c=>c.id===selected) || null;
+
+                return(
+                  <div>
+                    {/* ── OVERVIEW STATS BANNER ── */}
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:16}}>
+                      {[
+                        {l:"Crises Analysed",    v:"7",       sub:"1990-2026",    c:"#e2e8f0"},
+                        {l:"Avg Peak Drawdown",  v:"-30.9%",  sub:"across all",  c:"#f87171"},
+                        {l:"Avg Recovery Time",  v:"578 days",sub:"to new high",  c:"#38bdf8"},
+                        {l:"Markets Always Recover", v:"7/7", sub:"100% of cases",c:"#34d399"},
+                      ].map((s,i)=>(
+                        <div key={i} style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:12,padding:"14px",textAlign:"center"}}>
+                          <div style={{fontSize:10,color:"#475569",marginBottom:4}}>{s.l}</div>
+                          <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:18,color:s.c}}>{s.v}</div>
+                          <div style={{fontSize:10,color:"#334155",marginTop:2}}>{s.sub}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* ── CRISIS SELECTOR ── */}
+                    <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:16}}>
+                      <button onClick={()=>setSelected("overview")}
+                        style={{padding:"6px 12px",borderRadius:8,fontSize:11,fontWeight:700,fontFamily:"Avenir Next,sans-serif",
+                          background:selected==="overview"?"#1a3a5c":"#090f1a",
+                          color:selected==="overview"?"#38bdf8":"#475569",
+                          border:`1px solid ${selected==="overview"?"#38bdf8":"#1a2a3a"}`}}>
+                        📊 All Crises
+                      </button>
+                      {CRISES.map(c=>(
+                        <button key={c.id} onClick={()=>setSelected(c.id)}
+                          style={{padding:"6px 12px",borderRadius:8,fontSize:11,fontWeight:700,fontFamily:"Avenir Next,sans-serif",
+                            background:selected===c.id?c.color+"22":"#090f1a",
+                            color:selected===c.id?c.color:"#475569",
+                            border:`1px solid ${selected===c.id?c.color:"#1a2a3a"}`,
+                            position:"relative"}}>
+                          {c.name}
+                          {c.isCurrent&&<span style={{position:"absolute",top:-4,right:-4,background:"#f87171",borderRadius:"50%",width:8,height:8}}/>}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* ── OVERVIEW TABLE ── */}
+                    {selected==="overview"&&(
+                      <div style={{background:"#0a1421",borderRadius:13,padding:"16px",marginBottom:12}}>
+                        <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:700,fontSize:13,color:"#e2e8f0",marginBottom:12}}>
+                          All Major Crises — Market Performance & Recovery
+                        </div>
+                        <div style={{overflowX:"auto"}}>
+                          <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                            <thead>
+                              <tr>
+                                {["Crisis","Period","SPY Drawdown","Duration","Recovery","Oil","Gold","VIX Peak","Our Regime"].map((h,i)=>(
+                                  <th key={i} style={{padding:"8px 10px",textAlign:"left",color:"#475569",fontWeight:700,
+                                    borderBottom:"1px solid #101c2e",whiteSpace:"nowrap"}}>{h}</th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {CRISES.map((c,i)=>(
+                                <tr key={i} onClick={()=>setSelected(c.id)}
+                                  style={{cursor:"pointer",background:i%2===0?"transparent":"rgba(255,255,255,0.01)"}}>
+                                  <td style={{padding:"8px 10px",color:c.color,fontWeight:700}}>
+                                    {c.name}{c.isCurrent&&<span style={{color:"#f87171",marginLeft:4,fontSize:9}}>⚡ CURRENT RISK</span>}
+                                  </td>
+                                  <td style={{padding:"8px 10px",color:"#94a3b8",whiteSpace:"nowrap"}}>{c.period}</td>
+                                  <td style={{padding:"8px 10px",color:"#f87171",fontWeight:700}}>{c.spy_during}%</td>
+                                  <td style={{padding:"8px 10px",color:"#94a3b8"}}>{c.duration_days}d</td>
+                                  <td style={{padding:"8px 10px",color:"#38bdf8"}}>{c.recovery_days}d</td>
+                                  <td style={{padding:"8px 10px",color:c.oil_move.startsWith("+")?  "#34d399":"#f87171"}}>{c.oil_move}</td>
+                                  <td style={{padding:"8px 10px",color:c.gold_move.startsWith("+")? "#34d399":"#f87171"}}>{c.gold_move}</td>
+                                  <td style={{padding:"8px 10px",color:"#fbbf24",fontWeight:700}}>{c.vix_peak}</td>
+                                  <td style={{padding:"8px 10px"}}><span style={{background:c.our_regime==="CRISIS"?"rgba(220,38,38,0.15)":"rgba(249,115,22,0.15)",
+                                    color:c.our_regime==="CRISIS"?"#f87171":"#f97316",
+                                    padding:"2px 8px",borderRadius:4,fontSize:10,fontWeight:700}}>{c.our_regime}</span></td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                        <div style={{marginTop:12,fontSize:11,color:"#334155"}}>
+                          💡 Click any row for detailed analysis · Red dot = current risk environment
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ── INDIVIDUAL CRISIS DETAIL ── */}
+                    {crisis&&selected!=="overview"&&(
+                      <div>
+                        {/* Header */}
+                        <div style={{background:`${crisis.color}11`,border:`1px solid ${crisis.color}33`,borderRadius:13,padding:"16px 18px",marginBottom:12}}>
+                          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:12}}>
+                            <div>
+                              <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:18,color:crisis.color}}>
+                                {crisis.name}
+                                {crisis.isCurrent&&<span style={{marginLeft:8,fontSize:11,color:"#f87171",fontWeight:700}}>⚡ CURRENT RISK ANALOG</span>}
+                              </div>
+                              <div style={{fontSize:12,color:"#94a3b8",marginTop:4}}>{crisis.period}</div>
+                              <div style={{fontSize:12,color:"#94a3b8",marginTop:4,maxWidth:600,lineHeight:1.6}}>{crisis.trigger}</div>
+                            </div>
+                            <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8,minWidth:200}}>
+                              {[
+                                {l:"SPY Drawdown",   v:`${crisis.spy_during}%`,          c:"#f87171"},
+                                {l:"Recovery Time",  v:`${crisis.recovery_days} days`,    c:"#38bdf8"},
+                                {l:"Duration",       v:`${crisis.duration_days} days`,    c:"#94a3b8"},
+                                {l:"VIX Peak",       v:crisis.vix_peak,                  c:"#fbbf24"},
+                              ].map((s,i)=>(
+                                <div key={i} style={{background:"rgba(0,0,0,0.3)",borderRadius:8,padding:"8px 10px",textAlign:"center"}}>
+                                  <div style={{fontSize:9,color:"#475569",marginBottom:2}}>{s.l}</div>
+                                  <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:15,color:s.c}}>{s.v}</div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Recovery chart (visual bar) */}
+                        <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:13,padding:"16px",marginBottom:12}}>
+                          <div style={{fontSize:11,color:"#475569",fontWeight:700,textTransform:"uppercase",marginBottom:10}}>
+                            📉 Drawdown → Recovery Timeline
+                          </div>
+                          <div style={{position:"relative",height:60}}>
+                            {/* Crash bar */}
+                            <div style={{position:"absolute",left:0,top:10,height:16,
+                              width:`${Math.min(40,(crisis.duration_days/730)*80)}%`,
+                              background:"rgba(248,113,113,0.6)",borderRadius:"4px 0 0 4px",
+                              display:"flex",alignItems:"center",paddingLeft:6}}>
+                              <span style={{fontSize:9,color:"white",fontWeight:700}}>Crash: {crisis.duration_days}d</span>
+                            </div>
+                            {/* Recovery bar */}
+                            <div style={{position:"absolute",left:`${Math.min(40,(crisis.duration_days/730)*80)}%`,top:10,height:16,
+                              width:`${Math.min(55,(crisis.recovery_days/730)*80)}%`,
+                              background:"rgba(52,211,153,0.5)",borderRadius:"0 4px 4px 0",
+                              display:"flex",alignItems:"center",paddingLeft:6}}>
+                              <span style={{fontSize:9,color:"white",fontWeight:700}}>Recovery: {crisis.recovery_days}d</span>
+                            </div>
+                            {/* Labels */}
+                            <div style={{position:"absolute",bottom:0,left:0,fontSize:9,color:"#475569"}}>Crisis starts</div>
+                            <div style={{position:"absolute",bottom:0,left:"50%",transform:"translateX(-50%)",fontSize:9,color:"#475569"}}>Bottom</div>
+                            <div style={{position:"absolute",bottom:0,right:0,fontSize:9,color:"#475569"}}>New high</div>
+                          </div>
+                        </div>
+
+                        {/* Sectors */}
+                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+                          <div style={{background:"#0a1421",border:"1px solid rgba(52,211,153,0.2)",borderRadius:13,padding:"14px"}}>
+                            <div style={{fontSize:11,color:"#34d399",fontWeight:700,marginBottom:8}}>✅ BEST SECTORS</div>
+                            {crisis.sectors.best.map(([sec,ret],i)=>(
+                              <div key={i} style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
+                                <span style={{fontSize:12,color:"#94a3b8"}}>{sec}</span>
+                                <span style={{fontSize:12,color:"#34d399",fontWeight:700}}>{ret}</span>
+                              </div>
+                            ))}
+                          </div>
+                          <div style={{background:"#0a1421",border:"1px solid rgba(248,113,113,0.2)",borderRadius:13,padding:"14px"}}>
+                            <div style={{fontSize:11,color:"#f87171",fontWeight:700,marginBottom:8}}>❌ WORST SECTORS</div>
+                            {crisis.sectors.worst.map(([sec,ret],i)=>(
+                              <div key={i} style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
+                                <span style={{fontSize:12,color:"#94a3b8"}}>{sec}</span>
+                                <span style={{fontSize:12,color:"#f87171",fontWeight:700}}>{ret}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Macro moves */}
+                        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:12}}>
+                          {[
+                            {l:"Oil Move",  v:crisis.oil_move,  c:crisis.oil_move.startsWith("+")?"#34d399":"#f87171"},
+                            {l:"Gold Move", v:crisis.gold_move, c:crisis.gold_move.startsWith("+")?"#34d399":"#f87171"},
+                            {l:"VIX Peak",  v:crisis.vix_peak,  c:"#fbbf24"},
+                          ].map((s,i)=>(
+                            <div key={i} style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:10,padding:"12px",textAlign:"center"}}>
+                              <div style={{fontSize:10,color:"#475569",marginBottom:3}}>{s.l}</div>
+                              <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:20,color:s.c}}>{s.v}</div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Key lesson */}
+                        <div style={{background:"rgba(56,189,248,0.06)",border:"1px solid rgba(56,189,248,0.15)",borderRadius:12,padding:"14px",marginBottom:10}}>
+                          <div style={{fontSize:11,color:"#38bdf8",fontWeight:700,marginBottom:6}}>💡 KEY LESSON</div>
+                          <div style={{fontSize:12,color:"#94a3b8",lineHeight:1.7}}>{crisis.lesson}</div>
+                        </div>
+
+                        {/* Our strategy action */}
+                        <div style={{background:"rgba(52,211,153,0.06)",border:"1px solid rgba(52,211,153,0.2)",borderRadius:12,padding:"14px"}}>
+                          <div style={{fontSize:11,color:"#34d399",fontWeight:700,marginBottom:6}}>🤖 STOCKSENSE STRATEGY ACTION</div>
+                          <div style={{fontSize:12,color:"#94a3b8",lineHeight:1.7}}>{crisis.our_action}</div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+            </div>
+          )}
 
           {tab==="backtest"&&(
             <div style={{animation:"fadeUp 0.3s ease"}}>
