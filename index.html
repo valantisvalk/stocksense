@@ -44,7 +44,7 @@ const DB = {
   WMT:  { name:"Walmart Inc.",          s:"Retail",            cap:"700B", vol:15.4, beta:0.56, pe:36.0, div:1.0, baseP:87.90,  rg:5.1,  fcf:1.8, de:0.6, rs:"low",  ss:74, r:{2015:-29.9,2016:18.1,2017:50.6,2018:-3.1,2019:30.1,2020:27.7,2021:1.2,2022:0.6,2023:22.3,2024:78.1,2025:6.4}, desc:"World's largest retailer." },
   COST: { name:"Costco Wholesale",      s:"Retail",            cap:"365B", vol:17.8, beta:0.82, pe:52.0, div:0.6, baseP:820.50, rg:5.0,  fcf:1.2, de:0.3, rs:"low",  ss:76, r:{2015:10.5,2016:10.7,2017:12.3,2018:12.0,2019:48.1,2020:33.7,2021:54.3,2022:-19.4,2023:47.0,2024:44.8,2025:14.2}, desc:"Membership warehouse with extremely loyal customers." },
   NFLX: { name:"Netflix Inc.",          s:"Streaming",         cap:"310B", vol:44.2, beta:1.38, pe:44.0, div:0.0, baseP:718.10, rg:15.0, fcf:1.8, de:0.8, rs:"med",  ss:70, r:{2015:134.4,2016:8.2,2017:55.1,2018:39.4,2019:20.9,2020:67.1,2021:11.4,2022:-51.1,2023:65.1,2024:83.1,2025:9.8}, desc:"World's leading streaming service with 260M+ subscribers." },
-  XOM:  { name:"Exxon Mobil",           s:"Energy",            cap:"540B", vol:22.8, beta:0.98, pe:14.0, div:3.4, baseP:120.80, rg:1.4,  fcf:5.8, de:0.2, rs:"low",  ss:58, r:{2015:-17.0,2016:18.0,2017:-5.0,2018:-15.5,2019:5.6,2020:-41.3,2021:71.5,2022:87.4,2023:4.3,2024:16.0,2025:-2.4}, desc:"World's largest publicly traded oil and gas company." },
+  XOM:  { name:"Exxon Mobil",           s:"Energy",            cap:"540B", vol:22.8, beta:0.98, pe:14.0, div:3.8, baseP:120.80, rg:1.4,  fcf:5.8, de:0.2, rs:"low",  ss:58, r:{2015:-17.0,2016:18.0,2017:-5.0,2018:-15.5,2019:5.6,2020:-41.3,2021:71.5,2022:87.4,2023:4.3,2024:16.0,2025:-2.4}, desc:"World's largest publicly traded oil and gas company." },
   BRK_B:{ name:"Berkshire Hathaway B",  s:"Financials",        cap:"1.0T", vol:16.8, beta:0.90, pe:22.0, div:0.0, baseP:471.20, rg:2.0,  fcf:3.8, de:0.3, rs:"pos",  ss:65, r:{2015:-12.5,2016:23.4,2017:21.9,2018:2.8,2019:11.0,2020:2.4,2021:29.6,2022:4.0,2023:15.8,2024:25.5,2025:18.2}, desc:"Warren Buffett's holding company owning hundreds of businesses." },
   SPY:  { name:"S&P 500 ETF (SPDR)",    s:"Index ETF",         cap:"560B", vol:14.8, beta:1.00, pe:22.0, div:1.3, baseP:536.02, rg:8.0,  fcf:3.5, de:0.5, rs:"med",  ss:65, r:{2015:1.4,2016:12.0,2017:21.8,2018:-4.4,2019:31.5,2020:18.4,2021:28.7,2022:-18.1,2023:26.3,2024:25.0,2025:-4.8}, desc:"Owns all 500 largest US companies — the world's most popular ETF." },
   PLTR: { name:"Palantir Technologies", s:"Technology",    sector:"Technology",      cap:"270B", vol:58.1, beta:2.82, pe:220.0, div:0.0, baseP:118.0, rg:0.0, fcf:1.8, de:0.0, rs:"high", ss:72, r:{2015:0,2016:0,2017:0,2018:0,2019:0,2020:170.0,2021:-23.6,2022:-66.3,2023:167.5,2024:340.5,2025:12.0}, desc:"AI analytics platform for government and enterprise clients." },
@@ -1102,15 +1102,19 @@ function StockSense(){
 
   // Fetch live prices from Finnhub
   const fetchAllPrices = async () => {
-    // Minimal priority list to stay well within Finnhub 60/min limit
-    const PRIORITY = [...new Set([
-      ...PORTFOLIO_INIT.map(p=>p.ticker),  // your 10 portfolio stocks
-      "SPY","GLD","USO","VIXY",            // macro essentials only
+    // Fetch ALL stocks in smart batches — 2 per second = safe within 60/min limit
+    // Round 1: Portfolio + macro (highest priority — fetch first)
+    const ROUND1 = [...new Set([
+      ...PORTFOLIO_INIT.map(p=>p.ticker),
+      "SPY","GLD","USO","VIXY","TLT","UUP",
     ])];
-    for(let i=0;i<PRIORITY.length;i+=2){
-      const batch=PRIORITY.slice(i,i+2);
+    // Round 2: Rest of universe
+    const ROUND2 = TICKERS.filter(t=>!ROUND1.includes(t));
+    const ALL = [...ROUND1, ...ROUND2];
+    for(let i=0;i<ALL.length;i+=2){
+      const batch=ALL.slice(i,i+2);
       await Promise.all(batch.map(t=>fetchFinnhub(t)));
-      if(i+2<PRIORITY.length) await new Promise(r=>setTimeout(r,1500));
+      if(i+2<ALL.length) await new Promise(r=>setTimeout(r,2000));
     }
     // Use Finnhub live data only — no simulation tick()
     setPrices(prev=>{
@@ -2446,319 +2450,199 @@ function StockSense(){
                 </div>
               </div>
 
-              {/* ── AUTO TRADER LIVE PORTFOLIO ── */}
-              <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:13,padding:"14px 18px",marginBottom:14}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,flexWrap:"wrap",gap:8}}>
-                  <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:700,fontSize:11,color:"#818cf8",textTransform:"uppercase",letterSpacing:"0.07em"}}>
-                    🤖 Auto Trader v3 — Live Portfolio
-                  </div>
-                  <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                    {autoPortfolio&&<div style={{fontSize:11,color:"#475569"}}>Updated: {autoPortfolio.updated}</div>}
-                    <button onClick={()=>{setShowAutoTrader(v=>!v);if(!autoPortfolio)fetchAutoPortfolio();}}
-                      style={{padding:"6px 14px",borderRadius:8,fontSize:12,fontWeight:700,fontFamily:"Avenir Next,sans-serif",
-                        background:showAutoTrader?"rgba(129,140,248,0.15)":"#0d1826",
-                        border:`1px solid ${showAutoTrader?"#818cf8":"#101c2e"}`,
-                        color:showAutoTrader?"#818cf8":"#94a3b8",cursor:"pointer"}}>
-                      {showAutoTrader?"Hide":"View Live Portfolio"}
-                    </button>
-                    {showAutoTrader&&<button onClick={fetchAutoPortfolio}
-                      style={{padding:"6px 14px",borderRadius:8,fontSize:12,fontWeight:700,fontFamily:"Avenir Next,sans-serif",
-                        background:"#0d1826",border:"1px solid #101c2e",color:"#94a3b8",cursor:"pointer"}}>
-                      🔄 Refresh
-                    </button>}
-                  </div>
-                </div>
-
-                {showAutoTrader&&(
-                  <>
-                    {autoLoading&&(
-                      <div style={{textAlign:"center",padding:"20px",color:"#475569",fontSize:13}}>
-                        Loading auto trader portfolio...
-                      </div>
-                    )}
-                    {autoError&&(
-                      <div style={{background:"rgba(248,113,113,0.06)",border:"1px solid rgba(248,113,113,0.2)",borderRadius:10,padding:"12px 14px"}}>
-                        <div style={{fontSize:13,color:"#f87171",fontWeight:600,marginBottom:4}}>⚠️ Could not load auto trader data</div>
-                        <div style={{fontSize:12,color:"#94a3b8"}}>{autoError}</div>
-                        <div style={{fontSize:11,color:"#475569",marginTop:6}}>
-                          Make sure paper_trader_v3.py has run at least once and pushed portfolio_summary.json to GitHub.
-                        </div>
-                      </div>
-                    )}
-                    {autoPortfolio&&!autoLoading&&(
-                      <>
-                        {/* Summary stats */}
-                        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:12}}>
-                          {[
-                            {label:"Portfolio Value", value:`$${autoPortfolio.portfolio_value.toLocaleString()}`, color:"#e2e8f0"},
-                            {label:"Total P&L",       value:`${autoPortfolio.total_pnl_pct>=0?"+":""}${autoPortfolio.total_pnl_pct.toFixed(2)}%`, color:autoPortfolio.total_pnl_pct>=0?"#34d399":"#f87171"},
-                            {label:"vs SPY (Alpha)",  value:`${autoPortfolio.alpha>=0?"+":""}${autoPortfolio.alpha.toFixed(2)}%`, color:autoPortfolio.alpha>=0?"#38bdf8":"#f87171"},
-                            {label:"Regime",          value:autoPortfolio.regime, color:{RISK_ON:"#34d399",CAUTION:"#fbbf24",RISK_OFF:"#f87171",CRISIS:"#f97316"}[autoPortfolio.regime]||"#94a3b8"},
-                          ].map((s,i)=>(
-                            <div key={i} style={{background:"#090f1a",borderRadius:9,padding:"10px 12px",textAlign:"center"}}>
-                              <div style={{fontSize:10,color:"#475569",fontWeight:700,textTransform:"uppercase",marginBottom:3}}>{s.label}</div>
-                              <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:15,color:s.color}}>{s.value}</div>
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* Positions table */}
-                        <div style={{marginBottom:12}}>
-                          <div style={{fontSize:10,color:"#475569",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:8}}>
-                            Positions ({autoPortfolio.positions.length})
-                          </div>
-                          <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
-                            <thead>
-                              <tr>
-                                {["Ticker","Shares","Avg Cost","Now","P&L %","Value"].map((h,i)=>(
-                                  <th key={i} style={{textAlign:i===0?"left":"right",padding:"6px 8px",fontSize:10,color:"#475569",fontWeight:700,textTransform:"uppercase",borderBottom:"1px solid #101c2e"}}>{h}</th>
-                                ))}
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {autoPortfolio.positions.map((p,i)=>(
-                                <tr key={i} style={{borderBottom:"1px solid #0d1826"}}>
-                                  <td style={{padding:"8px",color:"#38bdf8",fontWeight:700}}>{p.ticker}</td>
-                                  <td style={{textAlign:"right",padding:"8px",color:"#94a3b8"}}>{p.shares}</td>
-                                  <td style={{textAlign:"right",padding:"8px",color:"#94a3b8"}}>${p.avg_cost}</td>
-                                  <td style={{textAlign:"right",padding:"8px",color:"#e2e8f0",fontWeight:600}}>${p.cur_price}</td>
-                                  <td style={{textAlign:"right",padding:"8px",color:p.pnl_pct>=0?"#34d399":"#f87171",fontWeight:700}}>{p.pnl_pct>=0?"+":""}{p.pnl_pct}%</td>
-                                  <td style={{textAlign:"right",padding:"8px",color:"#e2e8f0",fontWeight:600}}>${p.value.toLocaleString()}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                          <div style={{display:"flex",justifyContent:"space-between",padding:"8px",borderTop:"1px solid #101c2e",marginTop:4}}>
-                            <span style={{fontSize:12,color:"#475569"}}>Cash: ${autoPortfolio.cash.toLocaleString()}</span>
-                            <span style={{fontSize:12,color:"#e2e8f0",fontWeight:700}}>Total: ${autoPortfolio.portfolio_value.toLocaleString()}</span>
-                          </div>
-                        </div>
-
-                        {/* Recent trades */}
-                        {autoPortfolio.recent_trades&&autoPortfolio.recent_trades.length>0&&(
-                          <div>
-                            <div style={{fontSize:10,color:"#475569",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:8}}>
-                              Recent Trades ({autoPortfolio.total_trades} total)
-                            </div>
-                            <div style={{display:"flex",flexDirection:"column",gap:4,maxHeight:200,overflowY:"auto"}}>
-                              {[...autoPortfolio.recent_trades].reverse().map((t,i)=>(
-                                <div key={i} style={{display:"flex",gap:10,alignItems:"center",background:"#090f1a",borderRadius:7,padding:"7px 10px",fontSize:11}}>
-                                  <span style={{color:t.action==="BUY"?"#34d399":t.action==="SELL"?"#f87171":"#38bdf8",fontWeight:700,minWidth:40}}>{t.action}</span>
-                                  <span style={{color:"#e2e8f0",fontWeight:600,minWidth:45}}>{t.ticker}</span>
-                                  <span style={{color:"#94a3b8"}}>{t.shares}sh @ ${t.price}</span>
-                                  <span style={{color:"#475569",flex:1,textAlign:"right"}}>{t.date}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* P&L chart from snapshots */}
-                        {autoPortfolio.daily_snapshots&&autoPortfolio.daily_snapshots.length>1&&(()=>{
-                          const snaps = autoPortfolio.daily_snapshots;
-                          const vals  = snaps.map(s=>s.value);
-                          const mn    = Math.min(...vals)*0.998;
-                          const mx    = Math.max(...vals)*1.002;
-                          const W3=540,H3=80,PL3=44,PR3=10,PT3=6,PB3=18;
-                          const px3 = i=>PL3+(i/(vals.length-1))*(W3-PL3-PR3);
-                          const py3 = v=>PT3+(H3-PT3-PB3)-((v-mn)/(mx-mn||1))*(H3-PT3-PB3);
-                          const last = vals[vals.length-1];
-                          const up   = last >= vals[0];
-                          const lc   = up?"#34d399":"#f87171";
-                          const path = vals.map((v,i)=>`${i===0?"M":"L"} ${px3(i).toFixed(1)} ${py3(v).toFixed(1)}`).join(" ");
-                          return(
-                            <div style={{marginTop:10}}>
-                              <div style={{fontSize:10,color:"#475569",fontWeight:700,textTransform:"uppercase",marginBottom:4}}>
-                                Portfolio Value History ({snaps.length} days)
-                              </div>
-                              <svg width="100%" viewBox={"0 0 "+W3+" "+H3} style={{display:"block"}}>
-                                <defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={lc} stopOpacity="0.2"/><stop offset="100%" stopColor={lc} stopOpacity="0"/></linearGradient></defs>
-                                {[mn,mn+(mx-mn)/2,mx].map((v,i)=>(
-                                  <g key={i}>
-                                    <line x1={PL3} y1={py3(v).toFixed(1)} x2={W3-PR3} y2={py3(v).toFixed(1)} stroke="#1a2538" strokeWidth="1"/>
-                                    <text x={PL3-3} y={(py3(v)+3).toFixed(1)} textAnchor="end" fontSize="7" fill="#4a5568" fontFamily="Avenir Next,sans-serif">${(v/1000).toFixed(0)}k</text>
-                                  </g>
-                                ))}
-                                {snaps.map((s,i)=>{if(i%Math.ceil(snaps.length/6)!==0)return null;return <text key={i} x={px3(i).toFixed(1)} y={H3-2} textAnchor="middle" fontSize="6" fill="#475569" fontFamily="Avenir Next,sans-serif">{s.date?.slice(5)}</text>;})}
-                                <path d={path+" L "+px3(vals.length-1).toFixed(1)+" "+(H3-PB3)+" L "+PL3+" "+(H3-PB3)+" Z"} fill="url(#ag)"/>
-                                <path d={path} fill="none" stroke={lc} strokeWidth="2" strokeLinejoin="round"/>
-                                <circle cx={px3(vals.length-1).toFixed(1)} cy={py3(last).toFixed(1)} r="3" fill={lc}/>
-                              </svg>
-                            </div>
-                          );
-                        })()}
-                      </>
-                    )}
-                  </>
-                )}
-              </div>
-
-              {/* ── PORTFOLIO PROGRESS CHART ── */}
+                            {/* ── UNIFIED PERFORMANCE CHART ── */}
               {(()=>{
-                // Build intraday price history from priceHist
-                // Use portfolio positions × current prices sampled every 30 min
-                const hist = priceHist;
-                const COST_BASIS = 100000;
+                // Build chart data from GitHub daily_snapshots + today's live value
+                // daily_snapshots: [{date:"2026-03-13", value:100000, spy:562.83}, ...]
+                const SPY_ENTRY   = 562.83;
+                const PORT_ENTRY  = 100000;
+                const COST_PCT    = 0.0008;
+                const allTrades   = (portLog||[]).filter(t=>t.action==="BUY"||t.action==="SELL");
+                const totalCosts  = allTrades.reduce((s,t)=>s+(t.price&&t.shares?t.price*t.shares:(t.value||0))*COST_PCT,0);
 
-                // Build portfolio value history from price ticks we have
-                // Each tick in priceHist[ticker] is a price at a point in time
-                const tickers = portfolio.map(p=>p.ticker);
-                const maxLen  = Math.max(...tickers.map(t=>(hist[t]||[]).length), 0);
+                // Historical data from GitHub (daily snapshots from paper trader)
+                const snapshots   = autoPortfolio?.daily_snapshots || [];
 
-                if(maxLen < 2) return(
-                  <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:13,padding:"20px",marginBottom:14,textAlign:"center"}}>
-                    <div style={{fontSize:20,marginBottom:8}}>📈</div>
-                    <div style={{fontSize:13,color:"#475569",fontWeight:600}}>Portfolio Progress Chart</div>
-                    <div style={{fontSize:12,color:"#334155",marginTop:4}}>Collecting price data... chart appears after first price update.</div>
-                    <div style={{fontSize:11,color:"#1e2e42",marginTop:2}}>Updates every 30 seconds while market is open.</div>
-                  </div>
-                );
+                // Build chart points: historical + live today
+                const spyNow      = prices["SPY"]?.price || SPY_ENTRY;
+                const liveVal     = portfolioValue;
+                const today       = new Date().toISOString().slice(0,10);
 
-                // Calculate portfolio value at each tick
-                const values = [];
-                for(let i=0; i<maxLen; i++){
-                  let val = STARTING_CASH;
-                  portfolio.forEach(p=>{
-                    const tickHistory = hist[p.ticker]||[];
-                    const price = tickHistory[i] || tickHistory[tickHistory.length-1] || p.entryPrice;
-                    val += p.shares * price;
-                  });
-                  values.push(val);
+                // Combine snapshots with live point
+                let chartPoints = [];
+                // Always start with entry point
+                chartPoints.push({date:"2026-03-13", portVal:PORT_ENTRY, spyVal:PORT_ENTRY, isEntry:true});
+                // Add daily snapshots from GitHub
+                snapshots.forEach(s=>{
+                  if(s.date && s.date !== "2026-03-13"){
+                    const spyRet = s.spy_price ? (s.spy_price/SPY_ENTRY) : 1;
+                    chartPoints.push({
+                      date:s.date,
+                      portVal:s.value || PORT_ENTRY,
+                      spyVal: PORT_ENTRY * spyRet,
+                      isSnap:true
+                    });
+                  }
+                });
+                // Add today's live value
+                const lastSnap = chartPoints[chartPoints.length-1];
+                if(!lastSnap || lastSnap.date !== today){
+                  chartPoints.push({date:today, portVal:liveVal, spyVal:PORT_ENTRY*(spyNow/SPY_ENTRY), isLive:true});
+                } else {
+                  chartPoints[chartPoints.length-1].portVal = liveVal;
+                  chartPoints[chartPoints.length-1].spyVal  = PORT_ENTRY*(spyNow/SPY_ENTRY);
+                  chartPoints[chartPoints.length-1].isLive  = true;
                 }
 
-                const mn    = Math.min(...values) * 0.999;
-                const mx    = Math.max(...values) * 1.001;
-                const range = mx - mn || 1;
-                const W2=560, H2=120, PL=52, PR=12, PT=8, PB=20;
-                const cW2   = W2-PL-PR;
-                const px2   = i => PL + (i/(values.length-1)) * cW2;
-                const py2   = v => PT + (H2-PT-PB) - ((v-mn)/range)*(H2-PT-PB);
+                // Deduplicate by date, keep latest
+                const seen = {};
+                chartPoints = chartPoints.filter(p=>{ if(seen[p.date]) return false; seen[p.date]=true; return true; });
+                chartPoints.sort((a,b)=>a.date>b.date?1:-1);
 
-                const first = values[0];
-                const last  = values[values.length-1];
-                const chg   = last - first;
-                const chgPct= (chg/first)*100;
-                const up    = last >= first;
-                const lc    = up ? "#34d399" : "#f87171";
+                const allVals  = chartPoints.map(p=>p.portVal).concat(chartPoints.map(p=>p.spyVal));
+                const minV     = Math.min(...allVals) * 0.995;
+                const maxV     = Math.max(...allVals) * 1.005;
+                const range    = maxV - minV;
+                const W = 780, H = 200;
+                const toX = i => (i/(chartPoints.length-1||1)) * (W-60) + 30;
+                const toY = v => H - 20 - ((v-minV)/range)*(H-40);
 
-                const path  = values.map((v,i)=>`${i===0?"M":"L"} ${px2(i).toFixed(1)} ${py2(v).toFixed(1)}`).join(" ");
-                const fill  = path + ` L ${px2(values.length-1).toFixed(1)} ${(H2-PB).toFixed(1)} L ${PL} ${(H2-PB).toFixed(1)} Z`;
+                // Build SVG paths
+                const portPath = chartPoints.map((p,i)=>`${i===0?"M":"L"}${toX(i).toFixed(1)},${toY(p.portVal).toFixed(1)}`).join(" ");
+                const spyPath  = chartPoints.map((p,i)=>`${i===0?"M":"L"}${toX(i).toFixed(1)},${toY(p.spyVal).toFixed(1)}`).join(" ");
+                const portFill = chartPoints.map((p,i)=>`${i===0?"M":"L"}${toX(i).toFixed(1)},${toY(p.portVal).toFixed(1)}`).join(" ")
+                               + ` L${toX(chartPoints.length-1).toFixed(1)},${(H-20).toFixed(1)} L30,${(H-20).toFixed(1)} Z`;
 
-                // Y axis ticks
-                const yTicks = [mn, mn+range*0.25, mn+range*0.5, mn+range*0.75, mx];
-
-                // Total P&L from cost basis
-                const totalPnl    = last - COST_BASIS;
-                const totalPnlPct = (totalPnl/COST_BASIS)*100;
+                const totalRetPctNow = ((liveVal - PORT_ENTRY) / PORT_ENTRY)*100;
+                const spyRetPctNow   = ((spyNow - SPY_ENTRY) / SPY_ENTRY)*100;
+                const alphaNow       = totalRetPctNow - spyRetPctNow;
+                const netRetPct      = ((liveVal - PORT_ENTRY - totalCosts)/PORT_ENTRY)*100;
 
                 return(
-                  <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:13,padding:"14px 16px",marginBottom:14}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10,flexWrap:"wrap",gap:8}}>
+                  <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:14,padding:"18px 20px",marginBottom:14}}>
+                    {/* Header row */}
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:12,marginBottom:14}}>
                       <div>
-                        <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:700,fontSize:11,color:"#475569",textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:4}}>📈 Portfolio Value — Today</div>
-                        <div style={{display:"flex",gap:16,alignItems:"baseline"}}>
-                          <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:22,color:"#e2e8f0"}}>${last.toLocaleString(undefined,{maximumFractionDigits:0})}</div>
-                          <div style={{fontSize:13,color:lc,fontWeight:700}}>{chg>=0?"+":""}{chgPct.toFixed(2)}% today</div>
+                        <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:16,color:"#e2e8f0"}}>
+                          📈 Portfolio Performance — Since Mar 13 2026
+                        </div>
+                        <div style={{fontSize:11,color:"#475569",marginTop:3}}>
+                          {chartPoints.length} data points · {autoPortfolio?"Live from GitHub":"Waiting for first trader run"} · Updates after every trade
                         </div>
                       </div>
-                      <div style={{display:"flex",gap:12}}>
-                        <div style={{textAlign:"right"}}>
-                          <div style={{fontSize:10,color:"#475569",textTransform:"uppercase",fontWeight:700}}>Total P&L</div>
-                          <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:15,color:totalPnl>=0?"#34d399":"#f87171"}}>
-                            {totalPnl>=0?"+":""}{totalPnlPct.toFixed(2)}%
-                          </div>
-                          <div style={{fontSize:11,color:totalPnl>=0?"#34d399":"#f87171"}}>{totalPnl>=0?"+$":"-$"}{Math.abs(totalPnl).toLocaleString(undefined,{maximumFractionDigits:0})}</div>
+                      <div style={{display:"flex",gap:12,alignItems:"center"}}>
+                        <div style={{display:"flex",alignItems:"center",gap:5}}>
+                          <div style={{width:20,height:3,background:"#34d399",borderRadius:2}}/>
+                          <span style={{fontSize:11,color:"#94a3b8"}}>StockSense</span>
                         </div>
-                        <div style={{textAlign:"right"}}>
-                          <div style={{fontSize:10,color:"#475569",textTransform:"uppercase",fontWeight:700}}>Data Points</div>
-                          <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:15,color:"#38bdf8"}}>{values.length}</div>
-                          <div style={{fontSize:11,color:"#475569"}}>30s intervals</div>
+                        <div style={{display:"flex",alignItems:"center",gap:5}}>
+                          <div style={{width:20,height:3,background:"#38bdf8",borderRadius:2,opacity:0.6}}/>
+                          <span style={{fontSize:11,color:"#94a3b8"}}>SPY</span>
                         </div>
                       </div>
                     </div>
-                    <svg width="100%" viewBox={"0 0 "+W2+" "+H2} style={{display:"block"}}>
-                      <defs>
-                        <linearGradient id="pgradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor={lc} stopOpacity="0.2"/>
-                          <stop offset="100%" stopColor={lc} stopOpacity="0"/>
-                        </linearGradient>
-                      </defs>
-                      {/* Y grid */}
-                      {yTicks.map((v,i)=>(
-                        <g key={i}>
-                          <line x1={PL} y1={py2(v).toFixed(1)} x2={W2-PR} y2={py2(v).toFixed(1)} stroke="#1a2538" strokeWidth="1" strokeDasharray="3,4"/>
-                          <text x={PL-4} y={(py2(v)+3).toFixed(1)} textAnchor="end" fontSize="7" fill="#4a5568" fontFamily="Avenir Next,sans-serif">${(v/1000).toFixed(0)}k</text>
-                        </g>
+
+                    {/* Stats row */}
+                    <div style={{display:"flex",gap:10,marginBottom:14,flexWrap:"wrap"}}>
+                      {[
+                        {l:"Portfolio Value",  v:"$"+liveVal.toLocaleString("en-US",{maximumFractionDigits:0}),          c:"#e2e8f0"},
+                        {l:"Gross Return",      v:(totalRetPctNow>=0?"+":"")+totalRetPctNow.toFixed(2)+"%",              c:totalRetPctNow>=0?"#34d399":"#f87171"},
+                        {l:"Net Return",        v:(netRetPct>=0?"+":"")+netRetPct.toFixed(2)+"%",                        c:netRetPct>=0?"#34d399":"#f87171",sub:"after costs"},
+                        {l:"Cost Drag",         v:"-$"+totalCosts.toFixed(0),                                            c:"#f87171",sub:(totalCosts/PORT_ENTRY*100).toFixed(3)+"%"},
+                        {l:"Alpha vs SPY",       v:(alphaNow>=0?"+":"")+alphaNow.toFixed(2)+"%",                         c:alphaNow>=0?"#34d399":"#f87171"},
+                        {l:"SPY since Mar 13",  v:(spyRetPctNow>=0?"+":"")+spyRetPctNow.toFixed(2)+"%",                 c:"#38bdf8"},
+                      ].map((s,i)=>(
+                        <div key={i} style={{textAlign:"center",background:"#090f1a",borderRadius:10,padding:"10px 14px",flex:1,minWidth:100}}>
+                          <div style={{fontSize:10,color:"#475569",marginBottom:2}}>{s.l}</div>
+                          <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:15,color:s.c}}>{s.v}</div>
+                          {s.sub&&<div style={{fontSize:9,color:s.c,opacity:0.7,marginTop:1}}>{s.sub}</div>}
+                        </div>
                       ))}
-                      {/* Cost basis line */}
-                      <line x1={PL} y1={py2(COST_BASIS).toFixed(1)} x2={W2-PR} y2={py2(COST_BASIS).toFixed(1)} stroke="#334155" strokeWidth="1" strokeDasharray="4,4"/>
-                      <text x={W2-PR+2} y={(py2(COST_BASIS)+3).toFixed(1)} fontSize="7" fill="#334155" fontFamily="Avenir Next,sans-serif">Cost</text>
-                      {/* Fill */}
-                      <path d={fill} fill="url(#pgradient)"/>
-                      {/* Line */}
-                      <path d={path} fill="none" stroke={lc} strokeWidth="2" strokeLinejoin="round"/>
-                      {/* Current dot */}
-                      <circle cx={px2(values.length-1).toFixed(1)} cy={py2(last).toFixed(1)} r="4" fill={lc}/>
-                      <text x={(px2(values.length-1)+6).toFixed(1)} y={(py2(last)+4).toFixed(1)} fontSize="8" fill={lc} fontFamily="Avenir Next,sans-serif" fontWeight="700">${(last/1000).toFixed(1)}k</text>
-                    </svg>
-                    <div style={{fontSize:10,color:"#334155",marginTop:4,textAlign:"right"}}>
-                      Live · updates every 30s · {values.length} data points collected this session
+                    </div>
+
+                    {/* THE CHART */}
+                    <div style={{background:"#060d18",borderRadius:10,padding:"12px 8px",position:"relative"}}>
+                      <svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%",height:"auto",display:"block"}}>
+                        <defs>
+                          <linearGradient id="portGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#34d399" stopOpacity="0.3"/>
+                            <stop offset="100%" stopColor="#34d399" stopOpacity="0"/>
+                          </linearGradient>
+                        </defs>
+
+                        {/* Grid lines */}
+                        {[0,0.25,0.5,0.75,1].map((t,i)=>{
+                          const y = H-20-(t*(H-40));
+                          const val = (minV + t*range).toFixed(0);
+                          return(
+                            <g key={i}>
+                              <line x1="30" y1={y} x2={W-10} y2={y} stroke="#0d1f33" strokeWidth="1"/>
+                              <text x="28" y={y+4} fontSize="9" fill="#334155" textAnchor="end">${(val/1000).toFixed(0)}k</text>
+                            </g>
+                          );
+                        })}
+
+                        {/* SPY line */}
+                        {chartPoints.length>1&&<path d={spyPath} fill="none" stroke="#38bdf8" strokeWidth="1.5" strokeOpacity="0.5" strokeDasharray="4,3"/>}
+
+                        {/* Portfolio fill */}
+                        {chartPoints.length>1&&<path d={portFill} fill="url(#portGrad)"/>}
+
+                        {/* Portfolio line */}
+                        {chartPoints.length>1&&<path d={portPath} fill="none" stroke="#34d399" strokeWidth="2"/>}
+
+                        {/* Trade markers */}
+                        {allTrades.slice(-20).map((t,i)=>{
+                          const ptIdx = chartPoints.findIndex(p=>p.date===t.date?.slice(0,10));
+                          if(ptIdx<0) return null;
+                          const x = toX(ptIdx), y = toY(chartPoints[ptIdx].portVal);
+                          const isBuy = t.action==="BUY";
+                          return(
+                            <g key={i}>
+                              <circle cx={x} cy={y} r="4" fill={isBuy?"#34d399":"#f87171"} stroke="#060d18" strokeWidth="1.5"/>
+                              <text x={x} y={y-7} fontSize="7" fill={isBuy?"#34d399":"#f87171"} textAnchor="middle">{isBuy?"▲":"▼"}</text>
+                            </g>
+                          );
+                        })}
+
+                        {/* Date labels on X axis */}
+                        {chartPoints.filter((_,i)=>i===0||i===chartPoints.length-1||chartPoints.length<8).map((p,i,arr)=>{
+                          const idx2 = chartPoints.indexOf(p);
+                          const x = toX(idx2);
+                          const label = p.date?.slice(5); // MM-DD
+                          return <text key={i} x={x} y={H-5} fontSize="8" fill="#334155" textAnchor="middle">{label}</text>;
+                        })}
+
+                        {/* Live dot */}
+                        {chartPoints.length>0&&(()=>{
+                          const last = chartPoints[chartPoints.length-1];
+                          const x = toX(chartPoints.length-1), y = toY(last.portVal);
+                          return(
+                            <g>
+                              <circle cx={x} cy={y} r="5" fill="#34d399" stroke="#060d18" strokeWidth="2"/>
+                              <circle cx={x} cy={y} r="9" fill="none" stroke="#34d399" strokeWidth="1" opacity="0.4"/>
+                            </g>
+                          );
+                        })()}
+                      </svg>
+
+                      {chartPoints.length<=1&&(
+                        <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",textAlign:"center"}}>
+                          <div style={{fontSize:12,color:"#475569"}}>Waiting for first trade scan...</div>
+                          <div style={{fontSize:10,color:"#334155",marginTop:4}}>Chart builds automatically after market opens</div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Bottom info */}
+                    <div style={{display:"flex",justifyContent:"space-between",marginTop:8,fontSize:10,color:"#334155",flexWrap:"wrap",gap:4}}>
+                      <span>📌 Start: $100,000 · Mar 13 2026</span>
+                      <span>▲ = Buy · ▼ = Sell markers on chart</span>
+                      <span>🔄 Updates after every trade & daily close</span>
                     </div>
                   </div>
                 );
               })()}
-
-              {/* ── HEADER SUMMARY ── */}
-              <div style={{background:"linear-gradient(135deg,rgba(52,211,153,0.08),rgba(56,189,248,0.05))",border:"1px solid rgba(52,211,153,0.2)",borderRadius:16,padding:"20px 24px",marginBottom:14}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:14}}>
-                  <div>
-                    <div style={{fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:18,color:"#e2e8f0",marginBottom:3}}>💼 StockSense Model Portfolio</div>
-                    <div style={{fontSize:13,color:"#94a3b8"}}>Paper trading · Opened March 13, 2026 · $100,000 budget · 10 positions</div>
-                    <div style={{fontSize:11,color:"#475569",marginTop:3}}>Entry: Friday March 13 closing prices · Quant-conviction weighted</div>
-                  </div>
-                  <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-                    {[
-                      {l:"Portfolio Value",   v:"$"+(portfolioValue).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}), c:"#e2e8f0"},
-                      {l:"Total Return",      v:(totalReturn>=0?"+$":"-$")+Math.abs(totalReturn).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}), c:totalReturn>=0?"#34d399":"#f87171"},
-                      {l:"Return %",          v:(totalRetPct>=0?"+":"")+totalRetPct.toFixed(2)+"%", c:totalRetPct>=0?"#34d399":"#f87171"},
-                      {l:"vs S&P 500",        v:(totalRetPct-spyRet>=0?"+":""+(totalRetPct-spyRet).toFixed(2)+"%"), c:totalRetPct-spyRet>=0?"#34d399":"#f87171"},
-                    ].map((s,i)=>(
-                      <div key={i} style={{textAlign:"center",background:"rgba(0,0,0,0.25)",borderRadius:10,padding:"10px 16px",minWidth:120}}>
-                        <div style={{fontSize:11,color:"#475569",marginBottom:3}}>{s.l}</div>
-                        <div style={{fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:17,color:s.c}}>{s.v}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Return breakdown bar */}
-                <div style={{marginTop:14,display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
-                  <div style={{flex:1,minWidth:200}}>
-                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-                      <span style={{fontSize:11,color:"#94a3b8"}}>Return Breakdown</span>
-                      <span style={{fontSize:11,color:"#94a3b8"}}>Price: <strong style={{color:priceGain>=0?"#34d399":"#f87171"}}>{priceRetPct>=0?"+":""}{priceRetPct.toFixed(2)}%</strong> + Dividends: <strong style={{color:"#fbbf24"}}>{divRetPct.toFixed(2)}%</strong></span>
-                    </div>
-                    <div style={{height:6,background:"#0d1826",borderRadius:4,overflow:"hidden",display:"flex"}}>
-                      <div style={{width:Math.max(0,priceRetPct)+"vw",maxWidth:"60%",background:"linear-gradient(90deg,#34d399,#10b981)",borderRadius:"4px 0 0 4px"}}/>
-                      <div style={{width:divRetPct+"vw",maxWidth:"10%",background:"#fbbf24"}}/>
-                    </div>
-                  </div>
-                  <div style={{display:"flex",gap:16}}>
-                    <div style={{textAlign:"center"}}>
-                      <div style={{fontSize:11,color:"#475569"}}>Divs Received</div>
-                      <div style={{fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:700,fontSize:14,color:"#fbbf24"}}>${totalDivReceived.toFixed(2)}</div>
-                    </div>
-                    <div style={{textAlign:"center"}}>
-                      <div style={{fontSize:11,color:"#475569"}}>Annual Div Income</div>
-                      <div style={{fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:700,fontSize:14,color:"#fbbf24"}}>${totalDivAnnual.toFixed(2)}/yr</div>
-                    </div>
-                    <div style={{textAlign:"center"}}>
-                      <div style={{fontSize:11,color:"#475569"}}>Cash</div>
-                      <div style={{fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:700,fontSize:14,color:"#38bdf8"}}>${STARTING_CASH.toFixed(2)}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
 
               {/* ── HOLDINGS TABLE ── */}
               <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:14,padding:"16px 18px",marginBottom:14,overflowX:"auto"}}>
@@ -3148,6 +3032,73 @@ function StockSense(){
                         </div>
                       </div>
                     ))}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ── TODAY'S ACTIVITY ── */}
+            {(()=>{
+              const today = new Date().toISOString().slice(0,10);
+              const todayLog = (portLog||[]).filter(t=>t.date&&t.date.slice(0,10)===today&&t.action!=="INIT");
+              if(todayLog.length===0) return null;
+              return(
+                <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:13,padding:"14px 16px",marginBottom:12}}>
+                  <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:700,fontSize:11,color:"#475569",textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:10}}>
+                    📋 Today's Trade Activity ({todayLog.length} trades)
+                  </div>
+                  <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                    {todayLog.map((t,i)=>{
+                      const isBuy  = t.action==="BUY";
+                      const color  = isBuy?"#34d399":"#f87171";
+                      const pnl    = t.pnl ? (t.pnl>=0?"+$":"−$")+Math.abs(t.pnl).toFixed(0) : null;
+                      return(
+                        <div key={i} style={{display:"flex",alignItems:"center",gap:10,background:"#090f1a",borderRadius:8,padding:"9px 12px",borderLeft:`3px solid ${color}`}}>
+                          <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:14,color,minWidth:48}}>
+                            {isBuy?"▲ BUY":"▼ SELL"}
+                          </div>
+                          <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:700,fontSize:14,color:"#e2e8f0",minWidth:52}}>{t.ticker}</div>
+                          <div style={{fontSize:12,color:"#94a3b8"}}>{t.shares} shares @ ${t.price}</div>
+                          <div style={{fontSize:12,color,fontWeight:600,marginLeft:"auto"}}>${t.value?.toLocaleString()}</div>
+                          {pnl&&<div style={{fontSize:12,color,fontWeight:700}}>{pnl}</div>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ── TRADING FREQUENCY MONITOR ── */}
+            {(()=>{
+              const COST_PCT=0.0008,STARTING_CASH=100000;
+              const allT=(portLog||[]).filter(t=>t.action==="BUY"||t.action==="SELL");
+              const totCosts=allT.reduce((s,t)=>s+(t.price&&t.shares?t.price*t.shares:(t.value||0))*COST_PCT,0);
+              const mth=new Date().toISOString().slice(0,7);
+              const mthT=allT.filter(t=>(t.date||"").startsWith(mth)).length;
+              const annualisedCostDrag=(totCosts/STARTING_CASH)*100*(12/Math.max(1,(new Date()-new Date("2026-03-13"))/(1000*60*60*24*30)));
+              return(
+                <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:13,padding:"14px 16px",marginBottom:12}}>
+                  <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:700,fontSize:11,color:"#475569",textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:10}}>
+                    🔄 Trading Frequency & Cost Tracker
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:10}}>
+                    {[
+                      {l:"Total Trades",     v:allT.length,            c:"#e2e8f0"},
+                      {l:"This Month",       v:mthT,                   c:mthT>20?"#f87171":"#38bdf8"},
+                      {l:"Total Cost Drag",  v:"$"+totCosts.toFixed(0),c:"#f87171"},
+                      {l:"Cost % of Capital",v:(totCosts/STARTING_CASH*100).toFixed(3)+"%",c:"#f87171"},
+                    ].map((s,i)=>(
+                      <div key={i} style={{textAlign:"center",background:"#090f1a",borderRadius:8,padding:"8px"}}>
+                        <div style={{fontSize:10,color:"#475569",marginBottom:2}}>{s.l}</div>
+                        <div style={{fontSize:15,fontWeight:700,color:s.c}}>{s.v}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{fontSize:11,color:"#475569",lineHeight:1.7}}>
+                    <span style={{color:"#38bdf8",fontWeight:600}}>Cost model:</span> 0.08% per trade (0.03% spread + 0.05% slippage). Commission-free on Alpaca.
+                    {mthT>20&&<span style={{color:"#f87171",fontWeight:700}}> ⚠️ OVERTRADING: {mthT} trades this month — cost drag accelerating.</span>}
+                    {mthT<=20&&<span style={{color:"#34d399"}}> ✅ Frequency normal — {20-mthT} trades remaining before overtrading threshold.</span>}
                   </div>
                 </div>
               );
@@ -3658,7 +3609,7 @@ function StockSense(){
               {/* Summary Stats */}
               {(()=>{
                 const stats = [
-                  {label:"$100K Grew To",   value:"$4,943,092", sub:"11 years",         color:"#34d399"},
+                  {label:"$100K Grew To",   value:"$4,943,092", sub:"11 years (+4,843%)",color:"#34d399"},
                   {label:"Strategy CAGR",   value:"+42.6%",     sub:"per year",          color:"#34d399"},
                   {label:"SPY CAGR",        value:"+11.0%",     sub:"buy & hold",        color:"#94a3b8"},
                   {label:"Annual Alpha",    value:"+31.6%",     sub:"vs SPY",            color:"#38bdf8"},
