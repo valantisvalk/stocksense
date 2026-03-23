@@ -1,0 +1,198 @@
+{
+  "updated": "2026-03-23 11:22 ET",
+  "started": "2026-03-13",
+  "regime": "RISK_OFF",
+  "portfolio_value": 101261.55,
+  "cash": 2157.0,
+  "total_pnl": 1261.55,
+  "total_pnl_pct": 1.26,
+  "spy_ret": 17.51,
+  "alpha": -16.24,
+  "positions": [
+    {
+      "ticker": "NVDA",
+      "shares": 63,
+      "avg_cost": 180.25,
+      "cur_price": 177.6,
+      "pnl_pct": -1.47,
+      "value": 11188.8,
+      "entry_date": "2026-03-13"
+    },
+    {
+      "ticker": "LLY",
+      "shares": 12,
+      "avg_cost": 800.0,
+      "cur_price": 924.02,
+      "pnl_pct": 15.5,
+      "value": 11088.24,
+      "entry_date": "2026-03-13"
+    },
+    {
+      "ticker": "AVGO",
+      "shares": 32,
+      "avg_cost": 322.94,
+      "cur_price": 323.7,
+      "pnl_pct": 0.24,
+      "value": 10358.4,
+      "entry_date": "2026-03-13"
+    },
+    {
+      "ticker": "GOOGL",
+      "shares": 33,
+      "avg_cost": 293.14,
+      "cur_price": 304.37,
+      "pnl_pct": 3.83,
+      "value": 10044.21,
+      "entry_date": "2026-03-13"
+    },
+    {
+      "ticker": "AMZN",
+      "shares": 46,
+      "avg_cost": 207.44,
+      "cur_price": 212.43,
+      "pnl_pct": 2.41,
+      "value": 9771.78,
+      "entry_date": "2026-03-13"
+    },
+    {
+      "ticker": "COST",
+      "shares": 10,
+      "avg_cost": 961.32,
+      "cur_price": 973.53,
+      "pnl_pct": 1.27,
+      "value": 9735.3,
+      "entry_date": "2026-03-13"
+    },
+    {
+      "ticker": "MSFT",
+      "shares": 25,
+      "avg_cost": 398.94,
+      "cur_price": 386.25,
+      "pnl_pct": -3.18,
+      "value": 9656.25,
+      "entry_date": "2026-03-13"
+    },
+    {
+      "ticker": "META",
+      "shares": 15,
+      "avg_cost": 631.65,
+      "cur_price": 607.05,
+      "pnl_pct": -3.89,
+      "value": 9105.75,
+      "entry_date": "2026-03-13"
+    },
+    {
+      "ticker": "JPM",
+      "shares": 31,
+      "avg_cost": 283.44,
+      "cur_price": 293.22,
+      "pnl_pct": 3.45,
+      "value": 9089.82,
+      "entry_date": "2026-03-13"
+    },
+    {
+      "ticker": "WMT",
+      "shares": 75,
+      "avg_cost": 126.52,
+      "cur_price": 120.88,
+      "pnl_pct": -4.46,
+      "value": 9066.0,
+      "entry_date": "2026-03-13"
+    }
+  ],
+  "recent_trades": [
+    {
+      "date": "2026-03-13 16:00 ET",
+      "action": "INIT",
+      "ticker": "NVDA",
+      "shares": 63,
+      "price": 180.25,
+      "value": 11355.75,
+      "reason": "Initial portfolio \u2014 Mar 13 2026"
+    },
+    {
+      "date": "2026-03-13 16:00 ET",
+      "action": "INIT",
+      "ticker": "AVGO",
+      "shares": 32,
+      "price": 322.94,
+      "value": 10334.08,
+      "reason": "Initial portfolio \u2014 Mar 13 2026"
+    },
+    {
+      "date": "2026-03-13 16:00 ET",
+      "action": "INIT",
+      "ticker": "LLY",
+      "shares": 12,
+      "price": 800.0,
+      "value": 9600.0,
+      "reason": "Initial portfolio \u2014 Mar 13 2026"
+    },
+    {
+      "date": "2026-03-13 16:00 ET",
+      "action": "INIT",
+      "ticker": "MSFT",
+      "shares": 25,
+      "price": 398.94,
+      "value": 9973.5,
+      "reason": "Initial portfolio \u2014 Mar 13 2026"
+    },
+    {
+      "date": "2026-03-13 16:00 ET",
+      "action": "INIT",
+      "ticker": "META",
+      "shares": 15,
+      "price": 631.65,
+      "value": 9474.75,
+      "reason": "Initial portfolio \u2014 Mar 13 2026"
+    },
+    {
+      "date": "2026-03-13 16:00 ET",
+      "action": "INIT",
+      "ticker": "COST",
+      "shares": 10,
+      "price": 961.32,
+      "value": 9613.2,
+      "reason": "Initial portfolio \u2014 Mar 13 2026"
+    },
+    {
+      "date": "2026-03-13 16:00 ET",
+      "action": "INIT",
+      "ticker": "GOOGL",
+      "shares": 33,
+      "price": 293.14,
+      "value": 9673.62,
+      "reason": "Initial portfolio \u2014 Mar 13 2026"
+    },
+    {
+      "date": "2026-03-13 16:00 ET",
+      "action": "INIT",
+      "ticker": "AMZN",
+      "shares": 46,
+      "price": 207.44,
+      "value": 9542.24,
+      "reason": "Initial portfolio \u2014 Mar 13 2026"
+    },
+    {
+      "date": "2026-03-13 16:00 ET",
+      "action": "INIT",
+      "ticker": "WMT",
+      "shares": 75,
+      "price": 126.52,
+      "value": 9489.0,
+      "reason": "Initial portfolio \u2014 Mar 13 2026"
+    },
+    {
+      "date": "2026-03-13 16:00 ET",
+      "action": "INIT",
+      "ticker": "JPM",
+      "shares": 31,
+      "price": 283.44,
+      "value": 8786.64,
+      "reason": "Initial portfolio \u2014 Mar 13 2026"
+    }
+  ],
+  "daily_snapshots": [],
+  "total_trades": 10,
+  "version": "3.0"
+}
