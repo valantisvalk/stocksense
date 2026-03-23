@@ -363,7 +363,10 @@ async function fetchFinnhub(ticker) {
   const sym = FINNHUB_MAP[ticker] || ticker;
   try {
     const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${sym}&token=${FINNHUB_KEY}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (!res.ok){
+      if(res.status===429) await new Promise(r=>setTimeout(r,6000)); // wait 6s on rate limit
+      throw new Error(`HTTP ${res.status}`);
+    }
     const d = await res.json();
     if (!d.c || d.c === 0) throw new Error("No data");
     liveCache[ticker] = {price:d.c, changePct:((d.c-d.pc)/d.pc)*100, dayHigh:d.h, dayLow:d.l, prevClose:d.pc, change:d.c-d.pc};
@@ -1008,6 +1011,7 @@ function StockSense(){
   const[autoPortfolio,setAutoPortfolio]=useState(null);
   const[autoLoading,setAutoLoading]=useState(false);
   const[autoError,setAutoError]=useState(null);
+  const[crisisSelected,setCrisisSelected]=useState("overview");
   const[showAutoTrader,setShowAutoTrader]=useState(false);
   const fetchAutoPortfolio=useCallback(async()=>{
     setAutoLoading(true);setAutoError(null);
@@ -1111,10 +1115,11 @@ function StockSense(){
     // Round 2: Rest of universe
     const ROUND2 = TICKERS.filter(t=>!ROUND1.includes(t));
     const ALL = [...ROUND1, ...ROUND2];
+    // Rate limit: 60 calls/min = max 1/sec. Batch 2 with 2.5s = safe 24 calls/min
     for(let i=0;i<ALL.length;i+=2){
       const batch=ALL.slice(i,i+2);
       await Promise.all(batch.map(t=>fetchFinnhub(t)));
-      if(i+2<ALL.length) await new Promise(r=>setTimeout(r,2000));
+      if(i+2<ALL.length) await new Promise(r=>setTimeout(r,2500));
     }
     // Use Finnhub live data only — no simulation tick()
     setPrices(prev=>{
@@ -4041,8 +4046,9 @@ function StockSense(){
                   },
                 ];
 
-                const [selected, setSelected] = React.useState("overview");
-                const crisis = CRISES.find(c=>c.id===selected) || null;
+                const selected    = crisisSelected;
+                const setSelected = setCrisisSelected;
+                const crisis      = CRISES.find(c=>c.id===selected) || null;
 
                 return(
                   <div>
