@@ -1411,7 +1411,7 @@ function StockSense(){
                           {label:"Gold (GLD)",  val:`$${gold.toFixed(0)}`,  alert:gold>280, color:"#fbbf24"},
                           {label:"Oil (USO)",   val:`$${oil.toFixed(0)}`,   alert:oil>90,   color:"#f97316"},
                           {label:"VIX (VIXY)",  val:vix.toFixed(1),         alert:vix>25,   color:"#f472b6"},
-                          {label:"Bonds (TLT)", val:`$${bonds.toFixed(0)}`, alert:bonds<88, color:"#38bdf8"},
+                          {label:"10Y Yield", val:`${(((100-bonds)*0.15)+3.5).toFixed(2)}%`, alert:bonds<88, color:"#38bdf8"},
                         ].map((m,i)=>(
                           <div key={i} style={{background:"#090f1a",borderRadius:8,padding:"8px 10px",textAlign:"center",border:`1px solid ${m.alert?m.color+"44":"#101c2e"}`}}>
                             <div style={{fontSize:9,color:"#475569",fontWeight:700,textTransform:"uppercase",marginBottom:2}}>{m.label}</div>
@@ -2358,7 +2358,26 @@ function StockSense(){
                     </div>
                   </div>
                 </div>
-                <div style={{marginTop:10,fontSize:11,color:"#475569",display:"flex",gap:16,flexWrap:"wrap"}}>
+                {(()=>{
+                    const tltP=(prices["TLT"]||{price:90}).price;
+                    const y10=parseFloat(((100-tltP)*0.15+3.5).toFixed(2));
+                    if(y10>=4.3) return(
+                      <div style={{marginTop:8,background:y10>=4.6?"rgba(248,113,113,0.1)":"rgba(251,191,36,0.06)",
+                        border:`1px solid ${y10>=4.6?"#f87171":"#fbbf24"}33`,borderRadius:8,padding:"8px 12px",marginBottom:8}}>
+                        <div style={{fontSize:12,color:y10>=4.6?"#f87171":"#fbbf24",fontWeight:700}}>
+                          {y10>=4.6?"🚨 BOND MARKET — LIQUIDATION CASCADE RISK":"⚠️ YIELD SPIKE ALERT"}
+                        </div>
+                        <div style={{fontSize:11,color:"#94a3b8",marginTop:3,lineHeight:1.6}}>
+                          10Y Treasury yield ~{y10.toFixed(2)}%.{" "}
+                          {y10>=4.6
+                            ?"Above 4.6% — institutional forced selling cascade risk. Slash growth exposure. Move to RISK_OFF."
+                            :"Rapidly rising yields compress growth valuations. Cascade threshold: 4.6%. Monitor daily."}
+                        </div>
+                      </div>
+                    );
+                    return null;
+                  })()}
+                  <div style={{marginTop:10,fontSize:11,color:"#475569",display:"flex",gap:16,flexWrap:"wrap"}}>
                   <span>📱 Alerts → @Stocksense0205bot</span>
                   <span>🧠 Engine → 5-pillar quant + live momentum</span>
                   <span>📊 Universe → 26 stocks</span>
@@ -3352,8 +3371,9 @@ function StockSense(){
                     low:  {threshold:20,  signal:"✅ VIX below 20 — calm market. Good conditions for growth stocks.", color:"#34d399"},
                   },
                   TLT: {
-                    low:  {threshold:85,  signal:"⚠️ Bond prices low — yields high (4%+). Growth stocks under pressure (NVDA, META).", color:"#fbbf24"},
-                    high: {threshold:95,  signal:"✅ Bond prices high — yields falling. Growth stocks benefit.", color:"#34d399"},
+                    cascade:{threshold:88, signal:"🚨 10Y yield >4.6% — LIQUIDATION CASCADE RISK. Institutional forced selling. Slash growth exposure immediately.", color:"#f87171"},
+                    low:    {threshold:88, signal:"⚠️ 10Y yield elevated (4.3-4.6%). Growth stocks under pressure. Watch for cascade threshold.", color:"#fbbf24"},
+                    high:   {threshold:95, signal:"✅ 10Y yield falling (<4%). Growth stocks benefit. Risk On conditions supported.", color:"#34d399"},
                   },
                 };
 
@@ -3369,7 +3389,7 @@ function StockSense(){
                         if(ticker==="VIXY"){
                           signal = price2>=impact.high.threshold?impact.high:price2>=impact.med.threshold?impact.med:impact.low;
                         } else if(ticker==="TLT"){
-                          signal = price2<=impact.low.threshold?impact.low:impact.high;
+                          signal = price2<=85?impact.cascade:(price2<=impact.low.threshold?impact.low:impact.high);
                         } else {
                           signal = price2>=impact.high.threshold?impact.high:impact.low;
                         }
