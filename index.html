@@ -1106,21 +1106,28 @@ function StockSense(){
 
   // Fetch live prices from Finnhub
   const fetchAllPrices = async () => {
-    // Fetch ALL stocks in smart batches — 2 per second = safe within 60/min limit
-    // Round 1: Portfolio + macro (highest priority — fetch first)
-    const ROUND1 = [...new Set([
-      ...PORTFOLIO_INIT.map(p=>p.ticker),
-      "SPY","GLD","USO","VIXY","TLT","UUP",
+    // Smart fetch — avoid 429s on Finnhub free tier (60 calls/min)
+    // Priority fetch every cycle: portfolio (10) + macro (6) + quant leaders (6) = 22 calls
+    // Full universe fetch every 3rd cycle
+    if(window._fetchLock){ return; } // prevent overlapping fetches
+    window._fetchLock = true;
+    window._fetchCycle = (window._fetchCycle || 0) + 1;
+
+    const PRIORITY = [...new Set([
+      ...PORTFOLIO_INIT.map(p=>p.ticker),          // 10 portfolio stocks
+      "SPY","GLD","USO","VIXY","TLT",               // 5 macro essentials
+      "NVDA","MSFT","AAPL","GOOGL","META","AMZN",   // 6 most watched
     ])];
-    // Round 2: Rest of universe
-    const ROUND2 = TICKERS.filter(t=>!ROUND1.includes(t));
-    const ALL = [...ROUND1, ...ROUND2];
-    // Rate limit: 60 calls/min = max 1/sec. Batch 2 with 2.5s = safe 24 calls/min
-    for(let i=0;i<ALL.length;i+=2){
-      const batch=ALL.slice(i,i+2);
-      await Promise.all(batch.map(t=>fetchFinnhub(t)));
-      if(i+2<ALL.length) await new Promise(r=>setTimeout(r,2500));
+    const REST = TICKERS.filter(t=>!PRIORITY.includes(t));
+    // Full universe every 3rd cycle (~4.5 min), priority only otherwise
+    const ALL = (window._fetchCycle % 3 === 0) ? [...PRIORITY, ...REST] : PRIORITY;
+
+    // 1 call per 1.2s = 50 calls/min — safe buffer below 60
+    for(let i=0;i<ALL.length;i++){
+      await fetchFinnhub(ALL[i]);
+      await new Promise(r=>setTimeout(r,1200));
     }
+    window._fetchLock = false;
     // Use Finnhub live data only — no simulation tick()
     setPrices(prev=>{
       const n={...prev};
