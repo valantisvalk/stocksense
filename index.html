@@ -1350,11 +1350,27 @@ function StockSense(){
 
         {/* Tabs */}
         <div style={{display:"flex",background:"#08111e",borderBottom:"1px solid #101c2e",padding:"0 20px",overflowX:"auto"}}>
-          {[["overview","📊 Deck"],["charts","📈 Charts"],["analyst","🏦 Analyst"],["quant","🧮 Quant"],["prediction","🔮 Forecast"],["history","📅 10-Year"],["news","📰 News"],["financials","💰 Financials"],["portfolio","💼 Portfolio"],["macro","🌍 Macro"],["backtest","🧪 Backtest"],["guide","📖 Guide"]].map(([v,l])=>(
-            <button key={v} onClick={()=>setTab(v)} style={{padding:"10px 13px",fontSize:13,fontWeight:600,fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",color:tab===v?"#38bdf8":"#94a3b8",borderBottom:`2px solid ${tab===v?"#38bdf8":"transparent"}`,transition:"color 0.15s",whiteSpace:"nowrap"}}>
-              {l}
+          {[["macro","🌍 Macro"],["portfolio","💼 Portfolio"],["quant","🧮 Quant"],["overview","📊 Deck"],["analyst","🏦 Analyst"],["financials","💰 Financials"],["charts","📈 Charts"],["history","📅 10-Year"],["backtest","🧪 Backtest"],["news","📰 News"],["prediction","🔮 Forecast"],["guide","📖 Guide"]].map(([v,l])=>{
+            const tabDesc={
+              macro:     "Market Environment",
+              portfolio: "Your Holdings",
+              quant:     "Buy/Sell Signals",
+              overview:  "Stock Analysis",
+              analyst:   "Wall St Ratings",
+              financials:"Earnings & Revenue",
+              charts:    "Price Charts",
+              history:   "10yr Returns",
+              backtest:  "Strategy Proof",
+              news:      "Latest Headlines",
+              prediction:"Price Targets",
+              guide:     "How To Use",
+            }[v]||"";
+            return(
+            <button key={v} onClick={()=>setTab(v)} style={{padding:"8px 13px",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",color:tab===v?"#38bdf8":"#94a3b8",borderBottom:`2px solid ${tab===v?"#38bdf8":"transparent"}`,transition:"color 0.15s",whiteSpace:"nowrap",display:"flex",flexDirection:"column",alignItems:"center",gap:1}}>
+              <span style={{fontSize:13,fontWeight:600}}>{l}</span>
+              <span style={{fontSize:9,opacity:0.7,letterSpacing:"0.03em",textTransform:"uppercase"}}>{tabDesc}</span>
             </button>
-          ))}
+          );})}
         </div>
 
         <div style={{padding:"16px 20px"}}>
@@ -1362,6 +1378,11 @@ function StockSense(){
           {/* ── OVERVIEW ── */}
                     {tab==="overview"&&(
             <div style={{animation:"fadeUp 0.3s ease"}}>
+
+              <div style={{background:"rgba(251,191,36,0.06)",border:"1px solid rgba(251,191,36,0.2)",borderRadius:14,padding:"14px 20px",marginBottom:16}}>
+                <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:17,color:"#fbbf24",marginBottom:5}}>📊 Stock Analysis</div>
+                <div style={{fontSize:12,color:"#94a3b8",lineHeight:1.7}}>Deep analysis of selected stock. Quant score breakdown, 4-layer technical confirmation, price forecasts, and buy/sell/hold recommendation.</div>
+              </div>
 
               {/* ── LIVE MACRO REGIME INDICATOR ── */}
               {(()=>{
@@ -1744,6 +1765,11 @@ function StockSense(){
 
 {tab==="charts"&&(
             <div style={{animation:"fadeUp 0.3s ease"}}>
+
+              <div style={{background:"rgba(56,189,248,0.06)",border:"1px solid rgba(56,189,248,0.2)",borderRadius:14,padding:"14px 20px",marginBottom:16}}>
+                <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:17,color:"#38bdf8",marginBottom:5}}>📈 Price Charts</div>
+                <div style={{fontSize:12,color:"#94a3b8",lineHeight:1.7}}>Live price tick chart, 52-week range. RSI and MACD are simulated (Phase 1). Real candlestick charts available via TradingView/Yahoo Finance links.</div>
+              </div>
               {/* Notice */}
               <div style={{background:"rgba(251,191,36,0.06)",border:"1px solid rgba(251,191,36,0.2)",borderRadius:13,padding:"18px 22px",marginBottom:16,display:"flex",gap:14,alignItems:"flex-start"}}>
                 <div style={{fontSize:24,flexShrink:0}}>⚠️</div>
@@ -1840,6 +1866,11 @@ function StockSense(){
           {/* ── ANALYST CONSENSUS ── */}
           {tab==="analyst"&&(
             <div style={{animation:"fadeUp 0.3s ease"}}>
+
+              <div style={{background:"rgba(244,114,182,0.06)",border:"1px solid rgba(244,114,182,0.2)",borderRadius:14,padding:"14px 20px",marginBottom:16}}>
+                <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:17,color:"#f472b6",marginBottom:5}}>🏦 Analyst Ratings</div>
+                <div style={{fontSize:12,color:"#94a3b8",lineHeight:1.7}}>Wall Street consensus from 15-25 analysts. Buy/Hold/Sell breakdown, price targets, EPS history (beat/miss), and upcoming earnings dates.</div>
+              </div>
               {/* Show live Finnhub rec if available */}
               {recCache[ticker]&&recCache[ticker].total>0&&(
                 <div style={{background:"rgba(56,189,248,0.05)",border:"1px solid rgba(56,189,248,0.15)",borderRadius:10,padding:"10px 14px",marginBottom:12,display:"flex",alignItems:"center",gap:8,fontSize:13}}>
@@ -2008,6 +2039,11 @@ function StockSense(){
           {/* ── QUANT MODEL ── */}
           {tab==="quant"&&(
             <div style={{animation:"fadeUp 0.3s ease"}}>
+
+              <div style={{background:"rgba(129,140,248,0.06)",border:"1px solid rgba(129,140,248,0.2)",borderRadius:14,padding:"14px 20px",marginBottom:16}}>
+                <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:17,color:"#818cf8",marginBottom:5}}>🧮 Quant Rankings</div>
+                <div style={{fontSize:12,color:"#94a3b8",lineHeight:1.7}}>All 26 stocks ranked 1-20 by quantitative score (0-100). Momentum + Valuation + Quality + Risk + Sentiment + Moat. Top ranked = buy candidates.</div>
+              </div>
               <div style={{background:q.sig.bg,border:`1px solid ${q.sig.c+"44"}`,borderRadius:16,padding:"20px 22px",marginBottom:14,display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:14}}>
                 <div>
                   {lbl("Composite Quant Score",q.sig.c)}
@@ -2115,6 +2151,11 @@ function StockSense(){
           {/* ── PREDICTION ── */}
           {tab==="prediction"&&(
             <div style={{animation:"fadeUp 0.3s ease"}}>
+
+              <div style={{background:"rgba(249,115,22,0.06)",border:"1px solid rgba(249,115,22,0.2)",borderRadius:14,padding:"14px 20px",marginBottom:16}}>
+                <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:17,color:"#f97316",marginBottom:5}}>🔮 Price Forecast</div>
+                <div style={{fontSize:12,color:"#94a3b8",lineHeight:1.7}}>Quantitative price targets for next session, this week, 1 month and 3 months. Based on quant score, historical volatility, and momentum signals.</div>
+              </div>
               <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:15,padding:"18px 20px",marginBottom:12}}>
                 {lbl("🔮 52-Week Price Forecast","#818cf8")}
                 <div style={{fontSize:11,color:"#94a3b8",marginBottom:14}}>Driven by 5-pillar composite score, 10-year CAGR model, and volatility-adjusted drift</div>
@@ -2157,6 +2198,11 @@ function StockSense(){
           {/* ── 10-YEAR ── */}
           {tab==="history"&&(
             <div style={{animation:"fadeUp 0.3s ease"}}>
+
+              <div style={{background:"rgba(163,230,53,0.06)",border:"1px solid rgba(163,230,53,0.2)",borderRadius:14,padding:"14px 20px",marginBottom:16}}>
+                <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:17,color:"#a3e635",marginBottom:5}}>📅 10-Year Performance</div>
+                <div style={{fontSize:12,color:"#94a3b8",lineHeight:1.7}}>Annual returns 2015-2025. How this stock performed in each macro regime — Risk On, Caution, Risk Off, and Crisis years — compared to SPY.</div>
+              </div>
               <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:15,padding:"18px 20px",marginBottom:12}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
                   {lbl("📅 Annual Returns 2015–2025","#38bdf8")}
@@ -2218,6 +2264,11 @@ function StockSense(){
           {/* ── NEWS ── */}
           {tab==="news"&&(
             <div style={{animation:"fadeUp 0.3s ease"}}>
+
+              <div style={{background:"rgba(148,163,184,0.06)",border:"1px solid rgba(148,163,184,0.2)",borderRadius:14,padding:"14px 20px",marginBottom:16}}>
+                <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:17,color:"#94a3b8",marginBottom:5}}>📰 Latest News</div>
+                <div style={{fontSize:12,color:"#94a3b8",lineHeight:1.7}}>Latest company news from Finnhub. Earnings announcements, analyst upgrades/downgrades, product launches, and macro events affecting this stock.</div>
+              </div>
               <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:14,padding:"15px 18px",marginBottom:12,borderLeft:"3px solid #38bdf8"}}>
                 {lbl("🤖 News Summary","#38bdf8")}
                 <div style={{fontSize:13,color:"#cbd5e1",lineHeight:1.85}}>
@@ -2257,6 +2308,11 @@ function StockSense(){
           {/* ── FINANCIALS ── */}
           {tab==="financials"&&(
             <div style={{animation:"fadeUp 0.3s ease"}}>
+
+              <div style={{background:"rgba(52,211,153,0.06)",border:"1px solid rgba(52,211,153,0.2)",borderRadius:14,padding:"14px 20px",marginBottom:16}}>
+                <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:17,color:"#34d399",marginBottom:5}}>💰 Financial Health</div>
+                <div style={{fontSize:12,color:"#94a3b8",lineHeight:1.7}}>Company financial health. Revenue growth, profit margins, free cash flow, debt-to-equity, and key metrics driving the quality pillar of the quant score.</div>
+              </div>
               {!fin?(
                 <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:14,padding:24,textAlign:"center",color:"#cbd5e1"}}>No financial data available.</div>
               ):fin.note&&!fin.is.length?(
@@ -2332,6 +2388,11 @@ function StockSense(){
 
             return(
             <div style={{animation:"fadeUp 0.3s ease"}}>
+
+              <div style={{background:"rgba(52,211,153,0.06)",border:"1px solid rgba(52,211,153,0.2)",borderRadius:14,padding:"14px 20px",marginBottom:16}}>
+                <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:17,color:"#34d399",marginBottom:5}}>💼 Your Portfolio</div>
+                <div style={{fontSize:12,color:"#94a3b8",lineHeight:1.7}}>Your Mar 13 2026 positions tracked in real time. P&L vs SPY, rebalance alerts, risk metrics, dividend income, and the auto-trader live portfolio.</div>
+              </div>
 
               {/* ── AUTO TRADER STATUS ── */}
               <div style={{background:"linear-gradient(135deg,rgba(129,140,248,0.08),rgba(56,189,248,0.05))",border:"1px solid rgba(129,140,248,0.2)",borderRadius:14,padding:"14px 18px",marginBottom:14}}>
@@ -3339,6 +3400,11 @@ function StockSense(){
           {tab==="macro"&&(
             <div style={{animation:"fadeUp 0.3s ease"}}>
 
+              <div style={{background:"rgba(56,189,248,0.08)",border:"1px solid rgba(56,189,248,0.2)",borderRadius:14,padding:"14px 20px",marginBottom:16}}>
+                <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:17,color:"#38bdf8",marginBottom:5}}>🌍 Macro Environment</div>
+                <div style={{fontSize:12,color:"#94a3b8",lineHeight:1.7}}>Live macro indicators driving market conditions. Gold, Oil, VIX and Bond yields determine the current regime — which sectors get capital and how much.</div>
+              </div>
+
               {/* ── MACRO HEADER ── */}
               <div style={{background:"linear-gradient(135deg,rgba(56,189,248,0.08),rgba(129,140,248,0.06))",border:"1px solid rgba(56,189,248,0.15)",borderRadius:16,padding:"18px 22px",marginBottom:14}}>
                 {lbl("🌍 Global Macro Dashboard","#38bdf8")}
@@ -3574,6 +3640,11 @@ function StockSense(){
 
           {tab==="backtest"&&(
             <div style={{animation:"fadeUp 0.3s ease"}}>
+
+              <div style={{background:"rgba(52,211,153,0.06)",border:"1px solid rgba(52,211,153,0.2)",borderRadius:14,padding:"14px 20px",marginBottom:16}}>
+                <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:17,color:"#34d399",marginBottom:5}}>🧪 Strategy Backtest</div>
+                <div style={{fontSize:12,color:"#94a3b8",lineHeight:1.7}}>11-year validation of the macro regime rotation strategy. $100K grew to $4.9M. Beat SPY all 11 years. Sharpe ratio 2.03. Framework proven.</div>
+              </div>
 
               {/* Header */}
               <div style={{background:"linear-gradient(135deg,rgba(52,211,153,0.08),rgba(56,189,248,0.05))",border:"1px solid rgba(52,211,153,0.2)",borderRadius:16,padding:"18px 22px",marginBottom:14}}>
