@@ -192,7 +192,19 @@
       "reason": "Initial portfolio \u2014 Mar 13 2026"
     }
   ],
-  "daily_snapshots": [],
+  "daily_snapshots": [
+    {
+      "date": "2026-03-23",
+      "session": "open",
+      "value": 101261.55,
+      "pnl": 1261.55,
+      "pnl_pct": 1.26,
+      "spy_ret": 17.51,
+      "alpha": -16.24,
+      "regime": "RISK_OFF",
+      "positions": 10
+    }
+  ],
   "total_trades": 10,
   "version": "3.0"
 }
