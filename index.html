@@ -3226,7 +3226,8 @@ function StockSense(){
               </div>
 
               {/* ── REBALANCE ALERTS ── */}
-              {(()=>{
+              // ── REBALANCE LOGIC ──
+                let alerts2 = [];
                 // ── REGIME for recommendations ───────────────────────────────────────
                 const gold2  = prices["GLD"]?.price  || 240;
                 const oil2   = prices["USO"]?.price   || 70;
@@ -3317,7 +3318,6 @@ function StockSense(){
                           <div style={{background:"rgba(56,189,248,0.08)",border:"1px solid rgba(56,189,248,0.2)",borderRadius:8,padding:"5px 12px",fontSize:11,color:"#38bdf8"}}>Regime: {regime2}</div>
                         </div>
                       );
-                    })()}
                     {alerts2.map((a,i)=>(
                       <div key={i} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"10px 12px",background:"#090f1a",borderRadius:9,marginBottom:7,borderLeft:"3px solid "+a.c}}>
                         <div style={{flexShrink:0}}>
