@@ -2,17 +2,12 @@
   "updated": "2026-03-24 11:33 ET",
   "started": "2026-03-13",
   "regime": "RISK_OFF",
-  "portfolio_value": 100028.75,
+  "portfolio_value": 100132.94,
   "cash": 2157.0,
-  "total_pnl": 28.75,
-  "total_pnl_pct": 0.03,
-  "net_pnl": 28.75,
-  "net_pnl_pct": 0.03,
-  "total_costs": 0,
-  "cost_drag_pct": 0.0,
-  "monthly_trades": 0,
-  "spy_ret": 16.52,
-  "alpha": -16.49,
+  "total_pnl": 132.94,
+  "total_pnl_pct": 0.13,
+  "spy_ret": 16.82,
+  "alpha": -16.68,
   "positions": [
     {
       "ticker": "NVDA",
@@ -63,9 +58,9 @@
       "ticker": "AMZN",
       "shares": 46,
       "avg_cost": 207.44,
-      "cur_price": 207.89,
-      "pnl_pct": 0.22,
-      "value": 9562.94,
+      "cur_price": 210.16,
+      "pnl_pct": 1.31,
+      "value": 9667.13,
       "entry_date": "2026-03-13"
     },
     {
@@ -255,5 +250,5 @@
     }
   ],
   "total_trades": 10,
-  "version": "3.1"
+  "version": "3.0"
 }
