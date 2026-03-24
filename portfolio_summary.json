@@ -241,6 +241,17 @@
       "alpha": 0.48,
       "regime": "RISK_OFF",
       "positions": 10
+    },
+    {
+      "date": "2026-03-24",
+      "session": "open",
+      "value": 100319.79,
+      "pnl": 319.79,
+      "pnl_pct": 0.32,
+      "spy_ret": 0.0,
+      "alpha": 0.32,
+      "regime": "RISK_OFF",
+      "positions": 10
     }
   ],
   "total_trades": 10,
