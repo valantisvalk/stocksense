@@ -3232,11 +3232,12 @@ function StockSense(){
                 const oil2   = prices["USO"]?.price   || 70;
                 const vix2   = prices["VIXY"]?.price  || 18;
                 const bonds2 = prices["TLT"]?.price   || 92;
-                let fear2 = 0;
-                if(vix2>35) fear2+=4; else if(vix2>25) fear2+=3; else if(vix2>18) fear2+=1;
-                if(gold2>280) fear2+=2; else if(gold2<240) fear2-=1;
-                if(oil2>90) fear2+=2; else if(oil2<70) fear2-=1;
-                if(bonds2<88) fear2+=2; else if(bonds2<92) fear2+=1;
+                const fear2 = [
+                  vix2>35?4:vix2>25?3:vix2>18?1:0,
+                  gold2>280?2:gold2>240?0:-1,
+                  oil2>90?2:oil2>70?0:-1,
+                  bonds2>92?0:bonds2>88?1:2,
+                ].reduce((a,b)=>a+b,0);
                 const regime2 = fear2>=6?"CRISIS":fear2>=3?"RISK_OFF":fear2>=1?"CAUTION":"RISK_ON";
 
                 // ── REGIME TARGETS ────────────────────────────────────────
