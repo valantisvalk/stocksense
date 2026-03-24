@@ -1,102 +1,107 @@
 {
-  "updated": "2026-03-24 10:31 ET",
+  "updated": "2026-03-24 11:02 ET",
   "started": "2026-03-13",
   "regime": "RISK_OFF",
-  "portfolio_value": 99639.58,
+  "portfolio_value": 99830.48,
   "cash": 2157.0,
-  "total_pnl": -360.42,
-  "total_pnl_pct": -0.36,
-  "spy_ret": 16.82,
-  "alpha": -17.18,
+  "total_pnl": -169.52,
+  "total_pnl_pct": -0.17,
+  "net_pnl": -169.52,
+  "net_pnl_pct": -0.17,
+  "total_costs": 0,
+  "cost_drag_pct": 0.0,
+  "monthly_trades": 0,
+  "spy_ret": 16.33,
+  "alpha": -16.5,
   "positions": [
     {
       "ticker": "NVDA",
       "shares": 63,
       "avg_cost": 180.25,
-      "cur_price": 174.35,
-      "pnl_pct": -3.27,
-      "value": 10984.05,
+      "cur_price": 174.43,
+      "pnl_pct": -3.23,
+      "value": 10989.09,
       "entry_date": "2026-03-13"
     },
     {
       "ticker": "LLY",
       "shares": 12,
       "avg_cost": 800.0,
-      "cur_price": 900.73,
-      "pnl_pct": 12.59,
-      "value": 10808.76,
+      "cur_price": 898.89,
+      "pnl_pct": 12.36,
+      "value": 10786.68,
       "entry_date": "2026-03-13"
     },
     {
       "ticker": "AVGO",
       "shares": 32,
       "avg_cost": 322.94,
-      "cur_price": 315.87,
-      "pnl_pct": -2.19,
-      "value": 10107.84,
-      "entry_date": "2026-03-13"
-    },
-    {
-      "ticker": "COST",
-      "shares": 10,
-      "avg_cost": 961.32,
-      "cur_price": 974.39,
-      "pnl_pct": 1.36,
-      "value": 9743.9,
+      "cur_price": 318.11,
+      "pnl_pct": -1.5,
+      "value": 10179.52,
       "entry_date": "2026-03-13"
     },
     {
       "ticker": "GOOGL",
       "shares": 33,
       "avg_cost": 293.14,
-      "cur_price": 295.25,
-      "pnl_pct": 0.72,
-      "value": 9743.25,
+      "cur_price": 296.22,
+      "pnl_pct": 1.05,
+      "value": 9775.26,
+      "entry_date": "2026-03-13"
+    },
+    {
+      "ticker": "COST",
+      "shares": 10,
+      "avg_cost": 961.32,
+      "cur_price": 975.01,
+      "pnl_pct": 1.42,
+      "value": 9750.1,
       "entry_date": "2026-03-13"
     },
     {
       "ticker": "AMZN",
       "shares": 46,
       "avg_cost": 207.44,
-      "cur_price": 210.16,
-      "pnl_pct": 1.31,
-      "value": 9667.13,
+      "cur_price": 208.4,
+      "pnl_pct": 0.46,
+      "value": 9586.4,
       "entry_date": "2026-03-13"
     },
     {
       "ticker": "MSFT",
       "shares": 25,
       "avg_cost": 398.94,
-      "cur_price": 372.74,
-      "pnl_pct": -6.57,
-      "value": 9318.5,
+      "cur_price": 373.87,
+      "pnl_pct": -6.28,
+      "value": 9346.75,
       "entry_date": "2026-03-13"
     },
     {
       "ticker": "WMT",
       "shares": 75,
       "avg_cost": 126.52,
-      "cur_price": 122.94,
-      "pnl_pct": -2.83,
-      "value": 9220.5,
+      "cur_price": 123.22,
+      "pnl_pct": -2.61,
+      "value": 9241.5,
       "entry_date": "2026-03-13"
     },
     {
       "ticker": "JPM",
       "shares": 31,
       "avg_cost": 283.44,
-      "cur_price": 289.6,
-      "pnl_pct": 2.17,
-      "value": 8977.6,
+      "cur_price": 293.28,
+      "pnl_pct": 3.47,
+      "value": 9091.68,
       "entry_date": "2026-03-13"
     },
     {
       "ticker": "META",
       "shares": 15,
       "avg_cost": 631.65,
-      "cur_price": 594.07,
-      "pnl_pct": -5.95,
-      "value": 8911.05,
+      "cur_price": 595.1,
+      "pnl_pct": -5.79,
+      "value": 8926.5,
       "entry_date": "2026-03-13"
     }
   ],
@@ -250,5 +255,5 @@
     }
   ],
   "total_trades": 10,
-  "version": "3.0"
+  "version": "3.1"
 }
