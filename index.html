@@ -3227,17 +3227,69 @@ function StockSense(){
 
               {/* ── REBALANCE ALERTS ── */}
               {(()=>{
-                const alerts2 = portfolio.flatMap(p=>{
-                  const curr = prices[p.ticker]?.price || p.entryPrice;
-                  const q2   = computeQuant(p.ticker, curr);
-                  const pnlP = ((curr-p.entryPrice)/p.entryPrice)*100;
+                const // ── REGIME for recommendations ───────────────────────────────────────
+                const gold2  = prices["GLD"]?.price  || 240;
+                const oil2   = prices["USO"]?.price   || 70;
+                const vix2   = prices["VIXY"]?.price  || 18;
+                const bonds2 = prices["TLT"]?.price   || 92;
+                let fear2    = 0;
+                if(vix2>35) fear2+=4; else if(vix2>25) fear2+=3; else if(vix2>18) fear2+=1;
+                if(gold2>280) fear2+=2; else if(gold2<240) fear2-=1;
+                if(oil2>90)   fear2+=2; else if(oil2<70)  fear2-=1;
+                if(bonds2<88) fear2+=2; else if(bonds2<92) fear2+=1;
+                const regime2 = fear2>=6?"CRISIS":fear2>=3?"RISK_OFF":fear2>=1?"CAUTION":"RISK_ON";
+
+                // ── REGIME TARGET ALLOCATIONS ─────────────────────────────
+                const REGIME_TARGETS2 = {
+                  RISK_ON:  {Technology:0.26,Semiconductors:0.18,Pharma:0.07,Banking:0.09,"Social Media":0.07,"E-Commerce/Cloud":0.09,Retail:0.05},
+                  CAUTION:  {Technology:0.20,Semiconductors:0.10,Pharma:0.13,Banking:0.10,"Social Media":0.05,"E-Commerce/Cloud":0.07,Retail:0.10},
+                  RISK_OFF: {Technology:0.09,Semiconductors:0.04,Pharma:0.16,Banking:0.08,"Social Media":0.03,"E-Commerce/Cloud":0.02,Retail:0.15},
+                  CRISIS:   {Technology:0.04,Semiconductors:0.00,Pharma:0.15,Banking:0.04,"Social Media":0.00,"E-Commerce/Cloud":0.00,Retail:0.20},
+                };
+                const targets2 = REGIME_TARGETS2[regime2] || REGIME_TARGETS2.CAUTION;
+                const totalPortVal2 = portfolio.reduce((s,p)=>s+(prices[p.ticker]?.price||p.entryPrice)*p.shares, 0) + 2157;
+
+                // ── GENERATE ALL ALERTS ───────────────────────────────────
+                alerts2 = portfolio.flatMap(p=>{
+                  const curr   = prices[p.ticker]?.price || p.entryPrice;
+                  const q2     = computeQuant(p.ticker, curr, prices);
+                  const pnlP   = ((curr-p.entryPrice)/p.entryPrice)*100;
+                  const posVal = curr * p.shares;
+                  const posPct = posVal / totalPortVal2 * 100;
+                  const db2    = DB[p.ticker] || {};
+                  const sector = db2.s || "Unknown";
+                  const targetPct = (targets2[sector] || 0) * 100;
                   const a = [];
-                  if(q2.comp < 40)           a.push({type:"🔴 SELL",   msg:"Quant dropped to "+q2.comp+" — below 40", c:"#f87171", ticker:p.ticker});
-                  if(q2.comp>=40&&q2.comp<55) a.push({type:"🟡 REVIEW", msg:"Quant at "+q2.comp+" — weakening",        c:"#fbbf24", ticker:p.ticker});
-                  if(pnlP > 40)              a.push({type:"✂️ TRIM",   msg:"Up "+pnlP.toFixed(1)+"% — take profit?",  c:"#fbbf24", ticker:p.ticker});
-                  if(pnlP < -25)             a.push({type:"🔍 REVIEW", msg:"Down "+Math.abs(pnlP).toFixed(1)+"%",     c:"#f97316", ticker:p.ticker});
+
+                  // ── SELL / REDUCE signals ─────────────────────────────
+                  if(q2.comp < 40)
+                    a.push({type:"🔴 SELL",   msg:`Quant ${q2.comp} — below 40 sell threshold. Exit position.`, c:"#f87171", ticker:p.ticker, priority:1});
+                  else if(q2.comp>=40&&q2.comp<55)
+                    a.push({type:"🟡 REDUCE", msg:`Quant ${q2.comp} — weakening. Consider trimming 25%.`, c:"#fbbf24", ticker:p.ticker, priority:2});
+                  if(pnlP > 40)
+                    a.push({type:"✂️ TRIM",   msg:`Up ${pnlP.toFixed(1)}% — take profit rule: sell 25% to lock gains.`, c:"#fbbf24", ticker:p.ticker, priority:1});
+                  if(pnlP < -15)
+                    a.push({type:"🛑 STOP",   msg:`Down ${Math.abs(pnlP).toFixed(1)}% — approaching stop loss at -15%. Review now.`, c:"#f87171", ticker:p.ticker, priority:1});
+                  else if(pnlP < -10)
+                    a.push({type:"⚠️ WATCH",  msg:`Down ${Math.abs(pnlP).toFixed(1)}% — nearing stop loss. Monitor closely.`, c:"#f97316", ticker:p.ticker, priority:2});
+                  if(posPct > 15)
+                    a.push({type:"📊 OVERWEIGHT", msg:`${posPct.toFixed(1)}% of portfolio — above 15% max. Trim to reduce concentration.`, c:"#f97316", ticker:p.ticker, priority:2});
+
+                  // ── ADD / INCREASE signals ────────────────────────────
+                  if(q2.comp >= 68 && posPct < targetPct * 0.75 && pnlP > -15){
+                    const gap = (targetPct - posPct).toFixed(1);
+                    const addAmt = Math.round((targetPct/100 - posPct/100) * totalPortVal2 / curr);
+                    a.push({type:"🟢 ADD",    msg:`Quant ${q2.comp} strong + underweight vs regime target (${posPct.toFixed(1)}% vs ${targetPct.toFixed(0)}% target). Add ~${addAmt} shares ($${Math.round(addAmt*curr).toLocaleString()}).`, c:"#34d399", ticker:p.ticker, priority:2});
+                  }
+                  if(q2.comp >= 75 && posPct < targetPct * 0.5 && pnlP > -10){
+                    const addAmt = Math.round((targetPct/100 - posPct/100) * totalPortVal2 / curr);
+                    a.push({type:"🚀 STRONG ADD", msg:`Quant ${q2.comp} — strong buy + significantly underweight. Increase position by ~${addAmt} shares ($${Math.round(addAmt*curr).toLocaleString()}).`, c:"#34d399", ticker:p.ticker, priority:1});
+                  }
                   return a;
                 });
+
+                // ── SORT: priority 1 first, then by type ─────────────────
+                alerts2.sort((a,b)=>(a.priority||3)-(b.priority||3));
                 if(alerts2.length===0) return(
                   <div style={{background:"rgba(52,211,153,0.05)",border:"1px solid rgba(52,211,153,0.2)",borderRadius:13,padding:"16px 20px",marginBottom:14,display:"flex",gap:12,alignItems:"center"}}>
                     <span style={{fontSize:22}}>✅</span>
@@ -3250,9 +3302,28 @@ function StockSense(){
                 return(
                   <div style={{background:"#0a1421",border:"1px solid rgba(251,191,36,0.3)",borderRadius:13,padding:"16px 18px",marginBottom:14}}>
                     <div style={{fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:14,color:"#fbbf24",marginBottom:10}}>🔔 Rebalance Alerts ({alerts2.length})</div>
+                    {/* Summary counts */}
+                    {(()=>{
+                      const sells  = alerts2.filter(a=>a.type.includes("SELL")||a.type.includes("STOP")).length;
+                      const adds   = alerts2.filter(a=>a.type.includes("ADD")).length;
+                      const trims  = alerts2.filter(a=>a.type.includes("TRIM")||a.type.includes("REDUCE")||a.type.includes("OVERWEIGHT")).length;
+                      const warns  = alerts2.filter(a=>a.type.includes("WATCH")||a.type.includes("REVIEW")).length;
+                      return(
+                        <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
+                          {sells>0&&<div style={{background:"rgba(248,113,113,0.12)",border:"1px solid rgba(248,113,113,0.3)",borderRadius:8,padding:"5px 12px",fontSize:11,color:"#f87171",fontWeight:700}}>{sells} SELL/STOP</div>}
+                          {adds>0&&<div style={{background:"rgba(52,211,153,0.12)",border:"1px solid rgba(52,211,153,0.3)",borderRadius:8,padding:"5px 12px",fontSize:11,color:"#34d399",fontWeight:700}}>{adds} ADD</div>}
+                          {trims>0&&<div style={{background:"rgba(251,191,36,0.12)",border:"1px solid rgba(251,191,36,0.3)",borderRadius:8,padding:"5px 12px",fontSize:11,color:"#fbbf24",fontWeight:700}}>{trims} TRIM/REDUCE</div>}
+                          {warns>0&&<div style={{background:"rgba(249,115,22,0.12)",border:"1px solid rgba(249,115,22,0.3)",borderRadius:8,padding:"5px 12px",fontSize:11,color:"#f97316",fontWeight:700}}>{warns} WATCH</div>}
+                          <div style={{background:"rgba(56,189,248,0.08)",border:"1px solid rgba(56,189,248,0.2)",borderRadius:8,padding:"5px 12px",fontSize:11,color:"#38bdf8"}}>Regime: {regime2}</div>
+                        </div>
+                      );
+                    })()}
                     {alerts2.map((a,i)=>(
-                      <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",background:"#090f1a",borderRadius:9,marginBottom:7,borderLeft:"3px solid "+a.c}}>
-                        <span style={{fontSize:11,fontWeight:700,color:a.c,background:a.c+"18",borderRadius:20,padding:"3px 10px",flexShrink:0}}>{a.type}</span>
+                      <div key={i} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"10px 12px",background:"#090f1a",borderRadius:9,marginBottom:7,borderLeft:"3px solid "+a.c}}>
+                        <div style={{flexShrink:0}}>
+                          <span style={{fontSize:11,fontWeight:700,color:a.c,background:a.c+"18",borderRadius:20,padding:"3px 10px",display:"block",whiteSpace:"nowrap"}}>{a.type}</span>
+                          <div style={{fontSize:10,color:"#475569",marginTop:3,textAlign:"center"}}>{a.ticker}</div>
+                        </div>
                         <span style={{fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:700,fontSize:13,color:"#7dd3fc",flexShrink:0}}>{a.ticker}</span>
                         <span style={{fontSize:13,color:"#94a3b8",flex:1}}>{a.msg}</span>
                         <button onClick={()=>{setTicker(a.ticker);setTab("analyst");}} style={{marginLeft:"auto",fontSize:11,color:"#38bdf8",background:"rgba(56,189,248,0.1)",border:"1px solid rgba(56,189,248,0.2)",borderRadius:6,padding:"4px 10px",cursor:"pointer",flexShrink:0}}>Review →</button>
