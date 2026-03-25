@@ -2662,26 +2662,21 @@ function StockSense(){
                             letterSpacing:"0.06em",marginBottom:8,paddingTop:10,borderTop:"1px solid #0d1f33"}}>
                             📊 Advanced Portfolio KPIs
                           </div>
-                          <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:6,marginBottom:6}}>
-                            {kpis.slice(0,7).map((k,i)=>(
-                              <div key={i} style={{background:"#090f1a",borderRadius:9,padding:"10px 12px",
-                                borderLeft:`2px solid ${k.c}`,textAlign:"center"}}>
-                                <div style={{fontSize:9,color:"#475569",marginBottom:3}}>{k.l}</div>
-                                <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:13,color:k.c,lineHeight:1}}>{k.v}</div>
-                                {k.sub&&<div style={{fontSize:9,color:k.c,opacity:0.75,marginTop:3}}>{k.sub}</div>}
-                              </div>
-                            ))}
-                          </div>
-                          <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:6}}>
-                            {kpis.slice(7).map((k,i)=>(
-                              <div key={i} style={{background:"#090f1a",borderRadius:9,padding:"10px 12px",
-                                borderLeft:`2px solid ${k.c}`,textAlign:"center"}}>
-                                <div style={{fontSize:9,color:"#475569",marginBottom:3}}>{k.l}</div>
-                                <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:13,color:k.c,lineHeight:1}}>{k.v}</div>
-                                {k.sub&&<div style={{fontSize:9,color:k.c,opacity:0.75,marginTop:3}}>{k.sub}</div>}
-                              </div>
-                            ))}
-                          </div>
+                          {[kpis.slice(0,7), kpis.slice(7,14)].map((row,ri)=>(
+                            <div key={ri} style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",
+                              gap:6,marginBottom:ri===0?6:0}}>
+                              {row.map((k,i)=>(
+                                <div key={i} style={{background:"#090f1a",borderRadius:9,
+                                  padding:"10px 12px",borderLeft:`2px solid ${k.c}`,textAlign:"center"}}>
+                                  <div style={{fontSize:9,color:"#475569",marginBottom:3}}>{k.l}</div>
+                                  <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,
+                                    fontSize:13,color:k.c,lineHeight:1}}>{k.v}</div>
+                                  {k.sub&&<div style={{fontSize:9,color:k.c,opacity:0.75,
+                                    marginTop:3}}>{k.sub}</div>}
+                                </div>
+                              ))}
+                            </div>
+                          ))}
                         </div>
                       );
                     })()}
