@@ -1018,7 +1018,7 @@ function StockSense(){
     try{
       const url="https://raw.githubusercontent.com/valantisvalk/stocksense/main/portfolio_summary.json";
       const r=await fetch(url+"?t="+Date.now());
-      if(!r.ok) throw new Error("File not found — run paper_trader_v3.py first");
+      if(!r.ok) throw new Error("File not found — run paper_trader_v4.py first");
       const data=await r.json();
       setAutoPortfolio(data);
     }catch(e){setAutoError(e.message);}
@@ -1082,7 +1082,7 @@ function StockSense(){
   });
   const [portLog, setPortLog] = useState(() => {
     try {
-      const saved = localStorage.getItem("stocksense_portlog_v2");
+      const saved = localStorage.getItem("stocksense_portlog_v4");
       return saved ? JSON.parse(saved) : [{
         date:"2026-03-15", action:"INIT", note:"Portfolio opened — $100,000 paper trading",
         portfolioValue:98500, cash:1500
@@ -1098,7 +1098,7 @@ function StockSense(){
   }, [portfolio]);
   React.useEffect(() => {
     try {
-      localStorage.setItem("stocksense_portlog_v2", JSON.stringify(portLog));
+      localStorage.setItem("stocksense_portlog_v4", JSON.stringify(portLog));
     } catch(e) {}
   }, [portLog]);
   const[histView,setHistView]=useState("Annual");
@@ -2398,7 +2398,7 @@ function StockSense(){
             const priceRetPct = (priceGain/TOTAL_BUDGET)*100;
             const divRetPct   = (totalDivReceived/TOTAL_BUDGET)*100;
             const portfolioValue = totalCurrentVal + STARTING_CASH;
-            const spyEntry = 662.29; // SPY close Mar 13 2026 (real price)
+            const spyEntry  = 662.29; // SPY close Mar 13 2026 (real price)
             const spyNow   = prices["SPY"]?.price || spyEntry;
             const spyRet   = ((spyNow-spyEntry)/spyEntry)*100;
 
@@ -2414,7 +2414,7 @@ function StockSense(){
               <div style={{background:"linear-gradient(135deg,rgba(129,140,248,0.08),rgba(56,189,248,0.05))",border:"1px solid rgba(129,140,248,0.2)",borderRadius:14,padding:"14px 18px",marginBottom:14}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10}}>
                   <div>
-                    <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:14,color:"#818cf8",marginBottom:4}}>🤖 Auto Trader v3 — Running on PythonAnywhere</div>
+                    <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:14,color:"#818cf8",marginBottom:4}}>🤖 Auto Trader v4 — Running on PythonAnywhere</div>
                     <div style={{fontSize:12,color:"#94a3b8",lineHeight:1.6}}>
                       Scanning every 30 min · Smart triggers on 3% moves · Stop loss -15% · Take profit +40%<br/>
                       Buy threshold: score ≥ 68 · Sell threshold: score ≤ 38 · Max position: 12%
@@ -2466,7 +2466,7 @@ function StockSense(){
               {(()=>{
                 // Build chart data from GitHub daily_snapshots + today's live value
                 // daily_snapshots: [{date:"2026-03-13", value:100000, spy:562.83}, ...]
-                const SPY_ENTRY   = 562.83;
+                const SPY_ENTRY = 662.29;
                 const PORT_ENTRY  = 100000;
                 const COST_PCT    = 0.0008;
                 const allTrades   = (portLog||[]).filter(t=>t.action==="BUY"||t.action==="SELL");
