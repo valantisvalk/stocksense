@@ -2519,61 +2519,26 @@ function StockSense(){
                 chartPoints = chartPoints.filter(p=>{ if(seen[p.date]) return false; seen[p.date]=true; return true; });
                 chartPoints.sort((a,b)=>a.date>b.date?1:-1);
 
-                // ── SHARED METRICS — single source of truth for entire portfolio tab ──
-                // All calculations from chartPoints so chart line and KPIs always match
-                const _vals = chartPoints.map(p=>p.portVal);
-                const _n    = _vals.length;
-                const _dr   = _vals.slice(1).map((v,i)=>(_vals[i]>0?(v-_vals[i])/_vals[i]:0));
-
-                // Sharpe Ratio
-                const _sharpe = (()=>{
-                  if(_dr.length<3) return null;
-                  const avg = _dr.reduce((a,b)=>a+b,0)/_dr.length;
-                  const std = Math.sqrt(_dr.reduce((a,b)=>a+(b-avg)**2,0)/_dr.length);
-                  const annR = avg*252, annV = std*Math.sqrt(252);
-                  return annV>0 ? (annR-0.043)/annV : null;
-                })();
-
-                // Max Drawdown (portfolio level, not individual stocks)
-                const _maxDD = (()=>{
-                  let peak=_vals[0]||PORT_ENTRY, dd=0;
-                  for(const v of _vals){ if(v>peak)peak=v; dd=Math.max(dd,(peak-v)/peak); }
-                  return dd;
-                })();
-
-                // Win Rate
-                const _winRate = _dr.length>0 ? _dr.filter(r=>r>0).length/_dr.length*100 : null;
-
-                // Annualised Volatility
-                const _annVol = (()=>{
-                  if(_dr.length<3) return null;
-                  const avg=_dr.reduce((a,b)=>a+b,0)/_dr.length;
-                  const std=Math.sqrt(_dr.reduce((a,b)=>a+(b-avg)**2,0)/_dr.length);
-                  return std*Math.sqrt(252)*100;
-                })();
-
-                // Portfolio Beta
-                const _beta = PORTFOLIO_INIT.reduce((s,p)=>{
-                  const w=(prices[p.ticker]?.price||p.entryPrice)*p.shares/liveVal;
-                  return s+w*(DB[p.ticker]?.beta||1);
-                },0);
-
-                // Diversification
-                const _sectors = [...new Set((PORTFOLIO_INIT||[]).map(p=>(DB[p.ticker]||{}).s).filter(Boolean))];
+                // ── SHARED METRICS — calculated from stock returns (consistent with Risk Metrics section) ──
+                const _rets     = PORTFOLIO_INIT.map(p=>((prices[p.ticker]?.price||p.entryPrice)-p.entryPrice)/p.entryPrice);
+                const _wts      = PORTFOLIO_INIT.map(p=>p.shares*p.entryPrice/PORTFOLIO_INIT.reduce((s,q)=>s+q.shares*q.entryPrice,0));
+                const _portRet  = _rets.reduce((s,r,i)=>s+r*_wts[i],0);
+                const _portVol  = Math.sqrt(_wts.reduce((s,w,i)=>s+Math.pow(w*(DB[PORTFOLIO_INIT[i].ticker]?.vol||25),2),0))/100;
+                const _daysHeld = Math.max(1,Math.round((Date.now()-new Date("2026-03-13"))/86400000));
+                const _annRet   = _portRet*(365/_daysHeld);
+                const _sharpe   = _portVol>0 ? (_annRet-0.043)/_portVol : null;
+                const _maxDD    = Math.abs(Math.min(0,..._rets));
+                const _winRate  = _rets.filter(r=>r>0).length/_rets.length*100;
+                const _annVol   = _portVol*Math.sqrt(252)*100;
+                const _beta     = PORTFOLIO_INIT.reduce((s,p)=>{ const w=(prices[p.ticker]?.price||p.entryPrice)*p.shares/liveVal; return s+w*(DB[p.ticker]?.beta||1); },0);
+                const _upCount  = _rets.filter(r=>r>0).length;
+                const _corr     = Math.round(Math.abs((_upCount/_rets.length-0.5)*2)*100);
+                const _sectors  = [...new Set(PORTFOLIO_INIT.map(p=>(DB[p.ticker]||{}).s).filter(Boolean))];
                 const _divScore = Math.min(100,Math.round((_sectors.length/8)*100));
-
-                // Dividends received (proportional to days held)
-                const _daysHeld = Math.max(1,chartPoints.length);
-                const _divRec = PORTFOLIO_INIT.reduce((s,p)=>{
-                  const annDiv=(DB[p.ticker]?.div||0)/100*(prices[p.ticker]?.price||p.entryPrice)*p.shares;
-                  return s+annDiv*(_daysHeld/365);
-                },0);
-
-                // Best/Worst position
-                const _posPerf = (PORTFOLIO_INIT||[]).map(p=>({t:p.ticker,
-                  pct:((prices[p.ticker]?.price||p.entryPrice)-p.entryPrice)/p.entryPrice*100}));
-                const _best  = _posPerf.length?_posPerf.reduce((a,b)=>b.pct>a.pct?b:a):{t:"—",pct:0};
-                const _worst = _posPerf.length?_posPerf.reduce((a,b)=>b.pct<a.pct?b:a):{t:"—",pct:0};
+                const _divRec   = PORTFOLIO_INIT.reduce((s,p)=>{ const a=(DB[p.ticker]?.div||0)/100*(prices[p.ticker]?.price||p.entryPrice)*p.shares; return s+a*(_daysHeld/365); },0);
+                const _posPerf  = PORTFOLIO_INIT.map(p=>({t:p.ticker,pct:((prices[p.ticker]?.price||p.entryPrice)-p.entryPrice)/p.entryPrice*100}));
+                const _best     = _posPerf.length?_posPerf.reduce((a,b)=>b.pct>a.pct?b:a):{t:"—",pct:0};
+                const _worst    = _posPerf.length?_posPerf.reduce((a,b)=>b.pct<a.pct?b:a):{t:"—",pct:0};
                 // ── END SHARED METRICS ──
 
                 const allVals  = chartPoints.map(p=>p.portVal).concat(chartPoints.map(p=>p.spyVal));
@@ -2641,22 +2606,21 @@ function StockSense(){
                     {(()=>{
                       // All vars from parent scope (_sharpe, _maxDD, etc.) — single source of truth
                       const kpis = [
-                        {l:"Total Return",    v:(totalRetPctNow>=0?"+":"")+totalRetPctNow.toFixed(2)+"%",  c:totalRetPctNow>=0?"#34d399":"#f87171", sub:"$"+(liveVal-PORT_ENTRY>=0?"+":"")+Math.abs(liveVal-PORT_ENTRY).toFixed(0)},
+                        {l:"Total Return",    v:(totalRetPctNow>=0?"+":"")+totalRetPctNow.toFixed(2)+"%",  c:totalRetPctNow>=0?"#34d399":"#f87171", sub:"$"+(liveVal-PORT_ENTRY>=0?"+":"-")+Math.abs(liveVal-PORT_ENTRY).toFixed(0)},
                         {l:"Net Return",      v:(netRetPct>=0?"+":"")+netRetPct.toFixed(2)+"%",             c:netRetPct>=0?"#34d399":"#f87171",       sub:"after costs"},
                         {l:"Alpha vs SPY",    v:(alphaNow>=0?"+":"")+alphaNow.toFixed(2)+"%",               c:alphaNow>=0?"#34d399":"#f87171",        sub:"SPY "+(spyRetPctNow>=0?"+":"")+spyRetPctNow.toFixed(2)+"%"},
-                        {l:"Sharpe Ratio",    v:_sharpe!=null?_sharpe.toFixed(2):"—",                       c:_sharpe==null?"#475569":_sharpe>=1?"#34d399":_sharpe>=0.5?"#fbbf24":"#f87171", sub:_sharpe==null?"≥3 pts needed":_sharpe>=1?"Excellent":_sharpe>=0.5?"Good":"Poor"},
-                        {l:"Max Drawdown",    v:_maxDD>0?"-"+(_maxDD*100).toFixed(1)+"%":"0.0%",            c:_maxDD>0.15?"#f87171":_maxDD>0.08?"#fbbf24":"#34d399", sub:_maxDD>0.15?"⚠️ High":_maxDD>0.08?"Moderate":"Low"},
-                        {l:"Win Rate",        v:_winRate!=null?_winRate.toFixed(1)+"%":"—",                 c:_winRate==null?"#475569":_winRate>=55?"#34d399":_winRate>=45?"#fbbf24":"#f87171", sub:_winRate==null?"≥3 pts needed":_winRate>=55?"Above target":"Below target"},
-                        {l:"Volatility",      v:_annVol!=null?_annVol.toFixed(1)+"%":"—",                  c:_annVol==null?"#475569":_annVol>30?"#f87171":_annVol>20?"#fbbf24":"#34d399",      sub:_annVol==null?"≥3 pts needed":_annVol>30?"High":_annVol>20?"Medium":"Low"},
-                        {l:"Portfolio Beta",  v:_beta.toFixed(2),                                           c:_beta>1.3?"#f87171":_beta<0.8?"#38bdf8":"#fbbf24",  sub:_beta>1.3?"Aggressive":_beta<0.8?"Defensive":"Balanced"},
-                        {l:"Diversification", v:_divScore+"/100",                                           c:_divScore>=75?"#34d399":_divScore>=50?"#fbbf24":"#f87171", sub:_sectors.length+" sectors"},
-                        {l:"Price Return",    v:((liveVal-PORT_ENTRY-_divRec)/PORT_ENTRY*100>=0?"+":"")+((liveVal-PORT_ENTRY-_divRec)/PORT_ENTRY*100).toFixed(2)+"%", c:(liveVal-PORT_ENTRY-_divRec)>=0?"#34d399":"#f87171", sub:"excl. dividends"},
-                        {l:"Dividend Income", v:"$"+_divRec.toFixed(2),                                    c:"#38bdf8", sub:"+"+(_divRec/PORT_ENTRY*100).toFixed(3)+"%"},
-                        {l:"Best Position",   v:_best.t,                                                    c:"#34d399", sub:(_best.pct>=0?"+":"")+_best.pct.toFixed(1)+"%"},
-                        {l:"Worst Position",  v:_worst.t,                                                   c:"#f87171", sub:(_worst.pct>=0?"+":"")+_worst.pct.toFixed(1)+"%"},
-                        {l:"Cost Drag",       v:"-$"+totalCosts.toFixed(0),                                 c:"#f87171", sub:(totalCosts/PORT_ENTRY*100).toFixed(3)+"%"},
-                      ];
-                      return(
+                        {l:"Sharpe Ratio",    v:_sharpe!=null?_sharpe.toFixed(2):"—",                       c:!_sharpe?"#475569":_sharpe>=1?"#34d399":_sharpe>=0.5?"#fbbf24":"#f87171", sub:!_sharpe?"—":_sharpe>=1?"Excellent":_sharpe>=0.5?"Good":"Poor"},
+                        {l:"Max Drawdown",    v:"-"+(_maxDD*100).toFixed(1)+"%",                            c:_maxDD>0.15?"#f87171":_maxDD>0.08?"#fbbf24":"#34d399",  sub:_maxDD>0.15?"High":_maxDD>0.08?"Moderate":"Low"},
+                        {l:"Win Rate",        v:_winRate.toFixed(1)+"%",                                    c:_winRate>=55?"#34d399":_winRate>=45?"#fbbf24":"#f87171", sub:_winRate>=55?"Above target":_winRate>=45?"At target":"Below"},
+                        {l:"Volatility",      v:_annVol.toFixed(1)+"%",                                     c:_annVol>30?"#f87171":_annVol>20?"#fbbf24":"#34d399",    sub:_annVol>30?"High":_annVol>20?"Medium":"Low"},
+                        {l:"Portfolio Beta",  v:_beta.toFixed(2),                                           c:_beta>1.3?"#f87171":_beta<0.8?"#38bdf8":"#fbbf24",       sub:_beta>1.3?"Aggressive":_beta<0.8?"Defensive":"Balanced"},
+                        {l:"Correlation",     v:_corr+"%",                                                  c:_corr>80?"#f87171":_corr>60?"#fbbf24":"#34d399",         sub:_corr>80?"High":_corr>60?"Medium":"Low"},
+                        {l:"Diversification", v:_divScore+"/100",                                           c:_divScore>=75?"#34d399":_divScore>=50?"#fbbf24":"#f87171",sub:_sectors.length+" sectors"},
+                        {l:"Price Return",    v:((_portRet*100-_divRec/PORT_ENTRY*100)>=0?"+":"")+(_portRet*100-_divRec/PORT_ENTRY*100).toFixed(2)+"%", c:_portRet>=0?"#34d399":"#f87171", sub:"excl. dividends"},
+                        {l:"Dividend Income", v:"$"+_divRec.toFixed(2),                                     c:"#38bdf8",                                               sub:"+"+(_divRec/PORT_ENTRY*100).toFixed(3)+"%"},
+                        {l:"Best Position",   v:_best.t,                                                    c:"#34d399",                                               sub:(_best.pct>=0?"+":"")+_best.pct.toFixed(1)+"%"},
+                        {l:"Worst Position",  v:_worst.t,                                                   c:"#f87171",                                               sub:(_worst.pct>=0?"+":"")+_worst.pct.toFixed(1)+"%"},
+                      ];                      return(
                         <div style={{marginBottom:14}}>
                           <div style={{fontSize:10,color:"#475569",fontWeight:700,textTransform:"uppercase",
                             letterSpacing:"0.06em",marginBottom:8,paddingTop:10,borderTop:"1px solid #0d1f33"}}>
