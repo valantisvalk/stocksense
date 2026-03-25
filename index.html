@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" style="overflow-x:hidden">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -2054,7 +2054,7 @@ function StockSense(){
 
           {/* ── QUANT MODEL ── */}
           {tab==="quant"&&(
-            <div style={{animation:"fadeUp 0.3s ease"}}>
+            <div style={{animation:"fadeUp 0.3s ease",overflow:"hidden"}}>
 
               <div style={{background:"rgba(129,140,248,0.06)",border:"1px solid rgba(129,140,248,0.2)",borderRadius:14,padding:"14px 20px",marginBottom:16}}>
                 <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:17,color:"#818cf8",marginBottom:5}}>🧮 Quant Rankings</div>
@@ -2085,14 +2085,14 @@ function StockSense(){
                   {key:"macro",label:"Macro",score:q.maS,color:"#f97316"},
                 ].map((p,i)=>(
                   <div key={i} style={{marginBottom:14}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4,flexWrap:"wrap",gap:4}}>
                       <span style={{fontSize:13,color:"#e2e8f0",fontWeight:600}}>{p.label}</span>
-                      <div style={{display:"flex",alignItems:"center",gap:8}}>
+                      <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
                         <span style={{fontSize:11,color:"#94a3b8"}}>Weight:</span>
                         <input type="range" min="0" max="50" value={pillarW[p.key]}
                           onChange={e=>setPillarW(prev=>({...prev,[p.key]:parseInt(e.target.value)}))}
-                          style={{width:80,accentColor:p.color}}/>
-                        <span style={{fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:18,color:p.color,minWidth:28}}>{pillarW[p.key]}%</span>
+                          style={{width:70,accentColor:p.color}}/>
+                        <span style={{fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:16,color:p.color,minWidth:28}}>{pillarW[p.key]}%</span>
                         <span style={{fontSize:15,color:sc(p.score),fontWeight:700,minWidth:40,textAlign:"right"}}>{p.score}/100</span>
                       </div>
                     </div>
@@ -2487,11 +2487,19 @@ function StockSense(){
                 // Add daily snapshots from GitHub
                 snapshots.forEach(s=>{
                   if(s.date && s.date !== "2026-03-13"){
-                    const spyRet = s.spy_price ? (s.spy_price/SPY_ENTRY) : 1;
+                    // Use spy_ret field if available (v4 pushes correct %)
+                    // Otherwise calculate from spy_price using correct SPY_ENTRY=662.29
+                    let spyMult = 1;
+                    if(s.spy_ret != null){
+                      spyMult = 1 + (s.spy_ret/100);
+                    } else if(s.spy_price && s.spy_price > 500){
+                      // spy_price is actual price — divide by correct entry
+                      spyMult = s.spy_price / SPY_ENTRY;
+                    }
                     chartPoints.push({
                       date:s.date,
                       portVal:s.value || PORT_ENTRY,
-                      spyVal: PORT_ENTRY * spyRet,
+                      spyVal: PORT_ENTRY * spyMult,
                       isSnap:true
                     });
                   }
@@ -2574,7 +2582,7 @@ function StockSense(){
 
                     {/* THE CHART */}
                     <div style={{background:"#060d18",borderRadius:10,padding:"12px 8px",position:"relative"}}>
-                      <svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%",height:"auto",display:"block"}}>
+                      <svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%",height:"auto",display:"block",maxWidth:"100%"}}>
                         <defs>
                           <linearGradient id="portGrad" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="0%" stopColor="#34d399" stopOpacity="0.3"/>
