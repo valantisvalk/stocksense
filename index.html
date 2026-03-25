@@ -2398,7 +2398,7 @@ function StockSense(){
             const priceRetPct = (priceGain/TOTAL_BUDGET)*100;
             const divRetPct   = (totalDivReceived/TOTAL_BUDGET)*100;
             const portfolioValue = totalCurrentVal + STARTING_CASH;
-            const spyEntry = 562.83; // SPY close Mar 13 2026
+            const spyEntry = 662.29; // SPY close Mar 13 2026 (real price)
             const spyNow   = prices["SPY"]?.price || spyEntry;
             const spyRet   = ((spyNow-spyEntry)/spyEntry)*100;
 
