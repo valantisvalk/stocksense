@@ -2580,6 +2580,154 @@ function StockSense(){
                       ))}
                     </div>
 
+                    {/* ── ADVANCED KPIs ROW ── */}
+                    {(()=>{
+                      // ── Calculate advanced KPIs from snapshots + live data ──
+                      const allValsKpi = chartPoints.map(p=>p.portVal);
+                      const n = allValsKpi.length;
+
+                      // Sharpe Ratio — (annualised return - risk free) / annualised volatility
+                      let sharpe = null;
+                      if(n >= 3){
+                        const dailyRets = allValsKpi.slice(1).map((v,i)=>(v-allValsKpi[i])/allValsKpi[i]);
+                        const avgDailyRet = dailyRets.reduce((a,b)=>a+b,0)/dailyRets.length;
+                        const variance = dailyRets.reduce((a,b)=>a+(b-avgDailyRet)**2,0)/dailyRets.length;
+                        const dailyVol = Math.sqrt(variance);
+                        const annVol = dailyVol * Math.sqrt(252);
+                        const annRet = avgDailyRet * 252;
+                        const riskFree = 0.043; // 4.3% 10Y yield
+                        sharpe = annVol > 0 ? ((annRet - riskFree) / annVol) : null;
+                      }
+
+                      // Max Drawdown — largest peak-to-trough decline
+                      let maxDD = 0;
+                      let peak = allValsKpi[0] || PORT_ENTRY;
+                      for(const v of allValsKpi){
+                        if(v > peak) peak = v;
+                        const dd = (peak - v) / peak;
+                        if(dd > maxDD) maxDD = dd;
+                      }
+
+                      // Win Rate — % of daily returns that are positive
+                      const dailyRetsAll = allValsKpi.slice(1).map((v,i)=>(v-allValsKpi[i])/allValsKpi[i]);
+                      const winRate = dailyRetsAll.length > 0
+                        ? (dailyRetsAll.filter(r=>r>0).length / dailyRetsAll.length * 100)
+                        : null;
+
+                      // Volatility (annualised)
+                      let annVolPct = null;
+                      if(n >= 3){
+                        const dr = allValsKpi.slice(1).map((v,i)=>(v-allValsKpi[i])/allValsKpi[i]);
+                        const avg = dr.reduce((a,b)=>a+b,0)/dr.length;
+                        const vol = Math.sqrt(dr.reduce((a,b)=>a+(b-avg)**2,0)/dr.length)*Math.sqrt(252)*100;
+                        annVolPct = vol;
+                      }
+
+                      // Price appreciation vs dividends split
+                      const divReceived = portfolio.reduce((s,p)=>{
+                        const db2 = DB[p.ticker]||{};
+                        const annDiv = (db2.div||0)/100 * (prices[p.ticker]?.price||p.entryPrice) * p.shares;
+                        return s + (annDiv * (12/365));  // ~12 days since entry
+                      },0);
+                      const priceAppreciation = (liveVal - PORT_ENTRY) - divReceived;
+                      const priceAppPct = (priceAppreciation / PORT_ENTRY) * 100;
+                      const divPct = (divReceived / PORT_ENTRY) * 100;
+
+                      // Diversification score — based on number of sectors represented
+                      const sectors = [...new Set(portfolio.map(p=>(DB[p.ticker]||{}).s).filter(Boolean))];
+                      const divScore = Math.min(100, Math.round((sectors.length / 8) * 100));
+
+                      // Beta-weighted portfolio beta
+                      const portBeta = portfolio.reduce((s,p)=>{
+                        const w = (prices[p.ticker]?.price||p.entryPrice)*p.shares / liveVal;
+                        return s + w*(DB[p.ticker]?.beta||1);
+                      },0).toFixed(2);
+
+                      // Correlation to SPY (simplified — using beta as proxy)
+                      const corrSPY = Math.min(0.99, Math.max(-0.99, portBeta * 0.6)).toFixed(2);
+
+                      // Best / worst position
+                      const posPerf = portfolio.map(p=>({
+                        t:p.ticker,
+                        pct:((prices[p.ticker]?.price||p.entryPrice)-p.entryPrice)/p.entryPrice*100
+                      }));
+                      const bestPos  = posPerf.reduce((a,b)=>b.pct>a.pct?b:a, posPerf[0]||{t:"—",pct:0});
+                      const worstPos = posPerf.reduce((a,b)=>b.pct<a.pct?b:a, posPerf[0]||{t:"—",pct:0});
+
+                      const kpis = [
+                        {l:"Sharpe Ratio",     v: sharpe!=null ? sharpe.toFixed(2) : "—",
+                         c: sharpe==null?"#475569":sharpe>=1?"#34d399":sharpe>=0?"#fbbf24":"#f87171",
+                         sub: sharpe!=null?(sharpe>=1?"Excellent":sharpe>=0.5?"Good":sharpe>=0?"Fair":"Poor"):"Need more data",
+                         tip:"Risk-adjusted return. >1 = excellent"},
+                        {l:"Max Drawdown",      v: maxDD>0?"-"+(maxDD*100).toFixed(1)+"%":"0.0%",
+                         c: maxDD>0.15?"#f87171":maxDD>0.08?"#fbbf24":"#34d399",
+                         sub: maxDD>0.15?"⚠️ High":maxDD>0.08?"Moderate":"Low",
+                         tip:"Largest peak-to-trough decline. <15% = safe zone"},
+                        {l:"Win Rate",          v: winRate!=null?(winRate.toFixed(1)+"%"):"—",
+                         c: winRate==null?"#475569":winRate>=55?"#34d399":winRate>=45?"#fbbf24":"#f87171",
+                         sub: winRate!=null?(winRate>=55?"Above target":winRate>=45?"At target":"Below target"):"Need more data",
+                         tip:"% of days with positive return. Target >55%"},
+                        {l:"Volatility (ann.)", v: annVolPct!=null?(annVolPct.toFixed(1)+"%"):"—",
+                         c: annVolPct==null?"#475569":annVolPct>30?"#f87171":annVolPct>20?"#fbbf24":"#34d399",
+                         sub: annVolPct!=null?(annVolPct>30?"High":annVolPct>20?"Medium":"Low"):"Need more data",
+                         tip:"Annualised price volatility. <20% = controlled"},
+                        {l:"Portfolio Beta",    v: portBeta,
+                         c: parseFloat(portBeta)>1.3?"#f87171":parseFloat(portBeta)<0.8?"#38bdf8":"#fbbf24",
+                         sub: parseFloat(portBeta)>1.3?"Aggressive":parseFloat(portBeta)<0.8?"Defensive":"Balanced",
+                         tip:"Market sensitivity. 1.0 = moves with market"},
+                        {l:"Corr. to SPY",      v: corrSPY,
+                         c: parseFloat(corrSPY)>0.85?"#f87171":parseFloat(corrSPY)>0.6?"#fbbf24":"#34d399",
+                         sub: parseFloat(corrSPY)>0.85?"High":parseFloat(corrSPY)>0.6?"Medium":"Low",
+                         tip:"How closely portfolio tracks SPY. Lower = more independent"},
+                        {l:"Diversification",   v: divScore+"/100",
+                         c: divScore>=75?"#34d399":divScore>=50?"#fbbf24":"#f87171",
+                         sub: sectors.length+" sectors",
+                         tip:"Based on number of distinct sectors held"},
+                        {l:"Price Appreciation",v:(priceAppPct>=0?"+":"")+priceAppPct.toFixed(2)+"%",
+                         c: priceAppPct>=0?"#34d399":"#f87171",
+                         sub:"excl. dividends",
+                         tip:"Return from stock price movement only"},
+                        {l:"Dividend Return",   v:(divPct>=0?"+":"")+divPct.toFixed(3)+"%",
+                         c:"#38bdf8",
+                         sub:"$"+divReceived.toFixed(2)+" received",
+                         tip:"Income from dividends since Mar 13"},
+                        {l:"Best Position",     v:bestPos.t,
+                         c:"#34d399",
+                         sub:(bestPos.pct>=0?"+":"")+bestPos.pct.toFixed(1)+"%",
+                         tip:"Top performing holding since entry"},
+                        {l:"Worst Position",    v:worstPos.t,
+                         c:"#f87171",
+                         sub:(worstPos.pct>=0?"+":"")+worstPos.pct.toFixed(1)+"%",
+                         tip:"Worst performing holding since entry"},
+                        {l:"Total Return",      v:(totalRetPctNow>=0?"+":"")+totalRetPctNow.toFixed(2)+"%",
+                         c:totalRetPctNow>=0?"#34d399":"#f87171",
+                         sub:"$"+(liveVal-PORT_ENTRY>=0?"+":""+(liveVal-PORT_ENTRY).toFixed(0)),
+                         tip:"Gross total return since Mar 13 2026"},
+                      ];
+
+                      return(
+                        <div style={{marginBottom:14}}>
+                          <div style={{fontSize:11,color:"#475569",fontWeight:700,textTransform:"uppercase",
+                            letterSpacing:"0.06em",marginBottom:8,paddingTop:4,borderTop:"1px solid #101c2e"}}>
+                            📊 Advanced Portfolio KPIs
+                          </div>
+                          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",gap:6}}>
+                            {kpis.map((k,i)=>(
+                              <div key={i} title={k.tip} style={{background:"#090f1a",borderRadius:9,padding:"8px 10px",
+                                borderLeft:`2px solid ${k.c}`,cursor:"help"}}>
+                                <div style={{fontSize:9,color:"#475569",marginBottom:2,whiteSpace:"nowrap",
+                                  overflow:"hidden",textOverflow:"ellipsis"}}>{k.l}</div>
+                                <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:13,
+                                  color:k.c,lineHeight:1}}>{k.v}</div>
+                                {k.sub&&<div style={{fontSize:9,color:k.c,opacity:0.75,marginTop:2,
+                                  whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{k.sub}</div>}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
+
                     {/* THE CHART */}
                     <div style={{background:"#060d18",borderRadius:10,padding:"12px 8px",position:"relative"}}>
                       <svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%",height:"auto",display:"block",maxWidth:"100%"}}>
