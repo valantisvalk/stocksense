@@ -2559,7 +2559,7 @@ function StockSense(){
                 },0);
 
                 // Diversification
-                const _sectors = [...new Set(portfolio.map(p=>(DB[p.ticker]||{}).s).filter(Boolean))];
+                const _sectors = [...new Set((PORTFOLIO_INIT||[]).map(p=>(DB[p.ticker]||{}).s).filter(Boolean))];
                 const _divScore = Math.min(100,Math.round((_sectors.length/8)*100));
 
                 // Dividends received (proportional to days held)
@@ -2570,7 +2570,7 @@ function StockSense(){
                 },0);
 
                 // Best/Worst position
-                const _posPerf = PORTFOLIO_INIT.map(p=>({t:p.ticker,
+                const _posPerf = (PORTFOLIO_INIT||[]).map(p=>({t:p.ticker,
                   pct:((prices[p.ticker]?.price||p.entryPrice)-p.entryPrice)/p.entryPrice*100}));
                 const _best  = _posPerf.length?_posPerf.reduce((a,b)=>b.pct>a.pct?b:a):{t:"—",pct:0};
                 const _worst = _posPerf.length?_posPerf.reduce((a,b)=>b.pct<a.pct?b:a):{t:"—",pct:0};
