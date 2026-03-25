@@ -1443,7 +1443,7 @@ function StockSense(){
                         <div style={{fontSize:12,color:rc.color,fontWeight:600,marginBottom:4}}>{rc.action}</div>
                         <div style={{fontSize:11,color:"#475569"}}>{rc.hist}</div>
                       </div>
-                      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,minWidth:280}}>
+                      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:8,minWidth:280}}>
                         {[
                           {label:"Gold (GLD)",  val:`$${gold.toFixed(0)}`,  alert:gold>280, color:"#fbbf24"},
                           {label:"Oil (USO)",   val:`$${oil.toFixed(0)}`,   alert:oil>90,   color:"#f97316"},
@@ -2266,7 +2266,7 @@ function StockSense(){
                     );
                   })}
                 </div>
-                <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:8}}>
                   {[["10yr Avg",avg10.toFixed(1)+"%","#38bdf8"],["Best Year","+"+Math.max(...vals).toFixed(1)+"%","#34d399"],["Worst Year",Math.min(...vals).toFixed(1)+"%","#f87171"],["Up Years",vals.filter(v=>v>0).length+"/10","#fbbf24"]].map(([l,v,c],i)=>(
                     <div key={i} style={{background:"#08111e",border:"1px solid #101c2e",borderRadius:9,padding:"9px 11px",textAlign:"center"}}>
                       {lbl(l)}<div style={{fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:18,color:c}}>{v}</div>
@@ -2665,7 +2665,7 @@ function StockSense(){
               })()}
 
                             {/* ── POSITION DEEP-DIVE TABLE ── */}
-              <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:14,padding:"16px 18px",marginBottom:14}}>
+              <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:14,padding:"16px 18px",marginBottom:14,overflow:"hidden"}}>
                 <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:14,color:"#e2e8f0",marginBottom:4}}>
                   🔬 Position Deep-Dive Analysis
                 </div>
@@ -2772,7 +2772,7 @@ function StockSense(){
                     }}>
 
                       {/* ── STOCK HEADER ── */}
-                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:10,marginBottom:12}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8,marginBottom:12,minWidth:0}}>
                         <div style={{display:"flex",gap:12,alignItems:"center"}}>
                           <div>
                             <span style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:16,color:"#e2e8f0"}}>{ticker}</span>
@@ -2801,7 +2801,7 @@ function StockSense(){
                       </div>
 
                       {/* ── 4 COLUMN METRICS GRID ── */}
-                      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>
+                      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:8}}>
 
                         {/* COLUMN 1: 5-PILLAR BREAKDOWN */}
                         <div style={{background:"#0a1421",borderRadius:10,padding:"10px 12px"}}>
