@@ -2472,63 +2472,6 @@ function StockSense(){
                 const allTrades   = (portLog||[]).filter(t=>t.action==="BUY"||t.action==="SELL");
                 const totalCosts  = allTrades.reduce((s,t)=>s+(t.price&&t.shares?t.price*t.shares:(t.value||0))*COST_PCT,0);
 
-                // ── SHARED METRICS — single source of truth for entire portfolio tab ──
-                // All calculations from chartPoints so chart line and KPIs always match
-                const _vals = chartPoints.map(p=>p.portVal);
-                const _n    = _vals.length;
-                const _dr   = _vals.slice(1).map((v,i)=>(_vals[i]>0?(v-_vals[i])/_vals[i]:0));
-
-                // Sharpe Ratio
-                const _sharpe = (()=>{
-                  if(_dr.length<3) return null;
-                  const avg = _dr.reduce((a,b)=>a+b,0)/_dr.length;
-                  const std = Math.sqrt(_dr.reduce((a,b)=>a+(b-avg)**2,0)/_dr.length);
-                  const annR = avg*252, annV = std*Math.sqrt(252);
-                  return annV>0 ? (annR-0.043)/annV : null;
-                })();
-
-                // Max Drawdown (portfolio level, not individual stocks)
-                const _maxDD = (()=>{
-                  let peak=_vals[0]||PORT_ENTRY, dd=0;
-                  for(const v of _vals){ if(v>peak)peak=v; dd=Math.max(dd,(peak-v)/peak); }
-                  return dd;
-                })();
-
-                // Win Rate
-                const _winRate = _dr.length>0 ? _dr.filter(r=>r>0).length/_dr.length*100 : null;
-
-                // Annualised Volatility
-                const _annVol = (()=>{
-                  if(_dr.length<3) return null;
-                  const avg=_dr.reduce((a,b)=>a+b,0)/_dr.length;
-                  const std=Math.sqrt(_dr.reduce((a,b)=>a+(b-avg)**2,0)/_dr.length);
-                  return std*Math.sqrt(252)*100;
-                })();
-
-                // Portfolio Beta
-                const _beta = portfolio.reduce((s,p)=>{
-                  const w=(prices[p.ticker]?.price||p.entryPrice)*p.shares/liveVal;
-                  return s+w*(DB[p.ticker]?.beta||1);
-                },0);
-
-                // Diversification
-                const _sectors = [...new Set(portfolio.map(p=>(DB[p.ticker]||{}).s).filter(Boolean))];
-                const _divScore = Math.min(100,Math.round((_sectors.length/8)*100));
-
-                // Dividends received (proportional to days held)
-                const _daysHeld = Math.max(1,chartPoints.length);
-                const _divRec = portfolio.reduce((s,p)=>{
-                  const annDiv=(DB[p.ticker]?.div||0)/100*(prices[p.ticker]?.price||p.entryPrice)*p.shares;
-                  return s+annDiv*(_daysHeld/365);
-                },0);
-
-                // Best/Worst position
-                const _posPerf = portfolio.map(p=>({t:p.ticker,
-                  pct:((prices[p.ticker]?.price||p.entryPrice)-p.entryPrice)/p.entryPrice*100}));
-                const _best  = _posPerf.length?_posPerf.reduce((a,b)=>b.pct>a.pct?b:a):{t:"—",pct:0};
-                const _worst = _posPerf.length?_posPerf.reduce((a,b)=>b.pct<a.pct?b:a):{t:"—",pct:0};
-                // ── END SHARED METRICS ──
-
                 // Historical data from GitHub (daily snapshots from paper trader)
                 const snapshots   = autoPortfolio?.daily_snapshots || [];
 
@@ -2575,6 +2518,63 @@ function StockSense(){
                 const seen = {};
                 chartPoints = chartPoints.filter(p=>{ if(seen[p.date]) return false; seen[p.date]=true; return true; });
                 chartPoints.sort((a,b)=>a.date>b.date?1:-1);
+
+                // ── SHARED METRICS — single source of truth for entire portfolio tab ──
+                // All calculations from chartPoints so chart line and KPIs always match
+                const _vals = chartPoints.map(p=>p.portVal);
+                const _n    = _vals.length;
+                const _dr   = _vals.slice(1).map((v,i)=>(_vals[i]>0?(v-_vals[i])/_vals[i]:0));
+
+                // Sharpe Ratio
+                const _sharpe = (()=>{
+                  if(_dr.length<3) return null;
+                  const avg = _dr.reduce((a,b)=>a+b,0)/_dr.length;
+                  const std = Math.sqrt(_dr.reduce((a,b)=>a+(b-avg)**2,0)/_dr.length);
+                  const annR = avg*252, annV = std*Math.sqrt(252);
+                  return annV>0 ? (annR-0.043)/annV : null;
+                })();
+
+                // Max Drawdown (portfolio level, not individual stocks)
+                const _maxDD = (()=>{
+                  let peak=_vals[0]||PORT_ENTRY, dd=0;
+                  for(const v of _vals){ if(v>peak)peak=v; dd=Math.max(dd,(peak-v)/peak); }
+                  return dd;
+                })();
+
+                // Win Rate
+                const _winRate = _dr.length>0 ? _dr.filter(r=>r>0).length/_dr.length*100 : null;
+
+                // Annualised Volatility
+                const _annVol = (()=>{
+                  if(_dr.length<3) return null;
+                  const avg=_dr.reduce((a,b)=>a+b,0)/_dr.length;
+                  const std=Math.sqrt(_dr.reduce((a,b)=>a+(b-avg)**2,0)/_dr.length);
+                  return std*Math.sqrt(252)*100;
+                })();
+
+                // Portfolio Beta
+                const _beta = PORTFOLIO_INIT.reduce((s,p)=>{
+                  const w=(prices[p.ticker]?.price||p.entryPrice)*p.shares/liveVal;
+                  return s+w*(DB[p.ticker]?.beta||1);
+                },0);
+
+                // Diversification
+                const _sectors = [...new Set(portfolio.map(p=>(DB[p.ticker]||{}).s).filter(Boolean))];
+                const _divScore = Math.min(100,Math.round((_sectors.length/8)*100));
+
+                // Dividends received (proportional to days held)
+                const _daysHeld = Math.max(1,chartPoints.length);
+                const _divRec = PORTFOLIO_INIT.reduce((s,p)=>{
+                  const annDiv=(DB[p.ticker]?.div||0)/100*(prices[p.ticker]?.price||p.entryPrice)*p.shares;
+                  return s+annDiv*(_daysHeld/365);
+                },0);
+
+                // Best/Worst position
+                const _posPerf = PORTFOLIO_INIT.map(p=>({t:p.ticker,
+                  pct:((prices[p.ticker]?.price||p.entryPrice)-p.entryPrice)/p.entryPrice*100}));
+                const _best  = _posPerf.length?_posPerf.reduce((a,b)=>b.pct>a.pct?b:a):{t:"—",pct:0};
+                const _worst = _posPerf.length?_posPerf.reduce((a,b)=>b.pct<a.pct?b:a):{t:"—",pct:0};
+                // ── END SHARED METRICS ──
 
                 const allVals  = chartPoints.map(p=>p.portVal).concat(chartPoints.map(p=>p.spyVal));
                 const minV     = Math.min(...allVals) * 0.995;
