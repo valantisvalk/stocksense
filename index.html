@@ -1021,6 +1021,33 @@ function StockSense(){
       if(!r.ok) throw new Error("File not found — run paper_trader_v4.py first");
       const data=await r.json();
       setAutoPortfolio(data);
+      // Sync live portfolio positions from GitHub into app state
+      if(data.positions && data.positions.length>0){
+        const livePortfolio = data.positions.map(p=>({
+          ticker:     p.ticker,
+          shares:     p.shares,
+          entryPrice: p.avg_cost,
+          entryDate:  p.entry_date||"2026-03-13",
+          weight:     0
+        }));
+        setPortfolio(livePortfolio);
+        localStorage.setItem("stocksense_portfolio_v2", JSON.stringify(livePortfolio));
+      }
+      // Sync trades log from GitHub
+      if(data.recent_trades && data.recent_trades.length>0){
+        const liveTrades = data.recent_trades.map(t=>({
+          date:           t.date||"",
+          action:         t.action||"",
+          ticker:         t.ticker||"",
+          shares:         t.shares||0,
+          price:          t.price||0,
+          note:           t.reason||"",
+          portfolioValue: data.portfolio_value||100000,
+          cash:           data.cash||0
+        }));
+        setPortLog(liveTrades);
+        localStorage.setItem("stocksense_portlog_v4", JSON.stringify(liveTrades));
+      }
     }catch(e){setAutoError(e.message);}
     finally{setAutoLoading(false);}
   },[]);;
