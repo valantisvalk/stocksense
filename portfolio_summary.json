@@ -1,5 +1,5 @@
 {
-  "updated": "2026-03-25 12:35 ET",
+  "updated": "2026-03-26 13:45 ET",
   "started": "2026-03-13",
   "regime": "RISK_OFF",
   "portfolio_value": 100521.0,
@@ -11,8 +11,8 @@
   "total_costs": 0,
   "cost_drag_pct": 0.0,
   "monthly_trades": 0,
-  "spy_ret": 16.93,
-  "alpha": -16.41,
+  "spy_ret": -0.63,
+  "alpha": 1.15,
   "positions": [
     {
       "ticker": "NVDA",
@@ -263,8 +263,17 @@
       "alpha": -16.52,
       "regime": "RISK_OFF",
       "positions": 10
+    },
+    {
+      "date": "2026-03-26",
+      "value": 98320.15,
+      "spy_price": 647.93,
+      "spy_ret": -2.17,
+      "pnl_pct": -1.68,
+      "alpha": 0.49,
+      "regime": "RISK_OFF"
     }
   ],
   "total_trades": 10,
-  "version": "3.1"
+  "version": "4.0"
 }
