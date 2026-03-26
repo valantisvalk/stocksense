@@ -2,62 +2,35 @@
   "updated": "2026-03-26 13:59 ET",
   "started": "2026-03-13",
   "regime": "RISK_OFF",
-  "portfolio_value": 100521.0,
-  "cash": 2157.0,
-  "total_pnl": 521.0,
-  "total_pnl_pct": 0.52,
-  "net_pnl": 521.0,
-  "net_pnl_pct": 0.52,
-  "total_costs": 0,
-  "cost_drag_pct": 0.0,
-  "monthly_trades": 0,
+  "portfolio_value": 98363.68,
+  "cash": 35179.11,
+  "total_pnl": -1636.32,
+  "total_pnl_pct": -1.64,
+  "net_pnl": -1733.7,
+  "net_pnl_pct": -1.73,
+  "total_costs": 97.38,
+  "cost_drag_pct": 0.0974,
+  "monthly_trades": 16,
   "spy_ret": -0.63,
-  "alpha": 1.15,
+  "alpha": -1.0,
   "positions": [
     {
-      "ticker": "NVDA",
-      "shares": 63,
-      "avg_cost": 180.25,
-      "cur_price": 179.26,
-      "pnl_pct": -0.55,
-      "value": 11293.38,
-      "entry_date": "2026-03-13"
+      "ticker": "PG",
+      "shares": 69,
+      "avg_cost": 142.91,
+      "cur_price": 143.26,
+      "pnl_pct": 0.24,
+      "value": 9884.94,
+      "entry_date": "2026-03-26"
     },
     {
-      "ticker": "LLY",
-      "shares": 12,
-      "avg_cost": 800.0,
-      "cur_price": 919.56,
-      "pnl_pct": 14.94,
-      "value": 11034.72,
-      "entry_date": "2026-03-13"
-    },
-    {
-      "ticker": "AVGO",
-      "shares": 32,
-      "avg_cost": 322.94,
-      "cur_price": 319.74,
-      "pnl_pct": -0.99,
-      "value": 10231.68,
-      "entry_date": "2026-03-13"
-    },
-    {
-      "ticker": "COST",
-      "shares": 10,
-      "avg_cost": 961.32,
-      "cur_price": 977.91,
-      "pnl_pct": 1.73,
-      "value": 9779.1,
-      "entry_date": "2026-03-13"
-    },
-    {
-      "ticker": "AMZN",
-      "shares": 46,
-      "avg_cost": 207.44,
-      "cur_price": 212.21,
-      "pnl_pct": 2.3,
-      "value": 9761.66,
-      "entry_date": "2026-03-13"
+      "ticker": "KO",
+      "shares": 128,
+      "avg_cost": 75.33,
+      "cur_price": 75.35,
+      "pnl_pct": 0.03,
+      "value": 9644.8,
+      "entry_date": "2026-03-26"
     },
     {
       "ticker": "GOOGL",
@@ -78,88 +51,61 @@
       "entry_date": "2026-03-13"
     },
     {
-      "ticker": "WMT",
-      "shares": 75,
-      "avg_cost": 126.52,
-      "cur_price": 122.9,
-      "pnl_pct": -2.86,
-      "value": 9217.5,
-      "entry_date": "2026-03-13"
-    },
-    {
-      "ticker": "JPM",
+      "ticker": "JNJ",
       "shares": 31,
-      "avg_cost": 283.44,
-      "cur_price": 295.43,
-      "pnl_pct": 4.23,
-      "value": 9158.33,
-      "entry_date": "2026-03-13"
+      "avg_cost": 241.03,
+      "cur_price": 241.38,
+      "pnl_pct": 0.15,
+      "value": 7482.78,
+      "entry_date": "2026-03-26"
     },
     {
-      "ticker": "META",
-      "shares": 15,
-      "avg_cost": 631.65,
-      "cur_price": 599.1,
-      "pnl_pct": -5.15,
-      "value": 8986.5,
-      "entry_date": "2026-03-13"
+      "ticker": "UNH",
+      "shares": 26,
+      "avg_cost": 268.34,
+      "cur_price": 268.8,
+      "pnl_pct": 0.17,
+      "value": 6988.8,
+      "entry_date": "2026-03-26"
+    },
+    {
+      "ticker": "XOM",
+      "shares": 23,
+      "avg_cost": 165.03,
+      "cur_price": 163.81,
+      "pnl_pct": -0.74,
+      "value": 3767.63,
+      "entry_date": "2026-03-26"
+    },
+    {
+      "ticker": "CVX",
+      "shares": 18,
+      "avg_cost": 208.65,
+      "cur_price": 205.83,
+      "pnl_pct": -1.35,
+      "value": 3704.94,
+      "entry_date": "2026-03-26"
+    },
+    {
+      "ticker": "V",
+      "shares": 6,
+      "avg_cost": 305.13,
+      "cur_price": 305.49,
+      "pnl_pct": 0.12,
+      "value": 1832.94,
+      "entry_date": "2026-03-26"
+    },
+    {
+      "ticker": "BLK",
+      "shares": 1,
+      "avg_cost": 971.21,
+      "cur_price": 976.61,
+      "pnl_pct": 0.56,
+      "value": 976.61,
+      "entry_date": "2026-03-26"
     }
   ],
   "recent_trades": [
-    {
-      "date": "2026-03-13 16:00 ET",
-      "action": "INIT",
-      "ticker": "NVDA",
-      "shares": 63,
-      "price": 180.25,
-      "value": 11355.75,
-      "reason": "Initial portfolio \u2014 Mar 13 2026"
-    },
-    {
-      "date": "2026-03-13 16:00 ET",
-      "action": "INIT",
-      "ticker": "AVGO",
-      "shares": 32,
-      "price": 322.94,
-      "value": 10334.08,
-      "reason": "Initial portfolio \u2014 Mar 13 2026"
-    },
-    {
-      "date": "2026-03-13 16:00 ET",
-      "action": "INIT",
-      "ticker": "LLY",
-      "shares": 12,
-      "price": 800.0,
-      "value": 9600.0,
-      "reason": "Initial portfolio \u2014 Mar 13 2026"
-    },
-    {
-      "date": "2026-03-13 16:00 ET",
-      "action": "INIT",
-      "ticker": "MSFT",
-      "shares": 25,
-      "price": 398.94,
-      "value": 9973.5,
-      "reason": "Initial portfolio \u2014 Mar 13 2026"
-    },
-    {
-      "date": "2026-03-13 16:00 ET",
-      "action": "INIT",
-      "ticker": "META",
-      "shares": 15,
-      "price": 631.65,
-      "value": 9474.75,
-      "reason": "Initial portfolio \u2014 Mar 13 2026"
-    },
-    {
-      "date": "2026-03-13 16:00 ET",
-      "action": "INIT",
-      "ticker": "COST",
-      "shares": 10,
-      "price": 961.32,
-      "value": 9613.2,
-      "reason": "Initial portfolio \u2014 Mar 13 2026"
-    },
     {
       "date": "2026-03-13 16:00 ET",
       "action": "INIT",
@@ -195,6 +141,206 @@
       "price": 283.44,
       "value": 8786.64,
       "reason": "Initial portfolio \u2014 Mar 13 2026"
+    },
+    {
+      "date": "2026-03-26 13:59 ET",
+      "action": "SELL",
+      "ticker": "NVDA",
+      "name": "NVIDIA",
+      "shares": 63,
+      "price": 171.97,
+      "value": 10834.11,
+      "transaction_cost": 8.67,
+      "pnl": -521.64,
+      "net_pnl": -530.31,
+      "pnl_pct": -4.59,
+      "reason": "Regime rotation \u2014 not in CRISIS targets"
+    },
+    {
+      "date": "2026-03-26 13:59 ET",
+      "action": "SELL",
+      "ticker": "AVGO",
+      "name": "Broadcom",
+      "shares": 32,
+      "price": 310.44,
+      "value": 9934.08,
+      "transaction_cost": 7.95,
+      "pnl": -400.0,
+      "net_pnl": -407.95,
+      "pnl_pct": -3.87,
+      "reason": "Regime rotation \u2014 not in CRISIS targets"
+    },
+    {
+      "date": "2026-03-26 13:59 ET",
+      "action": "SELL",
+      "ticker": "LLY",
+      "name": "Eli Lilly",
+      "shares": 12,
+      "price": 901.33,
+      "value": 10815.96,
+      "transaction_cost": 8.65,
+      "pnl": 1215.96,
+      "net_pnl": 1207.31,
+      "pnl_pct": 12.67,
+      "reason": "Regime rotation \u2014 not in CRISIS targets"
+    },
+    {
+      "date": "2026-03-26 13:59 ET",
+      "action": "SELL",
+      "ticker": "META",
+      "name": "Meta",
+      "shares": 15,
+      "price": 545.66,
+      "value": 8184.9,
+      "transaction_cost": 6.55,
+      "pnl": -1289.85,
+      "net_pnl": -1296.4,
+      "pnl_pct": -13.61,
+      "reason": "Regime rotation \u2014 not in CRISIS targets"
+    },
+    {
+      "date": "2026-03-26 13:59 ET",
+      "action": "SELL",
+      "ticker": "COST",
+      "name": "Costco",
+      "shares": 10,
+      "price": 985.49,
+      "value": 9854.9,
+      "transaction_cost": 7.88,
+      "pnl": 241.7,
+      "net_pnl": 233.82,
+      "pnl_pct": 2.51,
+      "reason": "Regime rotation \u2014 not in CRISIS targets"
+    },
+    {
+      "date": "2026-03-26 13:59 ET",
+      "action": "SELL",
+      "ticker": "AMZN",
+      "name": "Amazon",
+      "shares": 46,
+      "price": 208.06,
+      "value": 9570.76,
+      "transaction_cost": 7.66,
+      "pnl": 28.52,
+      "net_pnl": 20.86,
+      "pnl_pct": 0.3,
+      "reason": "Regime rotation \u2014 not in CRISIS targets"
+    },
+    {
+      "date": "2026-03-26 13:59 ET",
+      "action": "SELL",
+      "ticker": "WMT",
+      "name": "Walmart",
+      "shares": 75,
+      "price": 122.72,
+      "value": 9204.0,
+      "transaction_cost": 7.36,
+      "pnl": -285.0,
+      "net_pnl": -292.36,
+      "pnl_pct": -3.0,
+      "reason": "Regime rotation \u2014 not in CRISIS targets"
+    },
+    {
+      "date": "2026-03-26 13:59 ET",
+      "action": "SELL",
+      "ticker": "JPM",
+      "name": "JPMorgan",
+      "shares": 31,
+      "price": 291.16,
+      "value": 9025.96,
+      "transaction_cost": 7.22,
+      "pnl": 239.32,
+      "net_pnl": 232.1,
+      "pnl_pct": 2.72,
+      "reason": "Regime rotation \u2014 not in CRISIS targets"
+    },
+    {
+      "date": "2026-03-26 13:59 ET",
+      "action": "BUY",
+      "ticker": "JNJ",
+      "name": "Johnson&Johnson",
+      "shares": 31,
+      "price": 241.03,
+      "value": 7471.93,
+      "transaction_cost": 5.98,
+      "reason": "4-LAYER CONFLUENCE | Macro:CRISIS | Quant:79 | Tech score 70/100 | RSI~50.0 | PASS | RSI proxy 50 \u2014 neutral zone, healthy | Flat day (0.5%) \u2014 consolidation, neutral | Earnings safe | Moat: wide"
+    },
+    {
+      "date": "2026-03-26 13:59 ET",
+      "action": "BUY",
+      "ticker": "PG",
+      "name": "Procter&Gamble",
+      "shares": 69,
+      "price": 142.91,
+      "value": 9860.79,
+      "transaction_cost": 7.89,
+      "reason": "4-LAYER CONFLUENCE | Macro:CRISIS | Quant:75 | Tech score 58/100 | RSI~50.0 | PASS | RSI proxy 50 \u2014 neutral zone, healthy | Mid-range (23% from high, 43% from low) \u2014 healthy zone | Earnings safe | Moat: wide"
+    },
+    {
+      "date": "2026-03-26 13:59 ET",
+      "action": "BUY",
+      "ticker": "XOM",
+      "name": "Exxon Mobil",
+      "shares": 23,
+      "price": 165.03,
+      "value": 3795.69,
+      "transaction_cost": 3.04,
+      "reason": "4-LAYER CONFLUENCE | Macro:CRISIS | Quant:74 | Tech score 81/100 | RSI~50.0 | PASS | RSI proxy 50 \u2014 neutral zone, healthy | Positive momentum: +1.1% today | Earnings safe | Moat: narrow"
+    },
+    {
+      "date": "2026-03-26 13:59 ET",
+      "action": "BUY",
+      "ticker": "CVX",
+      "name": "Chevron",
+      "shares": 18,
+      "price": 208.65,
+      "value": 3755.7,
+      "transaction_cost": 3.0,
+      "reason": "4-LAYER CONFLUENCE | Macro:CRISIS | Quant:74 | Tech score 81/100 | RSI~50.0 | PASS | RSI proxy 50 \u2014 neutral zone, healthy | Positive momentum: +1.7% today | Earnings safe | Moat: narrow"
+    },
+    {
+      "date": "2026-03-26 13:59 ET",
+      "action": "BUY",
+      "ticker": "UNH",
+      "name": "UnitedHealth",
+      "shares": 26,
+      "price": 268.34,
+      "value": 6976.84,
+      "transaction_cost": 5.58,
+      "reason": "4-LAYER CONFLUENCE | Macro:CRISIS | Quant:73 | Tech score 58/100 | RSI~50.0 | PASS | RSI proxy 50 \u2014 neutral zone, healthy | Mid-range (23% from high, 43% from low) \u2014 healthy zone | Earnings safe | Moat: wide"
+    },
+    {
+      "date": "2026-03-26 13:59 ET",
+      "action": "BUY",
+      "ticker": "KO",
+      "name": "Coca-Cola",
+      "shares": 128,
+      "price": 75.33,
+      "value": 9642.24,
+      "transaction_cost": 7.71,
+      "reason": "4-LAYER CONFLUENCE | Macro:CRISIS | Quant:73 | Tech score 70/100 | RSI~50.0 | PASS | RSI proxy 50 \u2014 neutral zone, healthy | Flat day (0.1%) \u2014 consolidation, neutral | Earnings safe | Moat: wide"
+    },
+    {
+      "date": "2026-03-26 13:59 ET",
+      "action": "BUY",
+      "ticker": "V",
+      "name": "Visa",
+      "shares": 6,
+      "price": 305.13,
+      "value": 1830.78,
+      "transaction_cost": 1.46,
+      "reason": "4-LAYER CONFLUENCE | Macro:CRISIS | Quant:70 | Tech score 70/100 | RSI~50.0 | PASS | RSI proxy 50 \u2014 neutral zone, healthy | Flat day (0.1%) \u2014 consolidation, neutral | Earnings safe | Moat: wide"
+    },
+    {
+      "date": "2026-03-26 13:59 ET",
+      "action": "BUY",
+      "ticker": "BLK",
+      "name": "BlackRock",
+      "shares": 1,
+      "price": 971.21,
+      "value": 971.21,
+      "transaction_cost": 0.78,
+      "reason": "4-LAYER CONFLUENCE | Macro:CRISIS | Quant:68 | Tech score 58/100 | RSI~50.0 | PASS | RSI proxy 50 \u2014 neutral zone, healthy | Mid-range (23% from high, 43% from low) \u2014 healthy zone | Earnings safe | Moat: wide"
     }
   ],
   "daily_snapshots": [
@@ -274,6 +420,6 @@
       "regime": "RISK_OFF"
     }
   ],
-  "total_trades": 10,
+  "total_trades": 26,
   "version": "4.0"
 }
