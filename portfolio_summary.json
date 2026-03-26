@@ -1,18 +1,18 @@
 {
-  "updated": "2026-03-26 13:59 ET",
+  "updated": "2026-03-26 14:11 ET",
   "started": "2026-03-13",
-  "regime": "RISK_OFF",
-  "portfolio_value": 98363.68,
-  "cash": 35179.11,
-  "total_pnl": -1636.32,
-  "total_pnl_pct": -1.64,
-  "net_pnl": -1733.7,
-  "net_pnl_pct": -1.73,
-  "total_costs": 97.38,
-  "cost_drag_pct": 0.0974,
-  "monthly_trades": 16,
+  "regime": "CRISIS",
+  "portfolio_value": 98006.04,
+  "cash": 42663.17,
+  "total_pnl": -1993.96,
+  "total_pnl_pct": -1.99,
+  "net_pnl": -2100.19,
+  "net_pnl_pct": -2.1,
+  "total_costs": 106.23,
+  "cost_drag_pct": 0.1062,
+  "monthly_trades": 18,
   "spy_ret": -0.63,
-  "alpha": -1.0,
+  "alpha": -1.36,
   "positions": [
     {
       "ticker": "PG",
@@ -31,15 +31,6 @@
       "pnl_pct": 0.03,
       "value": 9644.8,
       "entry_date": "2026-03-26"
-    },
-    {
-      "ticker": "GOOGL",
-      "shares": 33,
-      "avg_cost": 293.14,
-      "cur_price": 291.61,
-      "pnl_pct": -0.52,
-      "value": 9623.13,
-      "entry_date": "2026-03-13"
     },
     {
       "ticker": "MSFT",
@@ -96,6 +87,15 @@
       "entry_date": "2026-03-26"
     },
     {
+      "ticker": "AAPL",
+      "shares": 7,
+      "avg_cost": 254.77,
+      "cur_price": 254.49,
+      "pnl_pct": -0.11,
+      "value": 1781.43,
+      "entry_date": "2026-03-26"
+    },
+    {
       "ticker": "BLK",
       "shares": 1,
       "avg_cost": 971.21,
@@ -106,24 +106,6 @@
     }
   ],
   "recent_trades": [
-    {
-      "date": "2026-03-13 16:00 ET",
-      "action": "INIT",
-      "ticker": "GOOGL",
-      "shares": 33,
-      "price": 293.14,
-      "value": 9673.62,
-      "reason": "Initial portfolio \u2014 Mar 13 2026"
-    },
-    {
-      "date": "2026-03-13 16:00 ET",
-      "action": "INIT",
-      "ticker": "AMZN",
-      "shares": 46,
-      "price": 207.44,
-      "value": 9542.24,
-      "reason": "Initial portfolio \u2014 Mar 13 2026"
-    },
     {
       "date": "2026-03-13 16:00 ET",
       "action": "INIT",
@@ -341,6 +323,31 @@
       "value": 971.21,
       "transaction_cost": 0.78,
       "reason": "4-LAYER CONFLUENCE | Macro:CRISIS | Quant:68 | Tech score 58/100 | RSI~50.0 | PASS | RSI proxy 50 \u2014 neutral zone, healthy | Mid-range (23% from high, 43% from low) \u2014 healthy zone | Earnings safe | Moat: wide"
+    },
+    {
+      "date": "2026-03-26 14:11 ET",
+      "action": "SELL",
+      "ticker": "GOOGL",
+      "name": "Alphabet",
+      "shares": 33,
+      "price": 281.1,
+      "value": 9276.3,
+      "transaction_cost": 7.42,
+      "pnl": -397.32,
+      "net_pnl": -404.74,
+      "pnl_pct": -4.11,
+      "reason": "Regime rotation \u2014 not in CRISIS targets"
+    },
+    {
+      "date": "2026-03-26 14:11 ET",
+      "action": "BUY",
+      "ticker": "AAPL",
+      "name": "Apple",
+      "shares": 7,
+      "price": 254.77,
+      "value": 1783.39,
+      "transaction_cost": 1.43,
+      "reason": "4-LAYER CONFLUENCE | Macro:CRISIS | Quant:71 | Tech score 81/100 | RSI~50.0 | PASS | RSI proxy 50 \u2014 neutral zone, healthy | Positive momentum: +0.9% today | Earnings safe | Moat: wide"
     }
   ],
   "daily_snapshots": [
@@ -412,14 +419,13 @@
     },
     {
       "date": "2026-03-26",
-      "value": 98064.69,
-      "spy_price": 646.72,
-      "spy_ret": -2.35,
-      "pnl_pct": -1.94,
-      "alpha": 0.42,
-      "regime": "RISK_OFF"
+      "value": 97934.84,
+      "spy_price": 647.36,
+      "spy_ret": -2.25,
+      "pnl_pct": -2.07,
+      "regime": "CRISIS"
     }
   ],
-  "total_trades": 26,
+  "total_trades": 28,
   "version": "4.0"
 }
