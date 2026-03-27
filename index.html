@@ -2499,8 +2499,12 @@ function StockSense(){
                 const SPY_ENTRY = 662.29;
                 const PORT_ENTRY  = 100000;
                 const COST_PCT    = 0.0008;
-                const allTrades   = (portLog||[]).filter(t=>t.action==="BUY"||t.action==="SELL");
-                const totalCosts  = allTrades.reduce((s,t)=>s+(t.price&&t.shares?t.price*t.shares:(t.value||0))*COST_PCT,0);
+                // Use GitHub data (authoritative) — fallback to localStorage portLog if not yet loaded
+                const allTrades   = autoPortfolio?.recent_trades
+                  ? autoPortfolio.recent_trades.filter(t=>t.action==="BUY"||t.action==="SELL")
+                  : (portLog||[]).filter(t=>t.action==="BUY"||t.action==="SELL");
+                // total_costs comes directly from trader (tracks all trades, not just last 20)
+                const totalCosts  = autoPortfolio?.total_costs ?? allTrades.reduce((s,t)=>s+(t.price&&t.shares?t.price*t.shares:(t.value||0))*COST_PCT,0);
 
                 // Historical data from GitHub (daily snapshots from paper trader)
                 const snapshots   = autoPortfolio?.daily_snapshots || [];
@@ -3193,32 +3197,44 @@ function StockSense(){
                       );
                     })}
                     {/* Totals row */}
-                    <tr style={{borderTop:"2px solid #38bdf8",background:"rgba(56,189,248,0.04)"}}>
-                      <td colSpan={2} style={{padding:"10px",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:13,color:"#38bdf8"}}>TOTAL (10 positions)</td>
-                      <td style={{textAlign:"right",padding:"10px",fontSize:12,color:"#475569",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:600}}>Avg Entry</td>
-                      <td style={{textAlign:"right",padding:"10px",fontSize:12,color:"#e2e8f0",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:600}}>Live</td>
-                      <td style={{textAlign:"right",padding:"10px",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:13,color:priceGain>=0?"#34d399":"#f87171"}}>
-                        {priceGain>=0?"+":""}{priceGain.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}
-                      </td>
-                      <td style={{textAlign:"right",padding:"10px",fontWeight:800,fontSize:13,color:priceRetPct>=0?"#34d399":"#f87171"}}>
-                        {priceRetPct>=0?"+":""}{priceRetPct.toFixed(2)}%
-                      </td>
-                      <td style={{textAlign:"right",padding:"10px",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:13,color:"#fbbf24"}}>
-                        ${totalDivReceived.toFixed(2)}
-                      </td>
-                      <td style={{textAlign:"right",padding:"10px",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:13,color:totalDivReceived>0?"#fbbf24":"#334155"}}>
-                        {totalDivReceived>0?(totalDivReceived/totalCostBasis*100).toFixed(3)+"%":"0.00%"}
-                      </td>
-                      <td style={{textAlign:"right",padding:"10px",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:14,color:totalReturn>=0?"#34d399":"#f87171"}}>
-                        {totalReturn>=0?"+":""}{totalReturn.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}
-                      </td>
-                      <td style={{textAlign:"right",padding:"10px",fontWeight:800,fontSize:14,color:totalRetPct>=0?"#34d399":"#f87171"}}>
-                        {totalRetPct>=0?"+":""}{totalRetPct.toFixed(2)}%
-                      </td>
-                      <td></td>
-                      <td></td>
-                      <td></td>
-                    </tr>
+                    {(()=>{
+                      // Compute totals from live data — no deleted variables
+                      const _costBasis  = livePortfolio.reduce((s,p)=>s+p.shares*p.entryPrice,0);
+                      const _stockGain  = totalCurrentVal - _costBasis; // stock-only gain vs avg_cost
+                      const _stockGainPct = _costBasis>0 ? (_stockGain/_costBasis)*100 : 0;
+                      // True total P&L vs $100k (includes cash)
+                      const _truePnL    = totalPnL;
+                      const _truePct    = totalRetPct;
+                      const _divYieldPct = _costBasis>0 ? (totalDivReceived/_costBasis)*100 : 0;
+                      return(
+                      <tr style={{borderTop:"2px solid #38bdf8",background:"rgba(56,189,248,0.04)"}}>
+                        <td colSpan={2} style={{padding:"10px",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:13,color:"#38bdf8"}}>TOTAL ({livePortfolio.length} positions)</td>
+                        <td style={{textAlign:"right",padding:"10px",fontSize:12,color:"#475569",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:600}}>Avg Entry</td>
+                        <td style={{textAlign:"right",padding:"10px",fontSize:12,color:"#e2e8f0",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:600}}>Live</td>
+                        <td style={{textAlign:"right",padding:"10px",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:13,color:_stockGain>=0?"#34d399":"#f87171"}}>
+                          {_stockGain>=0?"+":""}{_stockGain.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}
+                        </td>
+                        <td style={{textAlign:"right",padding:"10px",fontWeight:800,fontSize:13,color:_stockGainPct>=0?"#34d399":"#f87171"}}>
+                          {_stockGainPct>=0?"+":""}{_stockGainPct.toFixed(2)}%
+                        </td>
+                        <td style={{textAlign:"right",padding:"10px",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:13,color:"#fbbf24"}}>
+                          ${totalDivReceived.toFixed(2)}
+                        </td>
+                        <td style={{textAlign:"right",padding:"10px",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:13,color:totalDivReceived>0?"#fbbf24":"#334155"}}>
+                          {_divYieldPct.toFixed(3)}%
+                        </td>
+                        <td style={{textAlign:"right",padding:"10px",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:14,color:_truePnL>=0?"#34d399":"#f87171"}}>
+                          {_truePnL>=0?"+":""}{_truePnL.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}
+                        </td>
+                        <td style={{textAlign:"right",padding:"10px",fontWeight:800,fontSize:14,color:_truePct>=0?"#34d399":"#f87171"}}>
+                          {_truePct>=0?"+":""}{_truePct.toFixed(2)}%
+                        </td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                      </tr>
+                      );
+                    })()}
                     {/* Cash row */}
                     <tr style={{background:"rgba(251,191,36,0.03)"}}>
                       <td colSpan={9} style={{padding:"10px",fontSize:13,color:"#475569"}}>
@@ -3470,7 +3486,7 @@ function StockSense(){
               {/* ── ACTIVITY LOG ── */}
               <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:13,padding:"16px 18px"}}>
                 <div style={{fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:14,color:"#818cf8",marginBottom:10}}>📋 Activity Log</div>
-                {portLog.slice().reverse().slice(0,15).map((entry,i)=>(
+                {(autoPortfolio?.recent_trades||portLog||[]).slice().reverse().slice(0,15).map((entry,i)=>(
                   <div key={i} style={{display:"flex",gap:12,padding:"7px 0",borderBottom:"1px solid #0d1826",alignItems:"flex-start"}}>
                     <div style={{fontSize:11,color:"#334155",flexShrink:0,minWidth:90}}>{entry.date}</div>
                     <div style={{fontSize:11,fontWeight:700,color:entry.action==="INIT"?"#38bdf8":entry.action==="BUY"?"#34d399":entry.action==="SELL"?"#f87171":"#fbbf24",flexShrink:0,minWidth:55}}>{entry.action}</div>
@@ -3531,7 +3547,8 @@ function StockSense(){
             {/* ── TODAY'S ACTIVITY ── */}
             {(()=>{
               const today = new Date().toISOString().slice(0,10);
-              const todayLog = (portLog||[]).filter(t=>t.date&&t.date.slice(0,10)===today&&t.action!=="INIT");
+              const allActivity = autoPortfolio?.recent_trades || portLog || [];
+              const todayLog = allActivity.filter(t=>t.date&&t.date.slice(0,10)===today&&t.action!=="INIT");
               if(todayLog.length===0) return null;
               return(
                 <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:13,padding:"14px 16px",marginBottom:12}}>
@@ -3562,12 +3579,15 @@ function StockSense(){
 
             {/* ── TRADING FREQUENCY MONITOR ── */}
             {(()=>{
-              const COST_PCT=0.0008,STARTING_CASH=100000;
-              const allT=(portLog||[]).filter(t=>t.action==="BUY"||t.action==="SELL");
-              const totCosts=allT.reduce((s,t)=>s+(t.price&&t.shares?t.price*t.shares:(t.value||0))*COST_PCT,0);
+              const COST_PCT=0.0008,INITIAL_CAP=100000;
+              // Use GitHub authoritative costs — fallback to portLog
+              const allT= autoPortfolio?.recent_trades
+                ? autoPortfolio.recent_trades.filter(t=>t.action==="BUY"||t.action==="SELL")
+                : (portLog||[]).filter(t=>t.action==="BUY"||t.action==="SELL");
+              const totCosts= autoPortfolio?.total_costs ?? allT.reduce((s,t)=>s+(t.price&&t.shares?t.price*t.shares:(t.value||0))*COST_PCT,0);
               const mth=new Date().toISOString().slice(0,7);
               const mthT=allT.filter(t=>(t.date||"").startsWith(mth)).length;
-              const annualisedCostDrag=(totCosts/STARTING_CASH)*100*(12/Math.max(1,(new Date()-new Date("2026-03-13"))/(1000*60*60*24*30)));
+              const annualisedCostDrag=(totCosts/INITIAL_CAP)*100*(12/Math.max(1,(new Date()-new Date("2026-03-13"))/(1000*60*60*24*30)));
               return(
                 <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:13,padding:"14px 16px",marginBottom:12}}>
                   <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:700,fontSize:11,color:"#475569",textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:10}}>
@@ -3578,7 +3598,7 @@ function StockSense(){
                       {l:"Total Trades",     v:allT.length,            c:"#e2e8f0"},
                       {l:"This Month",       v:mthT,                   c:mthT>20?"#f87171":"#38bdf8"},
                       {l:"Total Cost Drag",  v:"$"+totCosts.toFixed(0),c:"#f87171"},
-                      {l:"Cost % of Capital",v:(totCosts/STARTING_CASH*100).toFixed(3)+"%",c:"#f87171"},
+                      {l:"Cost % of Capital",v:(totCosts/INITIAL_CAP*100).toFixed(3)+"%",c:"#f87171"},
                     ].map((s,i)=>(
                       <div key={i} style={{textAlign:"center",background:"#090f1a",borderRadius:8,padding:"8px"}}>
                         <div style={{fontSize:10,color:"#475569",marginBottom:2}}>{s.l}</div>
