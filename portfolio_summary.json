@@ -1,18 +1,18 @@
 {
-  "updated": "2026-03-27 11:53 ET",
+  "updated": "2026-03-27 12:23 ET",
   "started": "2026-03-13",
   "regime": "CRISIS",
-  "portfolio_value": 97983.73,
-  "cash": 26230.21,
-  "total_pnl": -2016.27,
-  "total_pnl_pct": -2.02,
-  "net_pnl": -2155.67,
-  "net_pnl_pct": -2.16,
-  "total_costs": 139.4,
-  "cost_drag_pct": 0.1394,
-  "monthly_trades": 26,
+  "portfolio_value": 98036.04,
+  "cash": 24426.92,
+  "total_pnl": -1963.96,
+  "total_pnl_pct": -1.96,
+  "net_pnl": -2104.8,
+  "net_pnl_pct": -2.1,
+  "total_costs": 140.84,
+  "cost_drag_pct": 0.1408,
+  "monthly_trades": 27,
   "spy_ret": -0.63,
-  "alpha": -1.38,
+  "alpha": -1.33,
   "positions": [
     {
       "ticker": "SLV",
@@ -112,23 +112,18 @@
       "pnl_pct": 0.74,
       "value": 1911.8,
       "entry_date": "2026-03-27"
+    },
+    {
+      "ticker": "MSFT",
+      "shares": 5,
+      "avg_cost": 360.37,
+      "cur_price": 371.12,
+      "pnl_pct": 2.98,
+      "value": 1855.6,
+      "entry_date": "2026-03-27"
     }
   ],
   "recent_trades": [
-    {
-      "date": "2026-03-26 13:59 ET",
-      "action": "SELL",
-      "ticker": "WMT",
-      "name": "Walmart",
-      "shares": 75,
-      "price": 122.72,
-      "value": 9204.0,
-      "transaction_cost": 7.36,
-      "pnl": -285.0,
-      "net_pnl": -292.36,
-      "pnl_pct": -3.0,
-      "reason": "Regime rotation \u2014 not in CRISIS targets"
-    },
     {
       "date": "2026-03-26 13:59 ET",
       "action": "SELL",
@@ -352,6 +347,17 @@
       "value": 952.02,
       "transaction_cost": 0.76,
       "reason": "4-LAYER CONFLUENCE | Macro:CRISIS | Quant:66 | Tech score 58/100 | RSI~50.0 | PASS | RSI proxy 50 \u2014 neutral zone, healthy | Mid-range (23% from high, 43% from low) \u2014 healthy zone | Earnings safe | Moat: wide"
+    },
+    {
+      "date": "2026-03-27 12:23 ET",
+      "action": "BUY",
+      "ticker": "MSFT",
+      "name": "Microsoft",
+      "shares": 5,
+      "price": 360.37,
+      "value": 1801.85,
+      "transaction_cost": 1.44,
+      "reason": "4-LAYER CONFLUENCE | Macro:CRISIS | Quant:71 | Tech score 58/100 | RSI~50.0 | PASS | RSI proxy 50 \u2014 neutral zone, healthy | Mid-range (23% from high, 43% from low) \u2014 healthy zone | Earnings safe | Moat: wide"
     }
   ],
   "daily_snapshots": [
@@ -431,13 +437,13 @@
     },
     {
       "date": "2026-03-27",
-      "value": 97546.78,
-      "spy_price": 641.23,
-      "spy_ret": -3.18,
-      "pnl_pct": -2.45,
+      "value": 97507.19,
+      "spy_price": 639.29,
+      "spy_ret": -3.47,
+      "pnl_pct": -2.49,
       "regime": "CRISIS"
     }
   ],
-  "total_trades": 36,
+  "total_trades": 37,
   "version": "4.0"
 }
