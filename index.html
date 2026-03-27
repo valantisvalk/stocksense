@@ -1021,33 +1021,6 @@ function StockSense(){
       if(!r.ok) throw new Error("File not found — run paper_trader_v4.py first");
       const data=await r.json();
       setAutoPortfolio(data);
-      // Sync live portfolio positions from GitHub into app state
-      if(data.positions && data.positions.length>0){
-        const livePortfolio = data.positions.map(p=>({
-          ticker:     p.ticker,
-          shares:     p.shares,
-          entryPrice: p.avg_cost,
-          entryDate:  p.entry_date||"2026-03-13",
-          weight:     0
-        }));
-        setPortfolio(livePortfolio);
-        localStorage.setItem("stocksense_portfolio_v2", JSON.stringify(livePortfolio));
-      }
-      // Sync trades log from GitHub
-      if(data.recent_trades && data.recent_trades.length>0){
-        const liveTrades = data.recent_trades.map(t=>({
-          date:           t.date||"",
-          action:         t.action||"",
-          ticker:         t.ticker||"",
-          shares:         t.shares||0,
-          price:          t.price||0,
-          note:           t.reason||"",
-          portfolioValue: data.portfolio_value||100000,
-          cash:           data.cash||0
-        }));
-        setPortLog(liveTrades);
-        localStorage.setItem("stocksense_portlog_v4", JSON.stringify(liveTrades));
-      }
     }catch(e){setAutoError(e.message);}
     finally{setAutoLoading(false);}
   },[]);;
@@ -1203,12 +1176,12 @@ function StockSense(){
     // Initial load
     fetchMarketStatus();
     fetchAllPrices();
-    fetchAutoPortfolio();
-    // Refresh every 30s (prices), every 5min (GitHub portfolio)
+    fetchAutoPortfolio(); // Auto-sync from GitHub on load (keeps app in sync with Telegram)
+    // Refresh every 30s for prices; refresh portfolio every 5 min
     const pid=setInterval(()=>{ fetchMarketStatus(); fetchAllPrices(); },30000);
-    const gid=setInterval(()=>{ fetchAutoPortfolio(); },300000);
     const cid=setInterval(()=>setCountdown(c=>Math.max(c-1,0)),1000);
-    return()=>{clearInterval(pid);clearInterval(gid);clearInterval(cid);};
+    const apid=setInterval(()=>fetchAutoPortfolio(),300000); // every 5 min
+    return()=>{clearInterval(pid);clearInterval(cid);clearInterval(apid);};
   },[]);
 
   // Fetch live detail data whenever ticker changes
@@ -2415,10 +2388,25 @@ function StockSense(){
           {/* ── PORTFOLIO TAB ── */}
           {tab==="portfolio"&&(()=>{
             // ── computed values ──────────────────────────────────────────────
-            const totalDivReceived = portfolio.reduce((s,p)=>s+calcDividends(p.ticker,p.shares,p.entryDate),0);
-            const totalDivAnnual   = portfolio.reduce((s,p)=>s+calcAnnualDivIncome(p.ticker,p.shares),0);
-            const totalCostBasis   = portfolio.reduce((s,p)=>s+p.shares*p.entryPrice,0);
-            const totalCurrentVal  = portfolio.reduce((s,p)=>{
+            // ── SINGLE SOURCE OF TRUTH: autoPortfolio (GitHub) when available ──
+            // Maps autoPortfolio.positions to same shape as PORTFOLIO_INIT so ALL
+            // downstream code (KPIs, deep-dive, rebalance) matches Telegram exactly.
+            const livePortfolio = autoPortfolio?.positions
+              ? autoPortfolio.positions.map(p=>({
+                  ticker:     p.ticker,
+                  shares:     p.shares,
+                  entryPrice: p.avg_cost,
+                  entryDate:  p.entry_date || "2026-03-13",
+                  weight:     (PORTFOLIO_INIT.find(x=>x.ticker===p.ticker)||{}).weight || 0,
+                }))
+              : PORTFOLIO_INIT;
+            // Cash: live from autoPortfolio, fallback to STARTING_CASH
+            const liveCash = autoPortfolio?.cash ?? STARTING_CASH;
+
+            const totalDivReceived = livePortfolio.reduce((s,p)=>s+calcDividends(p.ticker,p.shares,p.entryDate),0);
+            const totalDivAnnual   = livePortfolio.reduce((s,p)=>s+calcAnnualDivIncome(p.ticker,p.shares),0);
+            const totalCostBasis   = livePortfolio.reduce((s,p)=>s+p.shares*p.entryPrice,0);
+            const totalCurrentVal  = livePortfolio.reduce((s,p)=>{
               const cp=prices[p.ticker]?.price||p.entryPrice; return s+p.shares*cp;
             },0);
             const priceGain   = totalCurrentVal - totalCostBasis;
@@ -2426,7 +2414,7 @@ function StockSense(){
             const totalRetPct = (totalReturn/TOTAL_BUDGET)*100;
             const priceRetPct = (priceGain/TOTAL_BUDGET)*100;
             const divRetPct   = (totalDivReceived/TOTAL_BUDGET)*100;
-            const portfolioValue = totalCurrentVal + STARTING_CASH;
+            const portfolioValue = totalCurrentVal + liveCash;
             const spyEntry  = 662.29; // SPY close Mar 13 2026 (real price)
             const spyNow   = prices["SPY"]?.price || spyEntry;
             const spyRet   = ((spyNow-spyEntry)/spyEntry)*100;
@@ -2435,7 +2423,15 @@ function StockSense(){
             <div style={{animation:"fadeUp 0.3s ease"}}>
 
               <div style={{background:"rgba(52,211,153,0.06)",border:"1px solid rgba(52,211,153,0.2)",borderRadius:14,padding:"14px 20px",marginBottom:16}}>
-                <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:17,color:"#34d399",marginBottom:5}}>💼 Your Portfolio</div>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8,marginBottom:5}}>
+                  <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:17,color:"#34d399"}}>💼 Your Portfolio</div>
+                  {autoLoading
+                    ? <div style={{fontSize:11,color:"#fbbf24",background:"rgba(251,191,36,0.1)",border:"1px solid rgba(251,191,36,0.2)",borderRadius:6,padding:"3px 10px"}}>⏳ Syncing with trader…</div>
+                    : autoPortfolio
+                      ? <div style={{fontSize:11,color:"#34d399",background:"rgba(52,211,153,0.1)",border:"1px solid rgba(52,211,153,0.2)",borderRadius:6,padding:"3px 10px"}}>✅ Live — synced with Telegram · {autoPortfolio.updated||""}</div>
+                      : <div style={{fontSize:11,color:"#f87171",background:"rgba(248,113,113,0.1)",border:"1px solid rgba(248,113,113,0.2)",borderRadius:6,padding:"3px 10px"}}>⚠️ Using entry data — trader not synced yet</div>
+                  }
+                </div>
                 <div style={{fontSize:12,color:"#94a3b8",lineHeight:1.7}}>Your Mar 13 2026 positions tracked in real time. P&L vs SPY, rebalance alerts, risk metrics, dividend income, and the auto-trader live portfolio.</div>
               </div>
 
@@ -2554,10 +2550,8 @@ function StockSense(){
                 const _portRet  = _rets.reduce((s,r,i)=>s+r*_wts[i],0);
                 const _portVol  = Math.sqrt(_wts.reduce((s,w,i)=>s+Math.pow(w*(DB[PORTFOLIO_INIT[i].ticker]?.vol||25),2),0))/100;
                 const _daysHeld = Math.max(1,Math.round((Date.now()-new Date("2026-03-13"))/86400000));
-                // Don't annualise with <30 days — use raw return scaled to avoid absurd numbers
-                const _scaleFactor = _daysHeld >= 30 ? (365/_daysHeld) : 1;
-                const _annRet   = _portRet * _scaleFactor;
-                const _sharpe   = _portVol>0 ? (_annRet-0.043*(_daysHeld/365))/_portVol : null;
+                const _annRet   = _portRet*(365/_daysHeld);
+                const _sharpe   = _portVol>0 ? (_annRet-0.043)/_portVol : null;
                 const _maxDD    = Math.abs(Math.min(0,..._rets));
                 const _winRate  = _rets.filter(r=>r>0).length/_rets.length*100;
                 const _annVol   = _portVol*Math.sqrt(252)*100;
@@ -3102,7 +3096,7 @@ function StockSense(){
                     </tr>
                   </thead>
                   <tbody>
-                    {portfolio.map((p,i)=>{
+                    {livePortfolio.map((p,i)=>{
                       const curr      = prices[p.ticker]?.price || p.entryPrice;
                       const costBasis = p.shares * p.entryPrice;
                       const currVal   = p.shares * curr;
@@ -3220,7 +3214,7 @@ function StockSense(){
                         💵 Cash Reserve
                       </td>
                       <td colSpan={3} style={{textAlign:"right",padding:"10px",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:700,fontSize:13,color:"#fbbf24"}}>
-                        ${STARTING_CASH.toFixed(2)}
+                        ${liveCash.toFixed(2)}
                       </td>
                       <td></td>
                     </tr>
@@ -3352,10 +3346,10 @@ function StockSense(){
                   CRISIS:   {Technology:0.04,Semiconductors:0.00,Pharma:0.15,Banking:0.04,"Social Media":0.00,"E-Commerce/Cloud":0.00,Retail:0.20},
                 };
                 const tgt2 = RT[regime2] || RT.CAUTION;
-                const totV2 = portfolio.reduce((s,p)=>s+(prices[p.ticker]?.price||p.entryPrice)*p.shares,0) + 2157;
+                const totV2 = livePortfolio.reduce((s,p)=>s+(prices[p.ticker]?.price||p.entryPrice)*p.shares,0) + liveCash;
 
                 // ── GENERATE ALERTS ───────────────────────────────────────
-                const alerts2 = portfolio.flatMap(p=>{
+                const alerts2 = livePortfolio.flatMap(p=>{
                   const curr   = prices[p.ticker]?.price || p.entryPrice;
                   const q2     = computeQuant(p.ticker, curr, prices);
                   const pnlP   = ((curr-p.entryPrice)/p.entryPrice)*100;
@@ -3427,7 +3421,7 @@ function StockSense(){
                 {(()=>{
                   const today = new Date();
                   const upcoming = [];
-                  portfolio.forEach(p=>{
+                  livePortfolio.forEach(p=>{
                     const dd = DIVIDEND_DATA[p.ticker];
                     if(!dd||!dd.exDates) return;
                     const dps = dd.annualDPS/4;
@@ -3477,13 +3471,13 @@ function StockSense(){
 
             {/* ── REBALANCE ALERTS ── */}
             {(()=>{
-              const totalInvested = portfolio.reduce((s,p)=>s+p.shares*p.entryPrice,0);
+              const totalInvested = livePortfolio.reduce((s,p)=>s+p.shares*p.entryPrice,0);
               const alerts = [];
-              portfolio.forEach(p=>{
+              livePortfolio.forEach(p=>{
                 const cur   = (prices[p.ticker]||{price:p.entryPrice}).price;
                 const pnl   = (cur-p.entryPrice)/p.entryPrice*100;
                 const val   = p.shares*cur;
-                const pct   = val/(totalCurrentVal+STARTING_CASH)*100;
+                const pct   = val/(totalCurrentVal+liveCash)*100;
                 const qr    = computeQuant(p.ticker,(prices[p.ticker]||{price:p.entryPrice}).price);
                 if(qr.comp<=38)  alerts.push({ticker:p.ticker,type:"SELL",   color:"#f87171",icon:"🔴",msg:`Quant score ${qr.comp} — below sell threshold. Review position.`});
                 else if(qr.comp<=50) alerts.push({ticker:p.ticker,type:"REVIEW", color:"#fbbf24",icon:"🟡",msg:`Quant score ${qr.comp} — weakening signal. Monitor closely.`});
@@ -3605,7 +3599,7 @@ function StockSense(){
                   Math.pow(w*(DB[PORTFOLIO_INIT[i].ticker]?.vol||25),2),0))/100;
                 const daysHeld = Math.max(1,Math.round((Date.now()-new Date("2026-03-13"))/86400000));
                 const portRet  = rets.reduce((s,r,i)=>s+r*weights[i],0);
-                const scaleFactor=daysHeld>=30?(365/daysHeld):1; const annRet=portRet*scaleFactor;
+                const annRet   = portRet*(365/daysHeld);
                 const rfRate   = 0.043;
                 const sharpe   = portVol>0 ? ((annRet-rfRate)/portVol).toFixed(2) : "—";
                 const maxDD    = Math.min(...rets)*100;
@@ -3658,9 +3652,9 @@ function StockSense(){
             <div style={{marginTop:4,marginBottom:16}}>
               {lbl("🌍 Sector Diversification","#818cf8")}
               {(()=>{
-                const totalInvested = portfolio.reduce((s,p)=>s+p.shares*p.entryPrice,0);
+                const totalInvested = livePortfolio.reduce((s,p)=>s+p.shares*p.entryPrice,0);
                 const sectorMap = {};
-                portfolio.forEach(p=>{
+                livePortfolio.forEach(p=>{
                   const sec = DB[p.ticker]?.sector || DB[p.ticker]?.s || "Other";
                   const val = p.shares*p.entryPrice;
                   sectorMap[sec] = (sectorMap[sec]||0) + val;
