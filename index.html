@@ -1203,10 +1203,12 @@ function StockSense(){
     // Initial load
     fetchMarketStatus();
     fetchAllPrices();
-    // Refresh every 30s
+    fetchAutoPortfolio();
+    // Refresh every 30s (prices), every 5min (GitHub portfolio)
     const pid=setInterval(()=>{ fetchMarketStatus(); fetchAllPrices(); },30000);
+    const gid=setInterval(()=>{ fetchAutoPortfolio(); },300000);
     const cid=setInterval(()=>setCountdown(c=>Math.max(c-1,0)),1000);
-    return()=>{clearInterval(pid);clearInterval(cid);};
+    return()=>{clearInterval(pid);clearInterval(gid);clearInterval(cid);};
   },[]);
 
   // Fetch live detail data whenever ticker changes
@@ -2552,8 +2554,10 @@ function StockSense(){
                 const _portRet  = _rets.reduce((s,r,i)=>s+r*_wts[i],0);
                 const _portVol  = Math.sqrt(_wts.reduce((s,w,i)=>s+Math.pow(w*(DB[PORTFOLIO_INIT[i].ticker]?.vol||25),2),0))/100;
                 const _daysHeld = Math.max(1,Math.round((Date.now()-new Date("2026-03-13"))/86400000));
-                const _annRet   = _portRet*(365/_daysHeld);
-                const _sharpe   = _portVol>0 ? (_annRet-0.043)/_portVol : null;
+                // Don't annualise with <30 days — use raw return scaled to avoid absurd numbers
+                const _scaleFactor = _daysHeld >= 30 ? (365/_daysHeld) : 1;
+                const _annRet   = _portRet * _scaleFactor;
+                const _sharpe   = _portVol>0 ? (_annRet-0.043*(_daysHeld/365))/_portVol : null;
                 const _maxDD    = Math.abs(Math.min(0,..._rets));
                 const _winRate  = _rets.filter(r=>r>0).length/_rets.length*100;
                 const _annVol   = _portVol*Math.sqrt(252)*100;
@@ -3601,7 +3605,7 @@ function StockSense(){
                   Math.pow(w*(DB[PORTFOLIO_INIT[i].ticker]?.vol||25),2),0))/100;
                 const daysHeld = Math.max(1,Math.round((Date.now()-new Date("2026-03-13"))/86400000));
                 const portRet  = rets.reduce((s,r,i)=>s+r*weights[i],0);
-                const annRet   = portRet*(365/daysHeld);
+                const scaleFactor=daysHeld>=30?(365/daysHeld):1; const annRet=portRet*scaleFactor;
                 const rfRate   = 0.043;
                 const sharpe   = portVol>0 ? ((annRet-rfRate)/portVol).toFixed(2) : "—";
                 const maxDD    = Math.min(...rets)*100;
