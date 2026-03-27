@@ -2,18 +2,36 @@
   "updated": "2026-03-27 11:22 ET",
   "started": "2026-03-13",
   "regime": "CRISIS",
-  "portfolio_value": 98006.04,
-  "cash": 42663.17,
-  "total_pnl": -1993.96,
-  "total_pnl_pct": -1.99,
-  "net_pnl": -2100.19,
-  "net_pnl_pct": -2.1,
-  "total_costs": 106.23,
-  "cost_drag_pct": 0.1062,
-  "monthly_trades": 18,
+  "portfolio_value": 97983.73,
+  "cash": 26230.21,
+  "total_pnl": -2016.27,
+  "total_pnl_pct": -2.02,
+  "net_pnl": -2155.67,
+  "net_pnl_pct": -2.16,
+  "total_costs": 139.4,
+  "cost_drag_pct": 0.1394,
+  "monthly_trades": 26,
   "spy_ret": -0.63,
-  "alpha": -1.36,
+  "alpha": -1.38,
   "positions": [
+    {
+      "ticker": "SLV",
+      "shares": 186,
+      "avg_cost": 64.68,
+      "cur_price": 65.83,
+      "pnl_pct": 1.78,
+      "value": 12244.38,
+      "entry_date": "2026-03-27"
+    },
+    {
+      "ticker": "GLD",
+      "shares": 29,
+      "avg_cost": 417.65,
+      "cur_price": 418.24,
+      "pnl_pct": 0.14,
+      "value": 12128.96,
+      "entry_date": "2026-03-27"
+    },
     {
       "ticker": "PG",
       "shares": 69,
@@ -31,15 +49,6 @@
       "pnl_pct": 0.03,
       "value": 9644.8,
       "entry_date": "2026-03-26"
-    },
-    {
-      "ticker": "MSFT",
-      "shares": 25,
-      "avg_cost": 398.94,
-      "cur_price": 371.12,
-      "pnl_pct": -6.97,
-      "value": 9278.0,
-      "entry_date": "2026-03-13"
     },
     {
       "ticker": "JNJ",
@@ -78,136 +87,34 @@
       "entry_date": "2026-03-26"
     },
     {
-      "ticker": "V",
-      "shares": 6,
-      "avg_cost": 305.13,
-      "cur_price": 305.49,
-      "pnl_pct": 0.12,
-      "value": 1832.94,
-      "entry_date": "2026-03-26"
-    },
-    {
-      "ticker": "AAPL",
+      "ticker": "GOOGL",
       "shares": 7,
-      "avg_cost": 254.77,
-      "cur_price": 254.49,
-      "pnl_pct": -0.11,
-      "value": 1781.43,
-      "entry_date": "2026-03-26"
+      "avg_cost": 277.64,
+      "cur_price": 291.61,
+      "pnl_pct": 5.03,
+      "value": 2041.27,
+      "entry_date": "2026-03-27"
     },
     {
       "ticker": "BLK",
-      "shares": 1,
-      "avg_cost": 971.21,
+      "shares": 2,
+      "avg_cost": 961.62,
       "cur_price": 976.61,
-      "pnl_pct": 0.56,
-      "value": 976.61,
+      "pnl_pct": 1.56,
+      "value": 1953.22,
       "entry_date": "2026-03-26"
+    },
+    {
+      "ticker": "BRK_B",
+      "shares": 4,
+      "avg_cost": 474.43,
+      "cur_price": 477.95,
+      "pnl_pct": 0.74,
+      "value": 1911.8,
+      "entry_date": "2026-03-27"
     }
   ],
   "recent_trades": [
-    {
-      "date": "2026-03-13 16:00 ET",
-      "action": "INIT",
-      "ticker": "WMT",
-      "shares": 75,
-      "price": 126.52,
-      "value": 9489.0,
-      "reason": "Initial portfolio \u2014 Mar 13 2026"
-    },
-    {
-      "date": "2026-03-13 16:00 ET",
-      "action": "INIT",
-      "ticker": "JPM",
-      "shares": 31,
-      "price": 283.44,
-      "value": 8786.64,
-      "reason": "Initial portfolio \u2014 Mar 13 2026"
-    },
-    {
-      "date": "2026-03-26 13:59 ET",
-      "action": "SELL",
-      "ticker": "NVDA",
-      "name": "NVIDIA",
-      "shares": 63,
-      "price": 171.97,
-      "value": 10834.11,
-      "transaction_cost": 8.67,
-      "pnl": -521.64,
-      "net_pnl": -530.31,
-      "pnl_pct": -4.59,
-      "reason": "Regime rotation \u2014 not in CRISIS targets"
-    },
-    {
-      "date": "2026-03-26 13:59 ET",
-      "action": "SELL",
-      "ticker": "AVGO",
-      "name": "Broadcom",
-      "shares": 32,
-      "price": 310.44,
-      "value": 9934.08,
-      "transaction_cost": 7.95,
-      "pnl": -400.0,
-      "net_pnl": -407.95,
-      "pnl_pct": -3.87,
-      "reason": "Regime rotation \u2014 not in CRISIS targets"
-    },
-    {
-      "date": "2026-03-26 13:59 ET",
-      "action": "SELL",
-      "ticker": "LLY",
-      "name": "Eli Lilly",
-      "shares": 12,
-      "price": 901.33,
-      "value": 10815.96,
-      "transaction_cost": 8.65,
-      "pnl": 1215.96,
-      "net_pnl": 1207.31,
-      "pnl_pct": 12.67,
-      "reason": "Regime rotation \u2014 not in CRISIS targets"
-    },
-    {
-      "date": "2026-03-26 13:59 ET",
-      "action": "SELL",
-      "ticker": "META",
-      "name": "Meta",
-      "shares": 15,
-      "price": 545.66,
-      "value": 8184.9,
-      "transaction_cost": 6.55,
-      "pnl": -1289.85,
-      "net_pnl": -1296.4,
-      "pnl_pct": -13.61,
-      "reason": "Regime rotation \u2014 not in CRISIS targets"
-    },
-    {
-      "date": "2026-03-26 13:59 ET",
-      "action": "SELL",
-      "ticker": "COST",
-      "name": "Costco",
-      "shares": 10,
-      "price": 985.49,
-      "value": 9854.9,
-      "transaction_cost": 7.88,
-      "pnl": 241.7,
-      "net_pnl": 233.82,
-      "pnl_pct": 2.51,
-      "reason": "Regime rotation \u2014 not in CRISIS targets"
-    },
-    {
-      "date": "2026-03-26 13:59 ET",
-      "action": "SELL",
-      "ticker": "AMZN",
-      "name": "Amazon",
-      "shares": 46,
-      "price": 208.06,
-      "value": 9570.76,
-      "transaction_cost": 7.66,
-      "pnl": 28.52,
-      "net_pnl": 20.86,
-      "pnl_pct": 0.3,
-      "reason": "Regime rotation \u2014 not in CRISIS targets"
-    },
     {
       "date": "2026-03-26 13:59 ET",
       "action": "SELL",
@@ -348,6 +255,103 @@
       "value": 1783.39,
       "transaction_cost": 1.43,
       "reason": "4-LAYER CONFLUENCE | Macro:CRISIS | Quant:71 | Tech score 81/100 | RSI~50.0 | PASS | RSI proxy 50 \u2014 neutral zone, healthy | Positive momentum: +0.9% today | Earnings safe | Moat: wide"
+    },
+    {
+      "date": "2026-03-27 11:22 ET",
+      "action": "SELL",
+      "ticker": "MSFT",
+      "name": "Microsoft",
+      "shares": 25,
+      "price": 359.5,
+      "value": 8987.5,
+      "transaction_cost": 7.19,
+      "pnl": -986.0,
+      "net_pnl": -993.19,
+      "pnl_pct": -9.89,
+      "reason": "Regime rotation \u2014 not in CRISIS targets"
+    },
+    {
+      "date": "2026-03-27 11:22 ET",
+      "action": "SELL",
+      "ticker": "V",
+      "name": "Visa",
+      "shares": 6,
+      "price": 297.12,
+      "value": 1782.72,
+      "transaction_cost": 1.43,
+      "pnl": -48.06,
+      "net_pnl": -49.49,
+      "pnl_pct": -2.63,
+      "reason": "Regime rotation \u2014 not in CRISIS targets"
+    },
+    {
+      "date": "2026-03-27 11:22 ET",
+      "action": "SELL",
+      "ticker": "AAPL",
+      "name": "Apple",
+      "shares": 7,
+      "price": 252.22,
+      "value": 1765.54,
+      "transaction_cost": 1.41,
+      "pnl": -17.85,
+      "net_pnl": -19.26,
+      "pnl_pct": -1.0,
+      "reason": "Regime rotation \u2014 not in CRISIS targets"
+    },
+    {
+      "date": "2026-03-27 11:22 ET",
+      "action": "BUY",
+      "ticker": "GOOGL",
+      "name": "Alphabet",
+      "shares": 7,
+      "price": 277.64,
+      "value": 1943.48,
+      "transaction_cost": 1.55,
+      "reason": "4-LAYER CONFLUENCE | Macro:CRISIS | Quant:76 | Tech score 58/100 | RSI~50.0 | PASS | RSI proxy 50 \u2014 neutral zone, healthy | Mid-range (23% from high, 43% from low) \u2014 healthy zone | Earnings safe | Moat: wide"
+    },
+    {
+      "date": "2026-03-27 11:22 ET",
+      "action": "BUY",
+      "ticker": "GLD",
+      "name": "Gold ETF",
+      "shares": 29,
+      "price": 417.65,
+      "value": 12111.85,
+      "transaction_cost": 9.69,
+      "reason": "4-LAYER CONFLUENCE | Macro:CRISIS | Quant:69 | Tech score 78/100 | RSI~50.0 | PASS | RSI proxy 50 \u2014 neutral zone, healthy | Strong momentum: +4.2% today \u2014 buyers in control | Earnings safe | Moat: none"
+    },
+    {
+      "date": "2026-03-27 11:22 ET",
+      "action": "BUY",
+      "ticker": "BRK_B",
+      "name": "Berkshire",
+      "shares": 4,
+      "price": 474.43,
+      "value": 1897.72,
+      "transaction_cost": 1.52,
+      "reason": "4-LAYER CONFLUENCE | Macro:CRISIS | Quant:67 | Tech score 70/100 | RSI~50.0 | PASS | RSI proxy 50 \u2014 neutral zone, healthy | Flat day (-0.2%) \u2014 consolidation, neutral | Earnings safe | Moat: wide"
+    },
+    {
+      "date": "2026-03-27 11:22 ET",
+      "action": "BUY",
+      "ticker": "SLV",
+      "name": "Silver ETF",
+      "shares": 186,
+      "price": 64.68,
+      "value": 12030.48,
+      "transaction_cost": 9.62,
+      "reason": "4-LAYER CONFLUENCE | Macro:CRISIS | Quant:67 | Tech score 73/100 | RSI~50.0 | PASS | RSI proxy 50 \u2014 neutral zone, healthy | Strong momentum: +6.4% today \u2014 buyers in control | Earnings safe | Moat: none"
+    },
+    {
+      "date": "2026-03-27 11:22 ET",
+      "action": "BUY",
+      "ticker": "BLK",
+      "name": "BlackRock",
+      "shares": 1,
+      "price": 952.02,
+      "value": 952.02,
+      "transaction_cost": 0.76,
+      "reason": "4-LAYER CONFLUENCE | Macro:CRISIS | Quant:66 | Tech score 58/100 | RSI~50.0 | PASS | RSI proxy 50 \u2014 neutral zone, healthy | Mid-range (23% from high, 43% from low) \u2014 healthy zone | Earnings safe | Moat: wide"
     }
   ],
   "daily_snapshots": [
@@ -427,14 +431,13 @@
     },
     {
       "date": "2026-03-27",
-      "value": 97694.43,
+      "value": 97661.26,
       "spy_price": 639.29,
       "spy_ret": -3.47,
-      "pnl_pct": -2.31,
-      "alpha": 1.17,
+      "pnl_pct": -2.34,
       "regime": "CRISIS"
     }
   ],
-  "total_trades": 28,
+  "total_trades": 36,
   "version": "4.0"
 }
