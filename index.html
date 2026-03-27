@@ -2778,7 +2778,7 @@ function StockSense(){
                   Full breakdown of every holding — 5-pillar quant score, technical indicators, analyst view, earnings history, risk metrics
                 </div>
 
-                {PORTFOLIO_INIT.map((pos,pi)=>{
+                {livePortfolio.map((pos,pi)=>{
                   const ticker  = pos.ticker;
                   const db      = DB[ticker] || {};
                   const lp      = prices[ticker] || {};
@@ -3620,20 +3620,25 @@ function StockSense(){
               {lbl("⚡ Risk Metrics","#f97316")}
               {(()=>{
                 // Self-contained risk metrics calculations
-                const rets = PORTFOLIO_INIT.map(p=>{
+                const rets = livePortfolio.map(p=>{
                   const cur = (prices[p.ticker]||{price:p.entryPrice}).price;
                   return (cur - p.entryPrice) / p.entryPrice;
                 });
-                const weights  = PORTFOLIO_INIT.map(p=>p.shares*p.entryPrice /
-                  PORTFOLIO_INIT.reduce((s,q)=>s+q.shares*q.entryPrice,0));
+                const _rmBase = livePortfolio.reduce((s,q)=>s+q.shares*q.entryPrice,0)||1;
+                const weights  = livePortfolio.map(p=>p.shares*p.entryPrice / _rmBase);
                 const portVol  = Math.sqrt(weights.reduce((s,w,i)=>s+
-                  Math.pow(w*(DB[PORTFOLIO_INIT[i].ticker]?.vol||25),2),0))/100;
+                  Math.pow(w*(DB[livePortfolio[i].ticker]?.vol||25),2),0))/100;
                 const daysHeld = Math.max(1,Math.round((Date.now()-new Date("2026-03-13"))/86400000));
-                const portRet  = rets.reduce((s,r,i)=>s+r*weights[i],0);
+                const portRet  = totalRetPct/100; // correct: (portfolioValue-100000)/100000
                 const annRet   = portRet*(365/daysHeld);
                 const rfRate   = 0.043;
                 const sharpe   = portVol>0 ? ((annRet-rfRate)/portVol).toFixed(2) : "—";
-                const maxDD    = Math.min(...rets)*100;
+                // maxDD from actual snapshot history, not just current position returns
+                const _rmSnaps = (autoPortfolio?.daily_snapshots||[]).map(s=>s.value||100000);
+                const _rmAllV  = [100000,..._rmSnaps,portfolioValue];
+                let _rmPeak=100000,_rmDD=0;
+                _rmAllV.forEach(v=>{_rmPeak=Math.max(_rmPeak,v);_rmDD=Math.max(_rmDD,(_rmPeak-v)/_rmPeak);});
+                const maxDD    = -_rmDD*100;
                 const upCount  = rets.filter(r=>r>0).length;
                 const corrProxy= Math.abs((upCount/rets.length-0.5)*2);
                 const sharpeN  = parseFloat(sharpe)||0;
