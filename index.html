@@ -1017,6 +1017,7 @@ function VixChart({liveVix, crisisSelected, setCrisisSelected}) {
     {id:"gulf_war",   name:"Gulf War",       start:"1990-08-02", end:"1991-03-01", color:"#f97316"},
     {id:"dotcom",     name:"Dot-Com",        start:"2000-03-01", end:"2002-10-09", color:"#f87171"},
     {id:"9_11",       name:"9/11",           start:"2001-09-11", end:"2001-10-11", color:"#818cf8"},
+    {id:"eurozone",   name:"Eurozone",       start:"2010-04-01", end:"2012-07-26", color:"#818cf8"},
     {id:"gfc",        name:"GFC",            start:"2007-10-01", end:"2009-03-09", color:"#dc2626"},
     {id:"covid",      name:"COVID",          start:"2020-02-19", end:"2020-04-07", color:"#dc2626"},
     {id:"ukraine",    name:"Ukraine",        start:"2022-01-01", end:"2022-12-31", color:"#f97316"},
@@ -3634,6 +3635,18 @@ function StockSense(){
                     color:"#fbbf24",
                     isCurrent:true
                   },
+                  {
+                    id:"eurozone", name:"Eurozone Debt Crisis", period:"Apr 2010 – Jul 2012",
+                    trigger:"Greece, Ireland, Portugal, Spain sovereign debt crisis. Contagion to Italy & Spain (yields hit 7%). ECB/IMF bailouts. Draghi 'whatever it takes' ended it Jul 2012. Cyprus directly affected — bank deposit haircuts 2013.",
+                    duration_days:820, peak_drawdown:-21.6, recovery_days:365,
+                    spy_during:-8.9, our_regime:"RISK_OFF",
+                    sectors:{best:[["Gold","+28%"],["Bonds","+15%"],["Healthcare","+8%"]],
+                             worst:[["Financials","-35%"],["Energy","-18%"],["Consumer Disc","-14%"]]},
+                    oil_move:"-18%", gold_move:"+28%", vix_peak:48,
+                    lesson:"Sovereign debt crises spread like wildfire. Italy & Spain yields at 7% = point of no return without ECB. Relevant to Cyprus: direct exposure through deposit haircuts 2013. Gold +28% was the refuge.",
+                    our_action:"RISK_OFF immediately. Exit all Financials (European bank contagion). Max gold. Healthcare + Staples. Re-enter when sovereign spreads narrow below 200bps.",
+                    color:"#818cf8"
+                  },
                 ];
 
                 const selected    = crisisSelected;
@@ -3645,7 +3658,7 @@ function StockSense(){
                     {/* ── OVERVIEW STATS BANNER ── */}
                     <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:16}}>
                       {[
-                        {l:"Crises Analysed",    v:"7",       sub:"1990-2026",    c:"#e2e8f0"},
+                        {l:"Crises Analysed",    v:"8",       sub:"1990-2026",    c:"#e2e8f0"},
                         {l:"Avg Peak Drawdown",  v:"-30.9%",  sub:"across all",  c:"#f87171"},
                         {l:"Avg Recovery Time",  v:"578 days",sub:"to new high",  c:"#38bdf8"},
                         {l:"Markets Always Recover", v:"7/7", sub:"100% of cases",c:"#34d399"},
@@ -3831,6 +3844,75 @@ function StockSense(){
                       </div>
                     )}
                   </div>
+                );
+              })()}
+
+              {/* ── VIX PEAK BAR CHART — All 8 crises ── */}
+              {(()=>{
+                const bars=[
+                  {id:"gulf_war",  name:"Gulf War",      year:"1990",peak:36, spyDrop:-15.4,color:"#f97316"},
+                  {id:"dotcom",    name:"Dot-Com",        year:"2000",peak:43, spyDrop:-49.1,color:"#f87171"},
+                  {id:"9_11",      name:"9/11",           year:"2001",peak:48, spyDrop:-14.3,color:"#818cf8"},
+                  {id:"gfc",       name:"GFC",            year:"2008",peak:80, spyDrop:-56.8,color:"#dc2626"},
+                  {id:"eurozone",  name:"Eurozone",       year:"2010",peak:48, spyDrop:-8.9, color:"#818cf8"},
+                  {id:"covid",     name:"COVID",          year:"2020",peak:66, spyDrop:-33.9,color:"#dc2626"},
+                  {id:"ukraine",   name:"Ukraine",        year:"2022",peak:38, spyDrop:-18.1,color:"#f97316"},
+                  {id:"liberation",name:"Liberation Day", year:"2025",peak:52, spyDrop:-15.3,color:"#fbbf24"},
+                ];
+                const liveVix=prices["VIXY"]?.price||null;
+                const maxV=90,BW=58,GAP=14,H=230,PB=40,PT=18;
+                const plotH=H-PB-PT;
+                const W=bars.length*(BW+GAP)+50;
+                const toY=v=>PT+plotH-(v/maxV)*plotH;
+                const zones=[{v:80,c:"#dc2626"},{v:66,c:"#f87171"},{v:35,c:"#fbbf24"},{v:25,c:"#38bdf8"}];
+                return(
+                <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:14,padding:"20px 22px",marginBottom:10}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8,marginBottom:12}}>
+                    <div>
+                      <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:15,color:"#e2e8f0"}}>📊 VIX Peak — All 8 Crises Compared</div>
+                      <div style={{fontSize:11,color:"#475569",marginTop:3}}>Peak VIX per crisis · SPY drawdown inside bar · Click bar to load crisis detail below</div>
+                    </div>
+                    {liveVix&&<div style={{background:"rgba(251,191,36,0.1)",border:"1px solid rgba(251,191,36,0.3)",borderRadius:8,padding:"6px 14px",textAlign:"center"}}>
+                      <div style={{fontSize:10,color:"#475569",marginBottom:2}}>LIVE VIX</div>
+                      <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:18,color:liveVix>35?"#f87171":liveVix>25?"#fbbf24":"#34d399"}}>{liveVix.toFixed(1)}</div>
+                      <div style={{fontSize:9,color:"#475569"}}>{liveVix>35?"🚨 CRISIS":liveVix>25?"⚠️ RISK_OFF":liveVix>18?"🟡 CAUTION":"🟢 RISK_ON"}</div>
+                    </div>}
+                  </div>
+                  <div style={{overflowX:"auto"}}>
+                    <svg viewBox={`0 0 ${W+10} ${H}`} style={{width:"100%",minWidth:500,height:"auto",display:"block"}}>
+                      {zones.map((z,i)=>(
+                        <g key={i}>
+                          <line x1={30} y1={toY(z.v)} x2={W} y2={toY(z.v)} stroke={z.c} strokeWidth={0.8} strokeDasharray="4,3" strokeOpacity={0.5}/>
+                          <text x={28} y={toY(z.v)+3} fontSize={8} fill={z.c} textAnchor="end" opacity={0.8}>{z.v}</text>
+                        </g>
+                      ))}
+                      {liveVix&&<g>
+                        <line x1={30} y1={toY(liveVix)} x2={W} y2={toY(liveVix)} stroke="#fbbf24" strokeWidth={1.5} strokeDasharray="2,2"/>
+                        <text x={W+2} y={toY(liveVix)+3} fontSize={8} fill="#fbbf24">NOW {liveVix.toFixed(0)}</text>
+                      </g>}
+                      {bars.map((b,i)=>{
+                        const x=38+i*(BW+GAP);
+                        const bH=(b.peak/maxV)*plotH;
+                        const y=toY(b.peak);
+                        const sel=crisisSelected===b.id;
+                        return(
+                          <g key={i} style={{cursor:"pointer"}} onClick={()=>setCrisisSelected(b.id)}>
+                            <rect x={x} y={y} width={BW} height={bH} fill={b.color} opacity={sel?1:0.55} rx={3}/>
+                            <text x={x+BW/2} y={y-5} fontSize={10} fill={b.color} textAnchor="middle" fontWeight="700">{b.peak}</text>
+                            {bH>28&&<text x={x+BW/2} y={y+bH/2+4} fontSize={8} fill="rgba(255,255,255,0.75)" textAnchor="middle">SPY {b.spyDrop}%</text>}
+                            <text x={x+BW/2} y={H-PB+12} fontSize={9} fill="#64748b" textAnchor="middle">{b.year}</text>
+                            <text x={x+BW/2} y={H-PB+24} fontSize={8} fill={sel?"#e2e8f0":"#475569"} textAnchor="middle" fontWeight={sel?"700":"400"}>{b.name}</text>
+                            {sel&&<rect x={x} y={H-PB+30} width={BW} height={3} fill={b.color} rx={1}/>}
+                          </g>
+                        );
+                      })}
+                      <text x={10} y={H/2} fontSize={9} fill="#475569" textAnchor="middle" transform={`rotate(-90,10,${H/2})`}>VIX Peak</text>
+                    </svg>
+                  </div>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:10,marginTop:6,fontSize:10,color:"#475569"}}>
+                    {zones.map((z,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:4}}><div style={{width:14,height:1.5,background:z.c,opacity:0.7}}/><span>{z.v} — {z.v===80?"GFC peak":z.v===66?"COVID peak":z.v===35?"CRISIS threshold":"RISK_OFF threshold"}</span></div>)}
+                  </div>
+                </div>
                 );
               })()}
 
