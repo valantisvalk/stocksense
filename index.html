@@ -995,6 +995,9 @@ function LiveCandleChart({ticker, timeframe, overlays, chartType}) {
 function StockSense(){
   const[ticker,setTicker]=useState("AAPL");
   const[tab,setTab]=useState("portfolio");
+  const[chatMessages,setChatMessages]=useState([{role:"assistant",content:"Hi Valantis! I'm your StockSense analyst. Ask me anything about your portfolio, the current regime, positions, or strategy. I have full context of your live portfolio."}]);
+  const[chatInput,setChatInput]=useState("");
+  const[chatLoading,setChatLoading]=useState(false);
   const[search,setSearch]=useState("");
   const[activeFS,setActiveFS]=useState("is");
   const[chartType,setChartType]=useState("candle");
@@ -1240,7 +1243,8 @@ function StockSense(){
         *{box-sizing:border-box;margin:0;padding:0} input,button,select{font-family:inherit} input,select{outline:none} button{cursor:pointer;border:none;background:none}
         .tr:hover{background:#0d1826!important;border-left-color:#38bdf8!important}
         .tr.act{background:rgba(56,189,248,0.07)!important;border-left-color:#38bdf8!important}
-        @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes pulse{0%,100%{opacity:0.3}50%{opacity:1}}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
         @keyframes blink{0%,100%{opacity:1}50%{opacity:0.15}}
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}
         ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:#090e18}::-webkit-scrollbar-thumb{background:#1a2538;border-radius:2px}
@@ -1368,7 +1372,7 @@ function StockSense(){
 
         {/* Tabs */}
         <div style={{display:"flex",background:"#08111e",borderBottom:"1px solid #101c2e",padding:"0 20px",overflowX:"auto"}}>
-          {[["macro","🌍 Macro"],["portfolio","💼 Portfolio"],["quant","🧮 Quant"],["overview","📊 Deck"],["analyst","🏦 Analyst"],["financials","💰 Financials"],["charts","📈 Charts"],["history","📅 10-Year"],["crisis","🚨 Crisis"],["backtest","🧪 Backtest"],["news","📰 News"],["prediction","🔮 Forecast"],["guide","📖 Guide"]].map(([v,l])=>{
+          {[["macro","🌍 Macro"],["portfolio","💼 Portfolio"],["quant","🧮 Quant"],["overview","📊 Deck"],["analyst","🏦 Analyst"],["financials","💰 Financials"],["charts","📈 Charts"],["history","📅 10-Year"],["crisis","🚨 Crisis"],["backtest","🧪 Backtest"],["news","📰 News"],["prediction","🔮 Forecast"],["guide","📖 Guide"],["ask","🤖 Ask AI"]].map(([v,l])=>{
             const tabDesc={
               macro:     "Market Environment",
               portfolio: "Your Holdings",
@@ -3654,6 +3658,166 @@ function StockSense(){
             </div>
           )}
 
+
+          {tab==="ask"&&(()=>{
+            const sendMessage = async () => {
+              if(!chatInput.trim()||chatLoading) return;
+              const userMsg = chatInput.trim();
+              setChatInput("");
+              setChatLoading(true);
+
+              // Build portfolio context for Claude
+              const livePos = autoPortfolio?.positions||PORTFOLIO_INIT.map(p=>({
+                ticker:p.ticker, shares:p.shares, avg_cost:p.entryPrice,
+                cur_price:prices[p.ticker]?.price||p.entryPrice,
+                pnl_pct:((prices[p.ticker]?.price||p.entryPrice)-p.entryPrice)/p.entryPrice*100,
+                value:(prices[p.ticker]?.price||p.entryPrice)*p.shares
+              }));
+              const cash    = autoPortfolio?.cash ?? 2157.22;
+              const portVal = livePos.reduce((s,p)=>s+p.value,0)+cash;
+              const pnlPct  = (portVal-100000)/100000*100;
+              const spyP    = prices["SPY"]?.price||662.29;
+              const spyR    = (spyP-662.29)/662.29*100;
+              const alpha   = pnlPct-spyR;
+              const regime  = autoPortfolio?.regime||"UNKNOWN";
+
+              const systemPrompt = `You are StockSense AI — an elite portfolio analyst and trading advisor for Valantis Kats, a sophisticated investor based in Cyprus running a $100,000 algorithmic paper trading system.
+
+CURRENT PORTFOLIO STATE (live data):
+- Portfolio Value: $${Math.round(portVal).toLocaleString()}
+- Cash: $${Math.round(cash).toLocaleString()}
+- Total P&L: ${pnlPct>=0?"+":""}${pnlPct.toFixed(2)}% vs $100k entry
+- Alpha vs SPY: ${alpha>=0?"+":""}${alpha.toFixed(2)}% (SPY ${spyR>=0?"+":""}${spyR.toFixed(2)}%)
+- Macro Regime: ${regime}
+- System started: March 13, 2026 | SPY entry: $662.29
+- Total trades: ${autoPortfolio?.total_trades||0}
+- Transaction costs: $${(autoPortfolio?.total_costs||0).toFixed(0)}
+
+CURRENT POSITIONS:
+${livePos.map(p=>`- ${p.ticker}: ${p.shares} shares @ $${(p.avg_cost||0).toFixed(2)} avg cost | Live: $${(p.cur_price||0).toFixed(2)} | P&L: ${(p.pnl_pct||0)>=0?"+":""}${(p.pnl_pct||0).toFixed(2)}% | Value: $${Math.round(p.value||0).toLocaleString()}`).join("\n")}
+
+REGIME CONTEXT:
+- RISK_ON: Full growth — tech & semis dominant
+- CAUTION: Balanced — quality bias, add gold hedge
+- RISK_OFF: Defensive — staples, healthcare, energy, reduce tech
+- CRISIS: Maximum defence — gold, silver, staples, healthcare, energy, 24% cash
+
+SYSTEM RULES:
+- Never more than 15% in one position
+- Stop loss at -15%, take profit trim at +40%
+- Regime must confirm on 2 consecutive scans before rebalancing
+- Data spike guard: rejects >15% single-session price moves
+- Target: beat SPY by >5% by June 2026, then go live with real capital July 2026
+
+You speak like a Goldman Sachs senior portfolio manager — precise, data-driven, direct. No fluff. When asked about positions give specific numbers. When asked about strategy explain the regime logic. Be honest about losses and mistakes.`;
+
+              const updatedMsgs = [...chatMessages, {role:"user",content:userMsg}];
+              setChatMessages(updatedMsgs);
+
+              try {
+                const response = await fetch("https://api.anthropic.com/v1/messages", {
+                  method:"POST",
+                  headers:{"Content-Type":"application/json"},
+                  body: JSON.stringify({
+                    model:"claude-sonnet-4-20250514",
+                    max_tokens:1000,
+                    system: systemPrompt,
+                    messages: updatedMsgs.filter(m=>m.role!=="system").map(m=>({role:m.role,content:m.content}))
+                  })
+                });
+                const data = await response.json();
+                const reply = data.content?.[0]?.text || "Sorry, I couldn't get a response. Try again.";
+                setChatMessages(prev=>[...prev,{role:"assistant",content:reply}]);
+              } catch(e) {
+                setChatMessages(prev=>[...prev,{role:"assistant",content:"Connection error. Check your internet and try again."}]);
+              }
+              setChatLoading(false);
+            };
+
+            const quickQ = [
+              "Why is the portfolio down?",
+              "Should we buy more now or wait?",
+              "When does the regime flip back to RISK_ON?",
+              "What's our biggest risk right now?",
+              "Explain the CRISIS regime rotation",
+              "How is alpha calculated?",
+            ];
+
+            return(
+            <div style={{animation:"fadeUp 0.3s ease",maxWidth:760,margin:"0 auto"}}>
+
+              <div style={{background:"rgba(129,140,248,0.06)",border:"1px solid rgba(129,140,248,0.2)",borderRadius:14,padding:"14px 20px",marginBottom:16}}>
+                <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:17,color:"#818cf8",marginBottom:4}}>🤖 Ask Your Portfolio AI</div>
+                <div style={{fontSize:12,color:"#94a3b8",lineHeight:1.7}}>Claude has full context of your live portfolio, positions, regime, and P&L. Ask anything — strategy, analysis, what to do next.</div>
+              </div>
+
+              {/* Quick questions */}
+              <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:14}}>
+                {quickQ.map((q,i)=>(
+                  <button key={i}
+                    onClick={()=>{setChatInput(q);}}
+                    style={{fontSize:11,color:"#818cf8",background:"rgba(129,140,248,0.08)",border:"1px solid rgba(129,140,248,0.2)",borderRadius:20,padding:"5px 12px",cursor:"pointer",fontFamily:"inherit"}}>
+                    {q}
+                  </button>
+                ))}
+              </div>
+
+              {/* Chat window */}
+              <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:12,padding:"16px",marginBottom:10,minHeight:400,maxHeight:520,overflowY:"auto",display:"flex",flexDirection:"column",gap:12}} id="chatWindow">
+                {chatMessages.map((m,i)=>{
+                  const isUser = m.role==="user";
+                  return(
+                    <div key={i} style={{display:"flex",justifyContent:isUser?"flex-end":"flex-start"}}>
+                      <div style={{
+                        maxWidth:"82%",
+                        background:isUser?"rgba(129,140,248,0.15)":"#060d18",
+                        border:`1px solid ${isUser?"rgba(129,140,248,0.3)":"#101c2e"}`,
+                        borderRadius:isUser?"12px 12px 2px 12px":"12px 12px 12px 2px",
+                        padding:"10px 14px",
+                      }}>
+                        {!isUser&&<div style={{fontSize:9,fontWeight:700,color:"#818cf8",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:4}}>StockSense AI</div>}
+                        <div style={{fontSize:13,color:isUser?"#c7d2fe":"#cbd5e1",lineHeight:1.75,whiteSpace:"pre-wrap"}}>{m.content}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+                {chatLoading&&(
+                  <div style={{display:"flex",justifyContent:"flex-start"}}>
+                    <div style={{background:"#060d18",border:"1px solid #101c2e",borderRadius:"12px 12px 12px 2px",padding:"10px 14px"}}>
+                      <div style={{fontSize:9,fontWeight:700,color:"#818cf8",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:4}}>StockSense AI</div>
+                      <div style={{display:"flex",gap:4,alignItems:"center"}}>
+                        {[0,1,2].map(i=>(
+                          <div key={i} style={{width:6,height:6,borderRadius:"50%",background:"#818cf8",opacity:0.6,animation:`pulse 1.2s ease-in-out ${i*0.2}s infinite`}}/>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Input */}
+              <div style={{display:"flex",gap:8}}>
+                <input
+                  value={chatInput}
+                  onChange={e=>setChatInput(e.target.value)}
+                  onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendMessage();}}}
+                  placeholder="Ask anything about your portfolio..."
+                  style={{flex:1,background:"#0a1421",border:"1px solid #1e3a5f",borderRadius:8,padding:"10px 14px",fontSize:13,color:"#e2e8f0",fontFamily:"inherit",outline:"none"}}
+                />
+                <button
+                  onClick={sendMessage}
+                  disabled={chatLoading||!chatInput.trim()}
+                  style={{background:chatLoading||!chatInput.trim()?"#1e293b":"#818cf8",color:chatLoading||!chatInput.trim()?"#475569":"#fff",border:"none",borderRadius:8,padding:"10px 20px",fontSize:13,fontWeight:700,cursor:chatLoading||!chatInput.trim()?"default":"pointer",fontFamily:"Avenir Next,sans-serif",transition:"background 0.2s"}}>
+                  {chatLoading?"...":"Send"}
+                </button>
+              </div>
+              <div style={{fontSize:10,color:"#334155",marginTop:6,textAlign:"center"}}>
+                Powered by Claude · Portfolio data updates every 5 min from GitHub
+              </div>
+
+            </div>
+            );
+          })()}
 
           {tab==="guide"&&(
             <div style={{animation:"fadeUp 0.3s ease"}}>
