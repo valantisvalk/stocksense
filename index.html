@@ -2627,6 +2627,249 @@ function StockSense(){
                 )}
               </div>
 
+              {/* ── INVESTMENT BRIEF ── */}
+              {(()=>{
+                // Sector allocation from live portfolio
+                const totalInvested = livePortfolio.reduce((s,p)=>s+p.value,0);
+                const sectorMap = {};
+                livePortfolio.forEach(p=>{
+                  const sec = DB[p.ticker]?.s || DB[p.ticker]?.sector || "Other";
+                  if(!sectorMap[sec]) sectorMap[sec]={value:0,tickers:[]};
+                  sectorMap[sec].value += p.value;
+                  sectorMap[sec].tickers.push(p.ticker);
+                });
+                const sectors = Object.entries(sectorMap).sort((a,b)=>b[1].value-a[1].value);
+
+                // Per-position thesis data
+                const THESIS = {
+                  GLD:  {why:"Maximum crisis hedge. Gold outperforms in every systemic shock — 2008 (+5%), 2020 (+25%), geopolitical crises. With VIX elevated and regime at CRISIS, GLD is the anchor of capital preservation.", week:"Expect continued bid as safe-haven demand holds. Watching for Fed commentary — any dovish signal accelerates gold further.", edge:"Store of value in a world of rising debt and geopolitical uncertainty."},
+                  SLV:  {why:"Silver amplifies gold's move with industrial demand upside. In risk-off environments silver lags gold initially, then catches up sharply. Higher beta crisis commodity.", week:"Momentum strong after +6.4% day. Short-term overbought — may consolidate mid-week before resuming uptrend.", edge:"Gold/silver ratio historically reverts — silver is cheap relative to gold right now."},
+                  KO:   {why:"Coca-Cola is the definition of recession-proof. Volumes hold through every downturn — people drink Coke in a depression. +20% dividend growth over 10 years. Warren Buffett's largest holding.", week:"Defensive floor. No catalyst expected — this position earns its keep by not going down while the market does.", edge:"Pricing power + global distribution moat. Revenue predictable to ±2% regardless of macro."},
+                  PG:   {why:"Procter & Gamble: 65 consecutive years of dividend increases. Owns 10 billion-dollar brands. When consumers trade down from premium, they trade into P&G's mid-tier brands — the company wins either way.", week:"Steady. Consumer staples outperform in risk-off. No earnings this week.", edge:"Unmatched brand portfolio + retail shelf dominance. FMCG pricing power."},
+                  JNJ:  {why:"Johnson & Johnson: pharma + medtech = true defensive hybrid. Healthcare spending is inelastic — demand doesn't fall in recessions. Strong balance sheet, AAA credit rating.", week:"UNH earnings Apr 15 may set sentiment for the sector. JNJ earnings Apr 14 — expect steady beat, raised guidance.", edge:"Litigation risks largely resolved post-Kenvue spin. Pure healthcare now — cleaner story."},
+                  UNH:  {why:"UnitedHealth is the largest health insurer in the US. Earnings Apr 15 — analyst consensus expects $6.12 EPS. Recent quarters show pressure from medical cost ratios but the franchise is intact.", week:"EARNINGS WEEK — Apr 15. High-impact event. Position sized conservatively. Beat = +3-5%, miss = -5-8%.", edge:"Scale advantage in insurance — 50M+ members creates unmatched negotiating power with hospitals."},
+                  XOM:  {why:"Exxon: energy hedge in crisis. Oil historically spikes in geopolitical crises (+87% in 2022). With USO elevated, XOM benefits from high realised oil prices.", week:"Oil price direction is the key variable. Any escalation in Middle East or Russia supply disruption = XOM higher.", edge:"Integrated model — downstream refining margins buffer upstream price volatility."},
+                  CVX:  {why:"Chevron: complementary energy position to XOM. Lower leverage, cleaner balance sheet, higher dividend yield. Crisis allocation calls for energy exposure — CVX is the quality play.", week:"Tracking oil macro. Permian Basin production data midweek could be a catalyst.", edge:"Hess acquisition adds Guyana deepwater — long-duration low-cost barrels."},
+                  GOOGL:{why:"Even in CRISIS, Alphabet retains a small allocation — its search monopoly generates $300B+ revenue with 60%+ margins. Digital advertising is the last thing companies cut. High quant score (76) earned it a position.", week:"Earnings Apr 22 — consensus $2.41 EPS. Cloud growth and AI Overviews monetisation are the two things to watch.", edge:"Search monopoly + YouTube + GCP. Three durable revenue streams with network effects."},
+                  MSFT: {why:"Microsoft retained at minimal weight — Azure cloud is essential infrastructure even in downturns. Enterprises don't cancel Azure contracts in a recession. Quant score 71 justifies the position.", week:"Earnings Apr 23 — consensus $3.65 EPS. Azure growth rate (currently ~31%) is the only number that matters.", edge:"Enterprise stickiness: Office 365 + Azure are deeply embedded. Switching cost is enormous."},
+                  BLK:  {why:"BlackRock manages $10 trillion. In a crisis, ETF flows actually increase as investors flee to passive. BlackRock earns fees regardless of market direction.", week:"Watching for fund flow data. Retail panic = AUM headwinds short-term but long-term franchise is unimpaired.", edge:"iShares ETF dominance — first-mover advantage in passive investing that compounds permanently."},
+                  BRK_B:{why:"Berkshire Hathaway is the ultimate crisis stock. $300B+ cash pile means Buffett can acquire distressed assets at crisis prices — the company gets stronger when markets fall.", week:"No earnings imminent. Trades on Buffett's reputation as a crisis buyer. Market sell-off = BRK_B outperforms.", edge:"The only conglomerate the market trusts. Insurance float funds investments at zero cost."},
+                };
+
+                const regimeRationale = {
+                  CRISIS:   "The system has rotated to maximum defensiveness. Capital preservation is the primary objective. Gold and silver provide crisis hedging, consumer staples provide dividend income with low drawdown, healthcare provides inelastic demand exposure, and energy benefits from supply disruptions. Tech allocation is minimal — only highest-conviction names with essential infrastructure roles.",
+                  RISK_OFF: "Defensive positioning. Reducing cyclical exposure, increasing dividends and quality. Energy, healthcare, and consumer staples overweighted vs benchmark. Tech trimmed to quality names only.",
+                  CAUTION:  "Balanced positioning with a defensive tilt. Maintaining growth exposure but increasing hedges. Gold added as insurance. Watching for regime deterioration.",
+                  RISK_ON:  "Full growth mode. Maximum allocation to Technology and Semiconductors. Momentum and AI theme lead. Minimal cash, minimal defensives.",
+                };
+
+                const weekOutlook = {
+                  CRISIS:   "This week the market is navigating peak uncertainty. Key events: UNH earnings (Apr 15), GOOGL earnings (Apr 22). Expect volatility to remain elevated. Our defensive positioning should outperform or hold value while the broader market finds a floor. The $24k cash reserve is dry powder — if the market drops another 5-8%, we deploy into highest-conviction names at crisis prices.",
+                  RISK_OFF: "Defensive rotation in progress. This week: watching macro data and any Fed commentary. Our energy and healthcare positions are the key performance drivers. Expect modest positive returns relative to a declining market.",
+                  CAUTION:  "Mixed signals this week. Maintaining balanced positioning. Quality over momentum. Watching yield curve for inversion signals.",
+                  RISK_ON:  "Growth momentum continues. Tech and semiconductors leading. This week: follow AI infrastructure capex announcements and any guidance revisions. Stay long, manage individual position risk.",
+                };
+
+                const howWeMakeMoney = {
+                  CRISIS:   [
+                    {icon:"🥇", title:"Crisis Premium", desc:"Gold and silver appreciate as investors flee risk assets. In 2008 GLD +5%, 2020 GLD +25%, 2022 GLD +0% but outperformed equities by 20%+. Our 35%+ commodity allocation captures this."},
+                    {icon:"🛡️", title:"Dividend Floor", desc:"KO, PG, JNJ, UNH pay dividends regardless of price action. At current portfolio, ~$800-1,000 in annualised dividend income. This is money the portfolio earns while waiting for regime recovery."},
+                    {icon:"⚡", title:"Energy Spike", desc:"Geopolitical crises historically spike oil prices. XOM and CVX earn higher margins when oil rises. 2022: XOM +87%. Our combined energy position captures this asymmetric upside."},
+                    {icon:"💰", title:"Cash Deployment", desc:"$24k cash earns ~5% at money market rates and waits for the regime to flip RISK_ON — at which point it deploys into tech and semis at depressed prices, capturing the full recovery move."},
+                  ],
+                  RISK_OFF: [
+                    {icon:"🛡️", title:"Dividend Income", desc:"Defensive positions generate consistent dividend income while the market finds a floor."},
+                    {icon:"⚡", title:"Energy Premium", desc:"Elevated energy prices benefit XOM and CVX directly through higher realised margins."},
+                    {icon:"💰", title:"Cash Optionality", desc:"Dry powder ready to deploy when regime shifts back to RISK_ON."},
+                  ],
+                  RISK_ON: [
+                    {icon:"🚀", title:"AI Infrastructure", desc:"NVDA, MSFT, GOOGL benefit directly from AI capex cycle — the largest capital investment wave in tech history."},
+                    {icon:"📈", title:"Earnings Growth", desc:"Tech companies growing EPS 20-40% annually. Price follows earnings over time."},
+                    {icon:"🌍", title:"Global Expansion", desc:"Consumer Disc and Communication benefit from global digital adoption acceleration."},
+                  ],
+                };
+
+                const cur_regime = regime || "CRISIS";
+                const rationale  = regimeRationale[cur_regime] || regimeRationale.CRISIS;
+                const wkOutlook  = weekOutlook[cur_regime]     || weekOutlook.CRISIS;
+                const moneyPlan  = howWeMakeMoney[cur_regime]  || howWeMakeMoney.CRISIS;
+
+                const regimeColor = cur_regime==="CRISIS"?"#f97316":cur_regime==="RISK_OFF"?"#f87171":cur_regime==="CAUTION"?"#fbbf24":"#34d399";
+
+                return(
+                <div>
+
+                  {/* ── 1. SECTOR ALLOCATION ── */}
+                  <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:12,padding:"20px 22px",marginBottom:12}}>
+                    <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:14,color:"#e2e8f0",marginBottom:4}}>
+                      🏗️ Sector Allocation
+                    </div>
+                    <div style={{fontSize:11,color:"#475569",marginBottom:16}}>
+                      Current deployment by sector · Regime: <span style={{color:regimeColor,fontWeight:700}}>{cur_regime}</span>
+                    </div>
+                    <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                      {sectors.map(([sec,data],i)=>{
+                        const pct = totalInvested>0?(data.value/totalInvested*100):0;
+                        const barColor = sec.includes("Commodit")?"#fbbf24":sec.includes("Staples")?"#34d399":sec.includes("Health")?"#f472b6":sec.includes("Energy")?"#f97316":sec.includes("Tech")?"#38bdf8":sec.includes("Financ")?"#818cf8":sec.includes("Semicon")?"#a78bfa":"#64748b";
+                        return(
+                          <div key={i}>
+                            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                                <span style={{fontFamily:"Avenir Next,sans-serif",fontWeight:700,fontSize:12,color:"#e2e8f0"}}>{sec}</span>
+                                <span style={{fontSize:11,color:"#475569"}}>{data.tickers.join(", ")}</span>
+                              </div>
+                              <div style={{display:"flex",alignItems:"center",gap:12}}>
+                                <span style={{fontSize:11,color:"#64748b"}}>${Math.round(data.value).toLocaleString()}</span>
+                                <span style={{fontFamily:"Avenir Next,sans-serif",fontWeight:700,fontSize:12,color:barColor,minWidth:36,textAlign:"right"}}>{pct.toFixed(1)}%</span>
+                              </div>
+                            </div>
+                            <div style={{background:"#060d18",borderRadius:4,height:6,overflow:"hidden"}}>
+                              <div style={{width:pct+"%",height:"100%",background:barColor,borderRadius:4,transition:"width 0.6s ease"}}/>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {/* Cash bar */}
+                      {(()=>{
+                        const cashPct = portfolioValue>0?(liveCash/portfolioValue*100):0;
+                        return(
+                          <div>
+                            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                                <span style={{fontFamily:"Avenir Next,sans-serif",fontWeight:700,fontSize:12,color:"#fbbf24"}}>Cash</span>
+                                <span style={{fontSize:11,color:"#475569"}}>Reserve · dry powder</span>
+                              </div>
+                              <div style={{display:"flex",alignItems:"center",gap:12}}>
+                                <span style={{fontSize:11,color:"#64748b"}}>${Math.round(liveCash).toLocaleString()}</span>
+                                <span style={{fontFamily:"Avenir Next,sans-serif",fontWeight:700,fontSize:12,color:"#fbbf24",minWidth:36,textAlign:"right"}}>{cashPct.toFixed(1)}%</span>
+                              </div>
+                            </div>
+                            <div style={{background:"#060d18",borderRadius:4,height:6,overflow:"hidden"}}>
+                              <div style={{width:cashPct+"%",height:"100%",background:"#fbbf24",borderRadius:4}}/>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </div>
+
+                  {/* ── 2. INVESTMENT THESIS ── */}
+                  <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:12,padding:"20px 22px",marginBottom:12}}>
+                    <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:14,color:"#e2e8f0",marginBottom:4}}>
+                      🎯 Why These Positions
+                    </div>
+                    <div style={{fontSize:12,color:"#64748b",lineHeight:1.8,marginBottom:16,borderLeft:"3px solid "+regimeColor,paddingLeft:12}}>
+                      {rationale}
+                    </div>
+                    <div style={{display:"flex",flexDirection:"column",gap:0}}>
+                      {livePortfolio.sort((a,b)=>b.value-a.value).map((p,i)=>{
+                        const th = THESIS[p.ticker];
+                        if(!th) return null;
+                        const an = ANALYST[p.ticker]||{};
+                        const total = (an.buy||0)+(an.hold||0)+(an.sell||0);
+                        const bullPct = total>0?Math.round(an.buy/total*100):0;
+                        const isUp = p.pnlPct>=0;
+                        const upside = an.target&&p.curPrice?((an.target-p.curPrice)/p.curPrice*100):null;
+                        return(
+                          <div key={i} style={{padding:"14px 0",borderBottom:"1px solid #0d1826"}}>
+                            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6,flexWrap:"wrap",gap:6}}>
+                              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                                <span style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:14,color:"#7dd3fc"}}>{p.ticker}</span>
+                                <span style={{fontSize:11,color:"#334155"}}>{DB[p.ticker]?.name?.split(" ").slice(0,3).join(" ")||""}</span>
+                              </div>
+                              <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+                                <span style={{fontSize:10,color:isUp?"#34d399":"#f87171",fontWeight:700,background:(isUp?"rgba(52,211,153":"rgba(248,113,113")+",0.1)",padding:"2px 7px",borderRadius:4}}>
+                                  {isUp?"+":""}{p.pnlPct.toFixed(2)}%
+                                </span>
+                                {upside!=null&&<span style={{fontSize:10,color:"#64748b",background:"rgba(100,116,139,0.1)",padding:"2px 7px",borderRadius:4}}>
+                                  Street target: {upside>=0?"+":""}{upside.toFixed(0)}% upside
+                                </span>}
+                                {bullPct>0&&<span style={{fontSize:10,color:"#818cf8",background:"rgba(129,140,248,0.1)",padding:"2px 7px",borderRadius:4}}>
+                                  {bullPct}% buy-rated
+                                </span>}
+                              </div>
+                            </div>
+                            <p style={{fontSize:12,color:"#94a3b8",lineHeight:1.75,margin:"0 0 6px"}}>{th.why}</p>
+                            <p style={{fontSize:11,color:"#4b5563",lineHeight:1.6,margin:0}}>
+                              <span style={{color:"#38bdf8",fontWeight:600}}>Edge: </span>{th.edge}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* ── 3. THIS WEEK ── */}
+                  <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:12,padding:"20px 22px",marginBottom:12}}>
+                    <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:14,color:"#e2e8f0",marginBottom:4}}>
+                      📅 What To Expect This Week
+                    </div>
+                    <div style={{fontSize:12,color:"#64748b",lineHeight:1.8,marginBottom:16,borderLeft:"3px solid #38bdf8",paddingLeft:12}}>
+                      {wkOutlook}
+                    </div>
+                    {/* Per-position week outlook */}
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:8}}>
+                      {livePortfolio.sort((a,b)=>b.value-a.value).map((p,i)=>{
+                        const th = THESIS[p.ticker];
+                        if(!th) return null;
+                        const an = ANALYST[p.ticker]||{};
+                        const hasEarnings = an.nextEarnings;
+                        const isEarningsWeek = hasEarnings && (()=>{
+                          try{
+                            const d = new Date(an.nextEarnings+", 2026");
+                            const now = new Date();
+                            const diff = (d-now)/(1000*60*60*24);
+                            return diff>=0&&diff<=7;
+                          }catch(e){return false;}
+                        })();
+                        return(
+                          <div key={i} style={{background:"#060d18",borderRadius:8,padding:"12px 14px",border:`1px solid ${isEarningsWeek?"rgba(251,191,36,0.3)":"#0d1826"}`}}>
+                            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                              <span style={{fontFamily:"Avenir Next,sans-serif",fontWeight:700,fontSize:13,color:"#7dd3fc"}}>{p.ticker}</span>
+                              {isEarningsWeek&&<span style={{fontSize:9,fontWeight:700,color:"#fbbf24",background:"rgba(251,191,36,0.15)",padding:"2px 6px",borderRadius:4}}>⚡ EARNINGS {an.nextEarnings}</span>}
+                            </div>
+                            <p style={{fontSize:11,color:"#64748b",lineHeight:1.65,margin:0}}>{th.week}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* ── 4. HOW WE MAKE MONEY ── */}
+                  <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:12,padding:"20px 22px",marginBottom:12}}>
+                    <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:14,color:"#e2e8f0",marginBottom:4}}>
+                      💡 How We Expect To Make Money
+                    </div>
+                    <div style={{fontSize:12,color:"#64748b",lineHeight:1.8,marginBottom:14}}>
+                      Regime <span style={{color:regimeColor,fontWeight:700}}>{cur_regime}</span> — three distinct return streams active simultaneously
+                    </div>
+                    <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                      {moneyPlan.map((m,i)=>(
+                        <div key={i} style={{background:"#060d18",border:"1px solid #0d1826",borderRadius:8,padding:"14px 16px",display:"flex",gap:14,alignItems:"flex-start"}}>
+                          <div style={{fontSize:22,flexShrink:0,lineHeight:1}}>{m.icon}</div>
+                          <div>
+                            <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:700,fontSize:13,color:"#e2e8f0",marginBottom:4}}>{m.title}</div>
+                            <div style={{fontSize:12,color:"#64748b",lineHeight:1.7}}>{m.desc}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {/* Target scenario */}
+                    <div style={{marginTop:14,padding:"14px 16px",background:"rgba(52,211,153,0.04)",border:"1px solid rgba(52,211,153,0.15)",borderRadius:8}}>
+                      <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:700,fontSize:12,color:"#34d399",marginBottom:6}}>🎯 Target Scenario — Beat SPY by +5% by June 2026</div>
+                      <div style={{fontSize:12,color:"#64748b",lineHeight:1.8}}>
+                        SPY is currently {spyRet>=0?"up":"down"} {Math.abs(spyRet).toFixed(2)}% from our entry.
+                        Our portfolio needs to reach <strong style={{color:"#e2e8f0"}}>${Math.round(100000*(1+(spyRet+5)/100)).toLocaleString()}</strong> to achieve the +5% alpha target.
+                        Current gap: <strong style={{color:alpha>=5?"#34d399":"#f87171"}}>{alpha>=5?"✅ Target achieved":"$"+(Math.round(100000*(1+(spyRet+5)/100))-Math.round(portfolioValue)).toLocaleString()+" to go"}</strong>.
+                        When the macro regime flips back to RISK_ON, the cash reserve deploys into discounted growth names — that rotation is historically the highest-return phase of the cycle.
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+                );
+              })()}
+
             </div>
             );
           })()}
