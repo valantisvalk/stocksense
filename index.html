@@ -2491,6 +2491,13 @@ function StockSense(){
             const spyEntry  = 662.29;
             const spyNow   = prices["SPY"]?.price || spyEntry;
             const spyRet   = ((spyNow-spyEntry)/spyEntry)*100;
+            // Transaction costs — from GitHub (authoritative), fallback to portLog
+            const COST_PCT = 0.0008;
+            const _trades  = autoPortfolio?.recent_trades
+              ? autoPortfolio.recent_trades.filter(t=>t.action==="BUY"||t.action==="SELL")
+              : (portLog||[]).filter(t=>t.action==="BUY"||t.action==="SELL");
+            const totalCosts = autoPortfolio?.total_costs ??
+              _trades.reduce((s,t)=>s+(t.price&&t.shares?t.price*t.shares:(t.value||0))*COST_PCT,0);
 
             return(
             <div style={{animation:"fadeUp 0.3s ease"}}>
