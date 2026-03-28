@@ -2425,25 +2425,6 @@ function StockSense(){
             const totalDivReceived = livePortfolio.reduce((s,p)=>s+calcDividends(p.ticker,p.shares,p.entryDate),0);
             const divRetPct        = (totalDivReceived/INITIAL_CAP)*100;
             const priceRetPct      = totalRetPct - divRetPct;
-            const daysHeld         = Math.max(1,Math.round((Date.now()-new Date("2026-03-13"))/86400000));
-            const liveBase         = livePortfolio.reduce((s,p)=>s+p.shares*p.entryPrice,0)||1;
-            const _wts             = livePortfolio.map(p=>p.shares*p.entryPrice/liveBase);
-            const _portVol         = Math.sqrt(_wts.reduce((s,w,i)=>s+Math.pow(w*(DB[livePortfolio[i].ticker]?.vol||25),2),0))/100;
-            const _annRet          = totalRetPct/100*(365/daysHeld);
-            const _sharpe          = _portVol>0?(_annRet-0.043)/_portVol:null;
-            const _snapVals        = (autoPortfolio?.daily_snapshots||[]).map(s=>s.value||INITIAL_CAP);
-            const _allVals         = [INITIAL_CAP,..._snapVals,portfolioValue];
-            let _pk=INITIAL_CAP,_dd=0; _allVals.forEach(v=>{_pk=Math.max(_pk,v);_dd=Math.max(_dd,(_pk-v)/_pk);});
-            const _maxDD           = _dd;
-            const _annVol          = _portVol*Math.sqrt(252)*100;
-            const _beta            = livePortfolio.reduce((s,p)=>{const w=p.value/Math.max(1,portfolioValue);return s+w*(DB[p.ticker]?.beta||1);},0);
-            const _posPerf         = livePortfolio.map(p=>({t:p.ticker,pct:p.pnlPct}));
-            const _best            = _posPerf.length?_posPerf.reduce((a,b)=>b.pct>a.pct?b:a):{t:"—",pct:0};
-            const _worst           = _posPerf.length?_posPerf.reduce((a,b)=>b.pct<a.pct?b:a):{t:"—",pct:0};
-            const _sectors         = [...new Set(livePortfolio.map(p=>(DB[p.ticker]||{}).s).filter(Boolean))];
-            const _divScore        = Math.min(100,Math.round((_sectors.length/8)*100));
-            const _winRate         = _posPerf.filter(p=>p.pct>0).length/Math.max(1,_posPerf.length)*100;
-            const _corr            = Math.round(Math.abs((_posPerf.filter(p=>p.pct>0).length/Math.max(1,_posPerf.length)-0.5)*2)*100);
 
             const cell = (val,color="#e2e8f0",bold=false)=>(
               <td style={{padding:"9px 12px",fontSize:13,color,fontWeight:bold?700:400,fontFamily:bold?"Avenir Next,sans-serif":"inherit",textAlign:"right",borderBottom:"1px solid #0d1826"}}>{val}</td>
@@ -2535,21 +2516,41 @@ function StockSense(){
               <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:12,padding:"16px 18px",marginBottom:12}}>
                 <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:700,fontSize:11,color:"#475569",textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:10}}>📊 Performance KPIs</div>
                 {(()=>{
+                  const lB2        = livePortfolio.reduce((s,p)=>s+p.shares*p.entryPrice,0)||1;
+                  const w2         = livePortfolio.map(p=>p.shares*p.entryPrice/lB2);
+                  const pVol2      = Math.sqrt(w2.reduce((s,w,i)=>s+Math.pow(w*(DB[livePortfolio[i]?.ticker]?.vol||25),2),0))/100;
+                  const dH2        = Math.max(1,Math.round((Date.now()-new Date("2026-03-13"))/86400000));
+                  const aRet2      = (totalRetPct/100)*(365/dH2);
+                  const sharpe2    = pVol2>0?(aRet2-0.043)/pVol2:null;
+                  const snaps2     = (autoPortfolio?.daily_snapshots||[]).map(s=>s.value||100000);
+                  const allV2      = [100000,...snaps2,portfolioValue];
+                  let pk2=100000,dd2=0; allV2.forEach(v=>{pk2=Math.max(pk2,v);dd2=Math.max(dd2,(pk2-v)/pk2);});
+                  const maxDD2     = dd2;
+                  const aVol2      = pVol2*Math.sqrt(252)*100;
+                  const beta2      = livePortfolio.reduce((s,p)=>{const w=p.value/Math.max(1,portfolioValue);return s+w*(DB[p.ticker]?.beta||1);},0);
+                  const posPerf2   = livePortfolio.map(p=>({t:p.ticker,pct:p.pnlPct}));
+                  const best2      = posPerf2.length?posPerf2.reduce((a,b)=>b.pct>a.pct?b:a):{t:"—",pct:0};
+                  const worst2     = posPerf2.length?posPerf2.reduce((a,b)=>b.pct<a.pct?b:a):{t:"—",pct:0};
+                  const secs2      = [...new Set(livePortfolio.map(p=>(DB[p.ticker]||{}).s).filter(Boolean))];
+                  const divSc2     = Math.min(100,Math.round((secs2.length/8)*100));
+                  const winR2      = posPerf2.filter(p=>p.pct>0).length/Math.max(1,posPerf2.length)*100;
+                  const corr2      = Math.round(Math.abs((posPerf2.filter(p=>p.pct>0).length/Math.max(1,posPerf2.length)-0.5)*2)*100);
+                  const divInc2    = livePortfolio.reduce((s,p)=>s+calcDividends(p.ticker,p.shares,p.entryDate),0);
                   const kpis=[
                     {l:"Total Return",    v:(totalRetPct>=0?"+":"")+totalRetPct.toFixed(2)+"%",    c:totalRetPct>=0?"#34d399":"#f87171", sub:"$"+(totalPnL>=0?"+":"")+Math.round(totalPnL)},
                     {l:"Net Return",      v:(netRetPct>=0?"+":"")+netRetPct.toFixed(2)+"%",         c:netRetPct>=0?"#34d399":"#f87171",   sub:"after costs"},
                     {l:"Alpha vs SPY",    v:(alpha>=0?"+":"")+alpha.toFixed(2)+"%",                 c:alpha>=0?"#34d399":"#f87171",       sub:"SPY "+(spyRet>=0?"+":"")+spyRet.toFixed(2)+"%"},
-                    {l:"Sharpe Ratio",    v:_sharpe!=null?_sharpe.toFixed(2):"—",                   c:!_sharpe?"#475569":_sharpe>=1?"#34d399":_sharpe>=0.5?"#fbbf24":"#f87171", sub:!_sharpe?"—":_sharpe>=1?"Excellent":_sharpe>=0.5?"Good":"Poor"},
-                    {l:"Max Drawdown",    v:"-"+(_maxDD*100).toFixed(1)+"%",                        c:_maxDD>0.15?"#f87171":_maxDD>0.08?"#fbbf24":"#34d399", sub:_maxDD>0.15?"High":_maxDD>0.08?"Moderate":"Low"},
-                    {l:"Win Rate",        v:_winRate.toFixed(1)+"%",                                c:_winRate>=55?"#34d399":_winRate>=45?"#fbbf24":"#f87171", sub:_winRate>=55?"On target":"Below"},
-                    {l:"Volatility",      v:_annVol.toFixed(1)+"%",                                 c:_annVol>30?"#f87171":_annVol>20?"#fbbf24":"#34d399",    sub:_annVol>30?"High":_annVol>20?"Medium":"Low"},
-                    {l:"Portfolio Beta",  v:_beta.toFixed(2),                                       c:_beta>1.3?"#f87171":_beta<0.8?"#38bdf8":"#fbbf24",      sub:_beta>1.3?"Aggressive":_beta<0.8?"Defensive":"Balanced"},
+                    {l:"Sharpe Ratio",    v:sharpe2!=null?sharpe2.toFixed(2):"—",                   c:!sharpe2?"#475569":sharpe2>=1?"#34d399":sharpe2>=0.5?"#fbbf24":"#f87171", sub:!sharpe2?"—":sharpe2>=1?"Excellent":sharpe2>=0.5?"Good":"Poor"},
+                    {l:"Max Drawdown",    v:"-"+(maxDD2*100).toFixed(1)+"%",                        c:maxDD2>0.15?"#f87171":maxDD2>0.08?"#fbbf24":"#34d399", sub:maxDD2>0.15?"High":maxDD2>0.08?"Moderate":"Low"},
+                    {l:"Win Rate",        v:winR2.toFixed(1)+"%",                                   c:winR2>=55?"#34d399":winR2>=45?"#fbbf24":"#f87171", sub:winR2>=55?"On target":"Below"},
+                    {l:"Volatility",      v:aVol2.toFixed(1)+"%",                                   c:aVol2>30?"#f87171":aVol2>20?"#fbbf24":"#34d399",    sub:aVol2>30?"High":aVol2>20?"Medium":"Low"},
+                    {l:"Portfolio Beta",  v:beta2.toFixed(2),                                       c:beta2>1.3?"#f87171":beta2<0.8?"#38bdf8":"#fbbf24",      sub:beta2>1.3?"Aggressive":beta2<0.8?"Defensive":"Balanced"},
                     {l:"Cost Drag",       v:"-$"+totalCosts.toFixed(0),                             c:"#f87171",                                               sub:(totalCosts/INITIAL_CAP*100).toFixed(3)+"%"},
-                    {l:"Diversification", v:_divScore+"/100",                                       c:_divScore>=75?"#34d399":_divScore>=50?"#fbbf24":"#f87171",sub:_sectors.length+" sectors"},
+                    {l:"Diversification", v:divSc2+"/100",                                          c:divSc2>=75?"#34d399":divSc2>=50?"#fbbf24":"#f87171",sub:secs2.length+" sectors"},
                     {l:"Price Return",    v:(priceRetPct>=0?"+":"")+priceRetPct.toFixed(2)+"%",    c:priceRetPct>=0?"#34d399":"#f87171",                      sub:"excl. dividends"},
-                    {l:"Dividend Income", v:"$"+totalDivReceived.toFixed(2),                        c:"#38bdf8",                                               sub:"+"+divRetPct.toFixed(3)+"%"},
-                    {l:"Best Position",   v:_best.t,                                                c:"#34d399",                                               sub:(_best.pct>=0?"+":"")+_best.pct.toFixed(1)+"%"},
-                    {l:"Worst Position",  v:_worst.t,                                               c:"#f87171",                                               sub:(_worst.pct>=0?"+":"")+_worst.pct.toFixed(1)+"%"},
+                    {l:"Dividend Income", v:"$"+divInc2.toFixed(2),                                 c:"#38bdf8",                                               sub:"+"+(divInc2/100000*100).toFixed(3)+"%"},
+                    {l:"Best Position",   v:best2.t,                                                c:"#34d399",                                               sub:(best2.pct>=0?"+":"")+best2.pct.toFixed(1)+"%"},
+                    {l:"Worst Position",  v:worst2.t,                                               c:"#f87171",                                               sub:(worst2.pct>=0?"+":"")+worst2.pct.toFixed(1)+"%"},
                   ];
                   return(
                     <div>
