@@ -8,7 +8,6 @@
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
@@ -22,13 +21,6 @@
 </head>
 <body style="margin:0;padding:0;background:#05080f;">
 <div id="root"></div>
-<script>
-window._chartQueue = window._chartQueue || [];
-window._runChartQueue = function() {
-  var q = window._chartQueue.splice(0);
-  q.forEach(function(fn){ try{ fn(); }catch(e){} });
-};
-</script>
 <script type="text/babel">
 const { useState,useCallback, useEffect, useMemo } = React;
 
@@ -1000,66 +992,6 @@ function LiveCandleChart({ticker, timeframe, overlays, chartType}) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAIN APP
 // ═══════════════════════════════════════════════════════════════════════════════
-function ChartRenderer({id1,id2,labels,portData,spyData,portEntry,posLabels,posVals,posColors,posPcts}){
-  React.useEffect(()=>{
-    if(typeof Chart==="undefined") return;
-    const gridCol="rgba(255,255,255,0.05)";
-    const textCol="#64748b";
-
-    const c1=document.getElementById(id1);
-    const c2=document.getElementById(id2);
-    if(!c1||!c2) return;
-
-    // Destroy existing charts if any
-    const ex1=Chart.getChart(c1); if(ex1) ex1.destroy();
-    const ex2=Chart.getChart(c2); if(ex2) ex2.destroy();
-
-    const minY=Math.floor(Math.min(...portData,...spyData)*0.995/1000)*1000;
-    const maxY=Math.ceil(Math.max(...portData,...spyData)*1.005/1000)*1000;
-
-    new Chart(c1,{
-      type:"line",
-      data:{
-        labels,
-        datasets:[
-          {label:"StockSense",data:portData,borderColor:"#34d399",borderWidth:2,pointRadius:4,pointBackgroundColor:"#34d399",tension:0.3,fill:false},
-          {label:"SPY",data:spyData,borderColor:"#38bdf8",borderWidth:1.5,pointRadius:3,pointBackgroundColor:"#38bdf8",tension:0.3,fill:false,borderDash:[4,3]},
-          {label:"Baseline",data:labels.map(()=>portEntry),borderColor:"#475569",borderWidth:1,pointRadius:0,fill:false,borderDash:[2,4]}
-        ]
-      },
-      options:{
-        responsive:true,maintainAspectRatio:false,
-        plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.dataset.label+": $"+Math.round(ctx.raw).toLocaleString()}}},
-        scales:{
-          x:{grid:{color:gridCol},ticks:{color:textCol,font:{size:10}}},
-          y:{grid:{color:gridCol},ticks:{color:textCol,font:{size:10},callback:v=>"$"+(v/1000).toFixed(0)+"k"},min:minY,max:maxY}
-        }
-      }
-    });
-
-    new Chart(c2,{
-      type:"bar",
-      data:{
-        labels:posLabels,
-        datasets:[{label:"Value",data:posVals,backgroundColor:posColors,borderRadius:3,barThickness:20}]
-      },
-      options:{
-        indexAxis:"y",
-        responsive:true,maintainAspectRatio:false,
-        plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{
-          const pct=posPcts[ctx.dataIndex];
-          return "$"+ctx.raw.toLocaleString()+" ("+(pct>=0?"+":"")+pct+"%)";
-        }}}},
-        scales:{
-          x:{grid:{color:gridCol},ticks:{color:textCol,font:{size:10},callback:v=>"$"+(v/1000).toFixed(0)+"k"}},
-          y:{grid:{display:false},ticks:{color:"#94a3b8",font:{size:11,weight:"600"}}}
-        }
-      }
-    });
-  },[id1,id2,JSON.stringify(portData),JSON.stringify(posVals)]);
-  return null;
-}
-
 function StockSense(){
   const[ticker,setTicker]=useState("AAPL");
   const[tab,setTab]=useState("portfolio");
@@ -2454,1382 +2386,249 @@ function StockSense(){
 
           {/* ── GUIDE TAB ── */}
           {/* ── PORTFOLIO TAB ── */}
+          {/* ── PORTFOLIO TAB ── */}
           {tab==="portfolio"&&(()=>{
-            // ── computed values ──────────────────────────────────────────────
-            // ── SINGLE SOURCE OF TRUTH: autoPortfolio (GitHub) when available ──
-            // Maps autoPortfolio.positions to same shape as PORTFOLIO_INIT so ALL
-            // downstream code (KPIs, deep-dive, rebalance) matches Telegram exactly.
+            // ── SINGLE SOURCE OF TRUTH ──────────────────────────────────────
             const livePortfolio = autoPortfolio?.positions
               ? autoPortfolio.positions.map(p=>({
-                  ticker:     p.ticker,
-                  shares:     p.shares,
-                  entryPrice: p.avg_cost,
-                  entryDate:  p.entry_date || "2026-03-13",
-                  weight:     (PORTFOLIO_INIT.find(x=>x.ticker===p.ticker)||{}).weight || 0,
+                  ticker:    p.ticker,
+                  shares:    p.shares,
+                  entryPrice:p.avg_cost,
+                  entryDate: p.entry_date||"2026-03-13",
+                  curPrice:  prices[p.ticker]?.price || p.avg_cost,
+                  value:     (prices[p.ticker]?.price||p.avg_cost)*p.shares,
+                  pnlPct:    ((prices[p.ticker]?.price||p.avg_cost)-p.avg_cost)/p.avg_cost*100,
                 }))
-              : PORTFOLIO_INIT;
-            // Cash: live from autoPortfolio, fallback to STARTING_CASH
-            const liveCash = autoPortfolio?.cash ?? STARTING_CASH;
+              : PORTFOLIO_INIT.map(p=>({
+                  ticker:p.ticker, shares:p.shares, entryPrice:p.entryPrice,
+                  entryDate:p.entryDate, curPrice:prices[p.ticker]?.price||p.entryPrice,
+                  value:(prices[p.ticker]?.price||p.entryPrice)*p.shares,
+                  pnlPct:((prices[p.ticker]?.price||p.entryPrice)-p.entryPrice)/p.entryPrice*100,
+                }));
 
-            // ── CORRECT P&L FORMULA ──────────────────────────────────────
-            // After trades, avg_cost in livePortfolio is per-position cost
-            // basis, NOT the original $100k. The only correct total P&L is:
-            //   portfolioValue (all stocks at live price + cash) - $100,000
-            const INITIAL_CAPITAL = 100000;
-            const totalCurrentVal  = livePortfolio.reduce((s,p)=>{
-              const cp=prices[p.ticker]?.price||p.entryPrice; return s+p.shares*cp;
-            },0);
-            const portfolioValue   = totalCurrentVal + liveCash;  // TRUE total value
-            const totalPnL         = portfolioValue - INITIAL_CAPITAL;
-            const totalRetPct      = (totalPnL / INITIAL_CAPITAL) * 100;
-            // Dividends
+            const liveCash      = autoPortfolio?.cash ?? STARTING_CASH;
+            const INITIAL_CAP   = 100000;
+            const totalStockVal = livePortfolio.reduce((s,p)=>s+p.value,0);
+            const portfolioValue= totalStockVal + liveCash;
+            const totalPnL      = portfolioValue - INITIAL_CAP;
+            const totalRetPct   = totalPnL / INITIAL_CAP * 100;
+            const totalCosts    = autoPortfolio?.total_costs ?? 0;
+            const netRetPct     = (totalPnL - totalCosts) / INITIAL_CAP * 100;
+            const spyNow        = prices["SPY"]?.price || 662.29;
+            const spyRet        = (spyNow - 662.29) / 662.29 * 100;
+            const alpha         = totalRetPct - spyRet;
+            const regime        = autoPortfolio?.regime || "—";
+            const updated       = autoPortfolio?.updated || "";
+            const trades        = autoPortfolio?.recent_trades || [];
+
+            // KPI metrics
             const totalDivReceived = livePortfolio.reduce((s,p)=>s+calcDividends(p.ticker,p.shares,p.entryDate),0);
-            const totalDivAnnual   = livePortfolio.reduce((s,p)=>s+calcAnnualDivIncome(p.ticker,p.shares),0);
-            const divRetPct        = (totalDivReceived/INITIAL_CAPITAL)*100;
+            const divRetPct        = (totalDivReceived/INITIAL_CAP)*100;
             const priceRetPct      = totalRetPct - divRetPct;
-            // SPY
-            const spyEntry  = 662.29;
-            const spyNow   = prices["SPY"]?.price || spyEntry;
-            const spyRet   = ((spyNow-spyEntry)/spyEntry)*100;
-            // Transaction costs — from GitHub (authoritative), fallback to portLog
-            const COST_PCT = 0.0008;
-            const _trades  = autoPortfolio?.recent_trades
-              ? autoPortfolio.recent_trades.filter(t=>t.action==="BUY"||t.action==="SELL")
-              : (portLog||[]).filter(t=>t.action==="BUY"||t.action==="SELL");
-            const totalCosts = autoPortfolio?.total_costs ??
-              _trades.reduce((s,t)=>s+(t.price&&t.shares?t.price*t.shares:(t.value||0))*COST_PCT,0);
+            const daysHeld         = Math.max(1,Math.round((Date.now()-new Date("2026-03-13"))/86400000));
+            const liveBase         = livePortfolio.reduce((s,p)=>s+p.shares*p.entryPrice,0)||1;
+            const _wts             = livePortfolio.map(p=>p.shares*p.entryPrice/liveBase);
+            const _portVol         = Math.sqrt(_wts.reduce((s,w,i)=>s+Math.pow(w*(DB[livePortfolio[i].ticker]?.vol||25),2),0))/100;
+            const _annRet          = totalRetPct/100*(365/daysHeld);
+            const _sharpe          = _portVol>0?(_annRet-0.043)/_portVol:null;
+            const _snapVals        = (autoPortfolio?.daily_snapshots||[]).map(s=>s.value||INITIAL_CAP);
+            const _allVals         = [INITIAL_CAP,..._snapVals,portfolioValue];
+            let _pk=INITIAL_CAP,_dd=0; _allVals.forEach(v=>{_pk=Math.max(_pk,v);_dd=Math.max(_dd,(_pk-v)/_pk);});
+            const _maxDD           = _dd;
+            const _annVol          = _portVol*Math.sqrt(252)*100;
+            const _beta            = livePortfolio.reduce((s,p)=>{const w=p.value/Math.max(1,portfolioValue);return s+w*(DB[p.ticker]?.beta||1);},0);
+            const _posPerf         = livePortfolio.map(p=>({t:p.ticker,pct:p.pnlPct}));
+            const _best            = _posPerf.length?_posPerf.reduce((a,b)=>b.pct>a.pct?b:a):{t:"—",pct:0};
+            const _worst           = _posPerf.length?_posPerf.reduce((a,b)=>b.pct<a.pct?b:a):{t:"—",pct:0};
+            const _sectors         = [...new Set(livePortfolio.map(p=>(DB[p.ticker]||{}).s).filter(Boolean))];
+            const _divScore        = Math.min(100,Math.round((_sectors.length/8)*100));
+            const _winRate         = _posPerf.filter(p=>p.pct>0).length/Math.max(1,_posPerf.length)*100;
+            const _corr            = Math.round(Math.abs((_posPerf.filter(p=>p.pct>0).length/Math.max(1,_posPerf.length)-0.5)*2)*100);
+
+            const cell = (val,color="#e2e8f0",bold=false)=>(
+              <td style={{padding:"9px 12px",fontSize:13,color,fontWeight:bold?700:400,fontFamily:bold?"Avenir Next,sans-serif":"inherit",textAlign:"right",borderBottom:"1px solid #0d1826"}}>{val}</td>
+            );
 
             return(
             <div style={{animation:"fadeUp 0.3s ease"}}>
 
-              <div style={{background:"rgba(52,211,153,0.06)",border:"1px solid rgba(52,211,153,0.2)",borderRadius:14,padding:"14px 20px",marginBottom:16}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8,marginBottom:5}}>
-                  <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:17,color:"#34d399"}}>💼 Your Portfolio</div>
-                  {autoLoading
-                    ? <div style={{fontSize:11,color:"#fbbf24",background:"rgba(251,191,36,0.1)",border:"1px solid rgba(251,191,36,0.2)",borderRadius:6,padding:"3px 10px"}}>⏳ Syncing with trader…</div>
-                    : autoPortfolio
-                      ? <div style={{fontSize:11,color:"#34d399",background:"rgba(52,211,153,0.1)",border:"1px solid rgba(52,211,153,0.2)",borderRadius:6,padding:"3px 10px"}}>✅ Live — synced with Telegram · {autoPortfolio.updated||""}</div>
-                      : <div style={{fontSize:11,color:"#f87171",background:"rgba(248,113,113,0.1)",border:"1px solid rgba(248,113,113,0.2)",borderRadius:6,padding:"3px 10px"}}>⚠️ Using entry data — trader not synced yet</div>
-                  }
-                </div>
-                <div style={{fontSize:12,color:"#94a3b8",lineHeight:1.7}}>Your Mar 13 2026 positions tracked in real time. P&L vs SPY, rebalance alerts, risk metrics, dividend income, and the auto-trader live portfolio.</div>
+              {/* ── SYNC STATUS ── */}
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8,marginBottom:12}}>
+                <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:16,color:"#e2e8f0"}}>💼 Portfolio</div>
+                {autoLoading
+                  ? <div style={{fontSize:11,color:"#fbbf24",background:"rgba(251,191,36,0.1)",border:"1px solid rgba(251,191,36,0.2)",borderRadius:6,padding:"3px 10px"}}>⏳ Syncing…</div>
+                  : autoPortfolio
+                    ? <div style={{fontSize:11,color:"#34d399",background:"rgba(52,211,153,0.1)",border:"1px solid rgba(52,211,153,0.15)",borderRadius:6,padding:"3px 10px"}}>✅ Live · {updated}</div>
+                    : <div style={{fontSize:11,color:"#f87171",background:"rgba(248,113,113,0.1)",border:"1px solid rgba(248,113,113,0.2)",borderRadius:6,padding:"3px 10px"}}>⚠️ Using entry data</div>
+                }
               </div>
 
-              {/* ── AUTO TRADER STATUS ── */}
-              <div style={{background:"linear-gradient(135deg,rgba(129,140,248,0.08),rgba(56,189,248,0.05))",border:"1px solid rgba(129,140,248,0.2)",borderRadius:14,padding:"14px 18px",marginBottom:14}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10}}>
-                  <div>
-                    <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:14,color:"#818cf8",marginBottom:4}}>🤖 Auto Trader v4 — Running on PythonAnywhere</div>
-                    <div style={{fontSize:12,color:"#94a3b8",lineHeight:1.6}}>
-                      Scanning every 30 min · Smart triggers on 3% moves · Stop loss -15% · Take profit +40%<br/>
-                      Buy threshold: score ≥ 68 · Sell threshold: score ≤ 38 · Max position: 12%
+              {/* ── PORTFOLIO STATUS TABLE ── */}
+              <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:12,padding:"16px 18px",marginBottom:12}}>
+                <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:700,fontSize:11,color:"#475569",textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:12}}>Current Status · Regime: <span style={{color:regime==="CRISIS"?"#f97316":regime==="RISK_OFF"?"#f87171":regime==="CAUTION"?"#fbbf24":"#34d399"}}>{regime}</span></div>
+
+                {/* Summary row */}
+                <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:14}}>
+                  {[
+                    {l:"Total Value",   v:"$"+portfolioValue.toLocaleString("en-US",{maximumFractionDigits:0}), c:"#e2e8f0"},
+                    {l:"Cash",          v:"$"+Math.round(liveCash).toLocaleString(),                             c:"#fbbf24"},
+                    {l:"Invested",      v:"$"+Math.round(totalStockVal).toLocaleString(),                        c:"#38bdf8"},
+                    {l:"P&L vs $100k",  v:(totalPnL>=0?"+":"")+totalPnL.toLocaleString("en-US",{maximumFractionDigits:0})+" ("+(totalRetPct>=0?"+":"")+totalRetPct.toFixed(2)+"%)", c:totalPnL>=0?"#34d399":"#f87171"},
+                  ].map((s,i)=>(
+                    <div key={i} style={{background:"#060d18",borderRadius:8,padding:"10px 12px",textAlign:"center"}}>
+                      <div style={{fontSize:10,color:"#475569",marginBottom:4}}>{s.l}</div>
+                      <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:14,color:s.c}}>{s.v}</div>
                     </div>
-                  </div>
-                  <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                    <div style={{background:"rgba(52,211,153,0.1)",border:"1px solid rgba(52,211,153,0.2)",borderRadius:8,padding:"8px 14px",textAlign:"center"}}>
-                      <div style={{fontSize:10,color:"#475569",fontWeight:700,textTransform:"uppercase"}}>Status</div>
-                      <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:13,color:"#34d399",marginTop:2}}>🟢 LIVE</div>
-                    </div>
-                    <div style={{background:"rgba(56,189,248,0.08)",border:"1px solid rgba(56,189,248,0.15)",borderRadius:8,padding:"8px 14px",textAlign:"center"}}>
-                      <div style={{fontSize:10,color:"#475569",fontWeight:700,textTransform:"uppercase"}}>Started</div>
-                      <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:13,color:"#38bdf8",marginTop:2}}>Mar 13</div>
-                    </div>
-                    <div style={{background:"rgba(251,191,36,0.08)",border:"1px solid rgba(251,191,36,0.15)",borderRadius:8,padding:"8px 14px",textAlign:"center"}}>
-                      <div style={{fontSize:10,color:"#475569",fontWeight:700,textTransform:"uppercase"}}>Go Live</div>
-                      <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:13,color:"#fbbf24",marginTop:2}}>Jun 2026</div>
-                    </div>
-                  </div>
-                </div>
-                {(()=>{
-                    const tltP=(prices["TLT"]||{price:90}).price;
-                    const y10=parseFloat(((100-tltP)*0.15+3.5).toFixed(2));
-                    if(y10>=4.3) return(
-                      <div style={{marginTop:8,background:y10>=4.6?"rgba(248,113,113,0.1)":"rgba(251,191,36,0.06)",
-                        border:`1px solid ${y10>=4.6?"#f87171":"#fbbf24"}33`,borderRadius:8,padding:"8px 12px",marginBottom:8}}>
-                        <div style={{fontSize:12,color:y10>=4.6?"#f87171":"#fbbf24",fontWeight:700}}>
-                          {y10>=4.6?"🚨 BOND MARKET — LIQUIDATION CASCADE RISK":"⚠️ YIELD SPIKE ALERT"}
-                        </div>
-                        <div style={{fontSize:11,color:"#94a3b8",marginTop:3,lineHeight:1.6}}>
-                          10Y Treasury yield ~{y10.toFixed(2)}%.{" "}
-                          {y10>=4.6
-                            ?"Above 4.6% — institutional forced selling cascade risk. Slash growth exposure. Move to RISK_OFF."
-                            :"Rapidly rising yields compress growth valuations. Cascade threshold: 4.6%. Monitor daily."}
-                        </div>
-                      </div>
-                    );
-                    return null;
-                  })()}
-                  <div style={{marginTop:10,fontSize:11,color:"#475569",display:"flex",gap:16,flexWrap:"wrap"}}>
-                  <span>📱 Alerts → @Stocksense0205bot</span>
-                  <span>🧠 Engine → 5-pillar quant + live momentum</span>
-                  <span>📊 Universe → 26 stocks</span>
-                  <span>🎯 Target → Beat SPY by Jun 2026</span>
-                </div>
-              </div>
-
-                            {/* ── PERFORMANCE CHART (Chart.js) ── */}
-              {(()=>{
-                const SPY_ENTRY = 662.29;
-                const PORT_ENTRY = 100000;
-                const spyNow = prices["SPY"]?.price || SPY_ENTRY;
-                const snapshots = autoPortfolio?.daily_snapshots || [];
-
-                // Build chart points from snapshots + live today
-                let chartPoints = [{date:"2026-03-13", portVal:PORT_ENTRY, spyVal:PORT_ENTRY}];
-                snapshots.forEach(s=>{
-                  if(s.date && s.date !== "2026-03-13"){
-                    const spyMult = s.spy_ret != null ? 1+(s.spy_ret/100)
-                      : s.spy_price ? s.spy_price/SPY_ENTRY : 1;
-                    chartPoints.push({date:s.date, portVal:s.value||PORT_ENTRY, spyVal:PORT_ENTRY*spyMult});
-                  }
-                });
-                const today = new Date().toISOString().slice(0,10);
-                const last = chartPoints[chartPoints.length-1];
-                if(!last||last.date!==today) chartPoints.push({date:today,portVal:portfolioValue,spyVal:PORT_ENTRY*(spyNow/SPY_ENTRY)});
-                else { chartPoints[chartPoints.length-1].portVal=portfolioValue; chartPoints[chartPoints.length-1].spyVal=PORT_ENTRY*(spyNow/SPY_ENTRY); }
-                const seen={};
-                chartPoints=chartPoints.filter(p=>{ if(seen[p.date])return false;seen[p.date]=true;return true; });
-                chartPoints.sort((a,b)=>a.date>b.date?1:-1);
-
-                const labels = chartPoints.map(p=>{
-                  const d=new Date(p.date); return d.toLocaleDateString("en-US",{month:"short",day:"numeric"});
-                });
-                const portData = chartPoints.map(p=>p.portVal);
-                const spyData  = chartPoints.map(p=>p.spyVal);
-
-                // Position bar chart data
-                const posLabels = livePortfolio.map(p=>p.ticker);
-                const posVals   = livePortfolio.map(p=>{ const cp=prices[p.ticker]?.price||p.entryPrice; return Math.round(p.shares*cp); });
-                const posColors = livePortfolio.map(p=>{ const cp=prices[p.ticker]?.price||p.entryPrice; const pnl=(cp-p.entryPrice)/p.entryPrice; return pnl<0?"rgba(226,75,74,0.85)":"rgba(29,158,117,0.85)"; });
-                const posPcts   = livePortfolio.map(p=>{ const cp=prices[p.ticker]?.price||p.entryPrice; return ((cp-p.entryPrice)/p.entryPrice*100).toFixed(2); });
-
-                const chartId1 = "perfChart_"+Math.random().toString(36).slice(2,7);
-                const chartId2 = "posChart_"+Math.random().toString(36).slice(2,7);
-
-                // Computed vars needed for stats + KPIs (same as outer scope)
-                const spyRetPctNow = ((spyNow - SPY_ENTRY) / SPY_ENTRY)*100;
-                const alphaNow     = totalRetPct - spyRetPctNow;
-                const netRetPct    = ((portfolioValue - 100000 - totalCosts)/100000)*100;
-
-                return(
-                  <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:14,padding:"18px 20px",marginBottom:14}}>
-
-                    {/* ── HEADER ── */}
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:12,marginBottom:14}}>
-                      <div>
-                        <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:16,color:"#e2e8f0"}}>
-                          📈 Portfolio Performance — Since Mar 13 2026
-                        </div>
-                        <div style={{fontSize:11,color:"#475569",marginTop:3}}>
-                          {chartPoints.length} data points · {autoPortfolio?"Live from GitHub":"Waiting for first trader run"} · Updates after every trade
-                        </div>
-                      </div>
-                      <div style={{display:"flex",gap:12,alignItems:"center"}}>
-                        {[{c:"#34d399",l:"StockSense"},{c:"#38bdf8",l:"SPY",op:0.6}].map((x,i)=>(
-                          <div key={i} style={{display:"flex",alignItems:"center",gap:5}}>
-                            <div style={{width:20,height:3,background:x.c,borderRadius:2,opacity:x.op||1}}/>
-                            <span style={{fontSize:11,color:"#94a3b8"}}>{x.l}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* ── STATS ROW ── */}
-                    <div style={{display:"flex",gap:10,marginBottom:14,flexWrap:"wrap"}}>
-                      {[
-                        {l:"Portfolio Value", v:"$"+portfolioValue.toLocaleString("en-US",{maximumFractionDigits:0}), c:"#e2e8f0", sub:"incl. $"+Math.round(liveCash).toLocaleString()+" cash"},
-                        {l:"Gross Return",    v:(totalRetPct>=0?"+":"")+totalRetPct.toFixed(2)+"%",   c:totalRetPct>=0?"#34d399":"#f87171"},
-                        {l:"Net Return",      v:(netRetPct>=0?"+":"")+netRetPct.toFixed(2)+"%",       c:netRetPct>=0?"#34d399":"#f87171", sub:"after costs"},
-                        {l:"Cost Drag",       v:"-$"+totalCosts.toFixed(0),                           c:"#f87171", sub:(totalCosts/100000*100).toFixed(3)+"%"},
-                        {l:"Alpha vs SPY",    v:(alphaNow>=0?"+":"")+alphaNow.toFixed(2)+"%",         c:alphaNow>=0?"#34d399":"#f87171"},
-                        {l:"SPY since Mar 13",v:(spyRetPctNow>=0?"+":"")+spyRetPctNow.toFixed(2)+"%",c:"#38bdf8"},
-                      ].map((s,i)=>(
-                        <div key={i} style={{textAlign:"center",background:"#090f1a",borderRadius:10,padding:"10px 14px",flex:1,minWidth:100}}>
-                          <div style={{fontSize:10,color:"#475569",marginBottom:2}}>{s.l}</div>
-                          <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:15,color:s.c}}>{s.v}</div>
-                          {s.sub&&<div style={{fontSize:9,color:s.c,opacity:0.7,marginTop:1}}>{s.sub}</div>}
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* ── ADVANCED KPIs ROW ── */}
-                    {(()=>{
-                      const kpis = [
-                        {l:"Total Return",    v:(totalRetPct>=0?"+":"")+totalRetPct.toFixed(2)+"%",        c:totalRetPct>=0?"#34d399":"#f87171",      sub:"$"+(totalPnL>=0?"+":"")+totalPnL.toFixed(0)},
-                        {l:"Net Return",      v:(netRetPct>=0?"+":"")+netRetPct.toFixed(2)+"%",            c:netRetPct>=0?"#34d399":"#f87171",        sub:"after costs"},
-                        {l:"Alpha vs SPY",    v:(alphaNow>=0?"+":"")+alphaNow.toFixed(2)+"%",              c:alphaNow>=0?"#34d399":"#f87171",         sub:"SPY "+(spyRetPctNow>=0?"+":"")+spyRetPctNow.toFixed(2)+"%"},
-                        {l:"Sharpe Ratio",    v:_sharpe!=null?_sharpe.toFixed(2):"—",                      c:!_sharpe?"#475569":_sharpe>=1?"#34d399":_sharpe>=0.5?"#fbbf24":"#f87171", sub:!_sharpe?"—":_sharpe>=1?"Excellent":_sharpe>=0.5?"Good":"Poor"},
-                        {l:"Max Drawdown",    v:"-"+(_maxDD*100).toFixed(1)+"%",                           c:_maxDD>0.15?"#f87171":_maxDD>0.08?"#fbbf24":"#34d399", sub:_maxDD>0.15?"High":_maxDD>0.08?"Moderate":"Low"},
-                        {l:"Win Rate",        v:_winRate.toFixed(1)+"%",                                   c:_winRate>=55?"#34d399":_winRate>=45?"#fbbf24":"#f87171", sub:_winRate>=55?"Above target":_winRate>=45?"At target":"Below"},
-                        {l:"Volatility",      v:_annVol.toFixed(1)+"%",                                   c:_annVol>30?"#f87171":_annVol>20?"#fbbf24":"#34d399",    sub:_annVol>30?"High":_annVol>20?"Medium":"Low"},
-                        {l:"Portfolio Beta",  v:_beta.toFixed(2),                                         c:_beta>1.3?"#f87171":_beta<0.8?"#38bdf8":"#fbbf24",      sub:_beta>1.3?"Aggressive":_beta<0.8?"Defensive":"Balanced"},
-                        {l:"Correlation",     v:_corr+"%",                                                 c:_corr>80?"#f87171":_corr>60?"#fbbf24":"#34d399",        sub:_corr>80?"High":_corr>60?"Medium":"Low"},
-                        {l:"Diversification", v:_divScore+"/100",                                          c:_divScore>=75?"#34d399":_divScore>=50?"#fbbf24":"#f87171",sub:_sectors.length+" sectors"},
-                        {l:"Price Return",    v:(priceRetPct>=0?"+":"")+priceRetPct.toFixed(2)+"%",       c:priceRetPct>=0?"#34d399":"#f87171",      sub:"excl. dividends"},
-                        {l:"Dividend Income", v:"$"+_divRec.toFixed(2),                                   c:"#38bdf8",                               sub:"+"+(_divRec/100000*100).toFixed(3)+"%"},
-                        {l:"Best Position",   v:_best.t,                                                  c:"#34d399",                               sub:(_best.pct>=0?"+":"")+_best.pct.toFixed(1)+"%"},
-                        {l:"Worst Position",  v:_worst.t,                                                 c:"#f87171",                               sub:(_worst.pct>=0?"+":"")+_worst.pct.toFixed(1)+"%"},
-                      ];
-                      return(
-                        <div style={{marginBottom:14}}>
-                          <div style={{fontSize:10,color:"#475569",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:8,paddingTop:10,borderTop:"1px solid #0d1f33"}}>
-                            📊 Advanced Portfolio KPIs
-                          </div>
-                          {[kpis.slice(0,7),kpis.slice(7,14)].map((row,ri)=>(
-                            <div key={ri} style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:6,marginBottom:ri===0?6:0}}>
-                              {row.map((k,i)=>(
-                                <div key={i} style={{background:"#090f1a",borderRadius:9,padding:"10px 12px",borderLeft:`2px solid ${k.c}`,textAlign:"center"}}>
-                                  <div style={{fontSize:9,color:"#475569",marginBottom:3}}>{k.l}</div>
-                                  <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:13,color:k.c,lineHeight:1}}>{k.v}</div>
-                                  {k.sub&&<div style={{fontSize:9,color:k.c,opacity:0.75,marginTop:3}}>{k.sub}</div>}
-                                </div>
-                              ))}
-                            </div>
-                          ))}
-                        </div>
-                      );
-                    })()}
-
-                    {/* ── PERFORMANCE CHART (Chart.js line) ── */}
-                    <div style={{position:"relative",width:"100%",height:200,marginBottom:20}}>
-                      <canvas id={chartId1}></canvas>
-                    </div>
-
-                    {/* ── POSITIONS CHART HEADER ── */}
-                    <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:14,color:"#e2e8f0",marginBottom:4}}>
-                      Current Positions ({livePortfolio.length} Holdings)
-                    </div>
-                    <div style={{fontSize:11,color:"#475569",marginBottom:8}}>
-                      Bar = position value · Green = gain · Red = loss vs avg cost
-                    </div>
-
-                    {/* ── POSITIONS CHART (Chart.js horizontal bar) ── */}
-                    <div style={{position:"relative",width:"100%",height:Math.max(160,livePortfolio.length*34+40)}}>
-                      <canvas id={chartId2}></canvas>
-                    </div>
-
-                    {/* Chart.js init */}
-                    <ChartRenderer
-                      id1={chartId1} id2={chartId2}
-                      labels={labels} portData={portData} spyData={spyData}
-                      portEntry={PORT_ENTRY}
-                      posLabels={posLabels} posVals={posVals} posColors={posColors} posPcts={posPcts}
-                    />
-
-
-                    {/* Summary row */}
-                    <div style={{display:"flex",gap:8,marginTop:14,flexWrap:"wrap"}}>
-                      {[
-                        {l:"Cash",v:"$"+Math.round(liveCash).toLocaleString(),c:"#fbbf24"},
-                        {l:"Invested",v:"$"+Math.round(totalCurrentVal).toLocaleString(),c:"#38bdf8"},
-                        {l:"Total",v:"$"+Math.round(portfolioValue).toLocaleString(),c:"#e2e8f0"},
-                        {l:"vs SPY",v:(totalRetPct-((spyNow-SPY_ENTRY)/SPY_ENTRY*100)>=0?"+":"")+((totalRetPct-((spyNow-SPY_ENTRY)/SPY_ENTRY*100)).toFixed(2))+"%",c:totalRetPct-((spyNow-SPY_ENTRY)/SPY_ENTRY*100)>=0?"#34d399":"#f87171"},
-                      ].map((s,i)=>(
-                        <div key={i} style={{background:"#090f1a",borderRadius:8,padding:"8px 14px",textAlign:"center",flex:1,minWidth:80}}>
-                          <div style={{fontSize:10,color:"#475569",marginBottom:2}}>{s.l}</div>
-                          <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:14,color:s.c}}>{s.v}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
-
-
-                            {/* ── POSITION DEEP-DIVE TABLE ── */}
-              <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:14,padding:"16px 18px",marginBottom:14,overflow:"hidden"}}>
-                <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:14,color:"#e2e8f0",marginBottom:4}}>
-                  🔬 Position Deep-Dive Analysis
-                </div>
-                <div style={{fontSize:11,color:"#475569",marginBottom:14}}>
-                  Full breakdown of every holding — 5-pillar quant score, technical indicators, analyst view, earnings history, risk metrics
+                  ))}
                 </div>
 
-                {livePortfolio.map((pos,pi)=>{
-                  const ticker  = pos.ticker;
-                  const db      = DB[ticker] || {};
-                  const lp      = prices[ticker] || {};
-                  const price   = lp.price || pos.entryPrice;
-                  const chg     = lp.changePct || 0;
-                  const high52  = lp.high52 || db.baseP*1.3 || price*1.3;
-                  const low52   = lp.low52  || db.baseP*0.7 || price*0.7;
-                  const ad      = ANALYST[ticker]    || {};
-
-                  // P&L
-                  const cost    = pos.shares * pos.entryPrice;
-                  const curVal  = pos.shares * price;
-                  const pnl     = curVal - cost;
-                  const pnlPct  = (pnl / cost) * 100;
-                  const isUp    = pnl >= 0;
-
-                  // ── 5 PILLAR SCORES (mirrors computeQuant logic) ──────────
-                  const vals    = Object.values(db.r || {});
-                  const n       = vals.length || 1;
-                  const avg10   = vals.reduce((a,b)=>a+b,0)/n;
-                  const avgR3   = ((db.r||{})[2022]||0 + (db.r||{})[2023]||0 + (db.r||{})[2024]||0)/3;
-                  const upYrs   = vals.filter(v=>v>0).length;
-
-                  // Momentum pillar
-                  const momScore = Math.min(95, Math.max(5,
-                    50 + (chg * 3) + (avg10 > 0 ? 15 : -10) + ((db.r||{})[2024] > 20 ? 10 : 0)
-                  ));
-                  // Valuation pillar
-                  const spePE   = {Technology:28,Semiconductors:30,Pharma:35,Retail:32,"Social Media":24,"E-Commerce/Cloud":38,Banking:13,"Consumer Staples":28}[db.s] || 22;
-                  const valScore = Math.min(95, Math.max(5, (spePE / Math.max(db.pe||22,1))*50 + 25));
-                  // Quality pillar
-                  const qualScore = Math.min(95, Math.max(5, (db.fcf||2)/5*60 + Math.max(0,(3-(db.de||1))/3)*40));
-                  // Risk pillar
-                  const riskBase  = {low:80,med:60,pos:55,high:30}[db.rs||"med"] || 60;
-                  const riskScore = Math.min(95, Math.max(5, riskBase - Math.max(0,(db.beta||1)-1)*20));
-                  // Sentiment pillar
-                  const sentScore = Math.min(95, Math.max(5, db.ss || 65));
-                  // Moat bonus
-                  const moat      = {AAPL:"wide",MSFT:"wide",GOOGL:"wide",META:"wide",NVDA:"wide",AVGO:"wide",ASML:"wide",LLY:"wide",JPM:"wide",BLK:"wide",V:"wide",MA:"wide",WMT:"wide",COST:"wide",KO:"wide",AMZN:"wide",CRM:"wide",AMD:"narrow",TSLA:"narrow",NFLX:"narrow",PLTR:"narrow",XOM:"narrow",CVX:"narrow"}[ticker]||"none";
-                  const moatBonus = {wide:4,narrow:1,none:0}[moat];
-                  const liveBoost = Math.max(-8, Math.min(8, chg * 1.5));
-                  const totalScore= Math.min(100, Math.max(0, Math.round(
-                    momScore*0.25 + valScore*0.20 + qualScore*0.20 + riskScore*0.20 + sentScore*0.15 + moatBonus + liveBoost
-                  )));
-                  const signal    = totalScore>=75?"Strong Buy":totalScore>=68?"Buy":totalScore>=50?"Hold":totalScore>=38?"Reduce":"Sell";
-                  const sigColor  = totalScore>=68?"#34d399":totalScore>=50?"#fbbf24":"#f87171";
-
-                  // ── TECHNICAL INDICATORS ─────────────────────────────────
-                  const range52   = high52 - low52 || price*0.4;
-                  const rsiProxy  = range52>0 ? Math.round((price-low52)/range52*100) : 50;
-                  const fromHigh  = high52>0 ? ((high52-price)/high52*100).toFixed(1) : "—";
-                  const fromLow   = low52>0  ? ((price-low52)/low52*100).toFixed(1)   : "—";
-                  const rsiColor  = rsiProxy>80?"#f87171":rsiProxy>65?"#34d399":rsiProxy<30?"#fbbf24":"#94a3b8";
-                  const rsiLabel  = rsiProxy>80?"Overbought":rsiProxy>65?"Bullish":rsiProxy<30?"Oversold":"Neutral";
-                  const volRegime = Math.abs(chg) > 3 ? "High" : Math.abs(chg) > 1.5 ? "Medium" : "Low";
-                  const volColor  = Math.abs(chg)>3?"#f87171":Math.abs(chg)>1.5?"#fbbf24":"#34d399";
-                  // Tech confirmation
-                  let techScore = 50;
-                  if(rsiProxy>80) techScore-=20; else if(rsiProxy>65) techScore+=10; else if(rsiProxy<30) techScore+=5;
-                  if(chg>=2) techScore+=15; else if(chg>=0.5) techScore+=8; else if(chg<=-2) techScore-=15; else if(chg<=-0.5) techScore-=5;
-                  if(parseFloat(fromHigh)<3) techScore-=15; else if(parseFloat(fromHigh)<10) techScore+=10; else techScore+=8;
-                  if(Math.abs(chg)>5) techScore-=10; else techScore+=5;
-                  techScore = Math.max(0,Math.min(100,techScore));
-                  const techOk   = techScore >= 45 && rsiProxy <= 80 && parseFloat(fromHigh) >= 3;
-                  const techColor= techOk?"#34d399":"#f87171";
-
-                  // ── EARNINGS ─────────────────────────────────────────────
-                  const epsHist   = ad.eps || [];
-                  const beats     = epsHist.filter(e=>e.act!=null&&e.act>e.est).length;
-                  const total_eps = epsHist.filter(e=>e.act!=null).length;
-                  const beatRate  = total_eps>0 ? Math.round((beats/total_eps)*100) : null;
-                  const lastEps   = epsHist.filter(e=>e.act!=null).slice(-1)[0];
-                  const nextEarn  = ad.nextEarnings || "TBD";
-
-                  // Days to earnings
-                  let daysToEarn  = null;
-                  try {
-                    const earnDate = new Date(nextEarn + " 2026");
-                    daysToEarn = Math.round((earnDate - new Date()) / (1000*60*60*24));
-                  } catch(e){}
-                  const earnWarn  = daysToEarn!=null && daysToEarn>=0 && daysToEarn<=14;
-                  const earnColor = daysToEarn<=3?"#f87171":daysToEarn<=7?"#fbbf24":daysToEarn<=14?"#38bdf8":"#475569";
-
-                  // Stop loss / take profit status
-                  const stopLoss  = pos.entryPrice * 0.85;
-                  const takeProfit= pos.entryPrice * 1.40;
-                  const distToStop= ((price - stopLoss)/price*100).toFixed(1);
-                  const distToTP  = ((takeProfit - price)/price*100).toFixed(1);
-                  const stopColor = parseFloat(distToStop)<5?"#f87171":parseFloat(distToStop)<10?"#fbbf24":"#34d399";
-
-                  return(
-                    <div key={ticker} style={{
-                      background:"#060d18",border:`1px solid ${isUp?"rgba(52,211,153,0.15)":"rgba(248,113,113,0.1)"}`,
-                      borderRadius:12,padding:"14px 16px",marginBottom:10,
-                      borderLeft:`3px solid ${isUp?"#34d399":"#f87171"}`
-                    }}>
-
-                      {/* ── STOCK HEADER ── */}
-                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8,marginBottom:12,minWidth:0}}>
-                        <div style={{display:"flex",gap:12,alignItems:"center"}}>
-                          <div>
-                            <span style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:16,color:"#e2e8f0"}}>{ticker}</span>
-                            <span style={{fontSize:12,color:"#475569",marginLeft:8}}>{db.name}</span>
-                            <span style={{fontSize:10,color:"#334155",marginLeft:8}}>{db.s} · {db.cap}</span>
-                          </div>
-                        </div>
-                        <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-                          <div style={{textAlign:"right"}}>
-                            <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:15,color:"#e2e8f0"}}>${price.toFixed(2)}</div>
-                            <div style={{fontSize:11,color:chg>=0?"#34d399":"#f87171"}}>{chg>=0?"+":""}{chg.toFixed(2)}% today</div>
-                          </div>
-                          <div style={{textAlign:"center",background:sigColor+"22",border:`1px solid ${sigColor}44`,borderRadius:8,padding:"6px 12px"}}>
-                            <div style={{fontSize:10,color:"#475569"}}>Quant Score</div>
-                            <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:16,color:sigColor}}>{totalScore}</div>
-                            <div style={{fontSize:10,color:sigColor,fontWeight:700}}>{signal}</div>
-                          </div>
-                          <div style={{textAlign:"center",background:isUp?"rgba(52,211,153,0.08)":"rgba(248,113,113,0.08)",border:`1px solid ${isUp?"rgba(52,211,153,0.2)":"rgba(248,113,113,0.2)"}`,borderRadius:8,padding:"6px 12px"}}>
-                            <div style={{fontSize:10,color:"#475569"}}>P&L</div>
-                            <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:14,color:isUp?"#34d399":"#f87171"}}>
-                              {isUp?"+":""}{pnlPct.toFixed(2)}%
-                            </div>
-                            <div style={{fontSize:10,color:isUp?"#34d399":"#f87171"}}>{isUp?"+$":"-$"}{Math.abs(pnl).toFixed(0)}</div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* ── 4 COLUMN METRICS GRID ── */}
-                      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:8}}>
-
-                        {/* COLUMN 1: 5-PILLAR BREAKDOWN */}
-                        <div style={{background:"#0a1421",borderRadius:10,padding:"10px 12px"}}>
-                          <div style={{fontSize:10,color:"#475569",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:8}}>
-                            📊 Quant Pillars
-                          </div>
-                          {[
-                            {l:"Momentum",  v:Math.round(momScore),  w:"25%"},
-                            {l:"Valuation", v:Math.round(valScore),  w:"20%"},
-                            {l:"Quality",   v:Math.round(qualScore), w:"20%"},
-                            {l:"Risk",      v:Math.round(riskScore), w:"20%"},
-                            {l:"Sentiment", v:Math.round(sentScore), w:"15%"},
-                          ].map((p,i)=>{
-                            const c = p.v>=70?"#34d399":p.v>=50?"#fbbf24":"#f87171";
-                            return(
-                              <div key={i} style={{marginBottom:5}}>
-                                <div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}>
-                                  <span style={{fontSize:10,color:"#475569"}}>{p.l} <span style={{color:"#334155"}}>({p.w})</span></span>
-                                  <span style={{fontSize:10,fontWeight:700,color:c}}>{p.v}</span>
-                                </div>
-                                <div style={{background:"#060d18",borderRadius:3,height:4}}>
-                                  <div style={{width:`${p.v}%`,height:"100%",background:c,borderRadius:3}}/>
-                                </div>
-                              </div>
-                            );
-                          })}
-                          <div style={{marginTop:6,fontSize:9,color:"#334155"}}>
-                            Moat: <span style={{color:moat==="wide"?"#34d399":moat==="narrow"?"#fbbf24":"#475569",fontWeight:700}}>{moat} (+{moatBonus}pts)</span>
-                          </div>
-                        </div>
-
-                        {/* COLUMN 2: TECHNICAL INDICATORS */}
-                        <div style={{background:"#0a1421",borderRadius:10,padding:"10px 12px"}}>
-                          <div style={{fontSize:10,color:"#475569",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:8}}>
-                            📐 Technical
-                          </div>
-                          <div style={{marginBottom:6}}>
-                            <div style={{fontSize:9,color:"#475569",marginBottom:1}}>RSI Proxy</div>
-                            <div style={{display:"flex",alignItems:"center",gap:6}}>
-                              <div style={{background:"#060d18",borderRadius:3,height:5,flex:1}}>
-                                <div style={{width:`${rsiProxy}%`,height:"100%",background:rsiColor,borderRadius:3}}/>
-                              </div>
-                              <span style={{fontSize:11,fontWeight:700,color:rsiColor}}>{rsiProxy}</span>
-                            </div>
-                            <div style={{fontSize:9,color:rsiColor,marginTop:1}}>{rsiLabel}</div>
-                          </div>
-                          <div style={{marginBottom:5}}>
-                            <div style={{fontSize:9,color:"#475569"}}>From 52W High</div>
-                            <div style={{fontSize:12,fontWeight:700,color:parseFloat(fromHigh)<5?"#f87171":parseFloat(fromHigh)<15?"#fbbf24":"#34d399"}}>
-                              -{fromHigh}%
-                            </div>
-                          </div>
-                          <div style={{marginBottom:5}}>
-                            <div style={{fontSize:9,color:"#475569"}}>From 52W Low</div>
-                            <div style={{fontSize:12,fontWeight:700,color:"#34d399"}}>+{fromLow}%</div>
-                          </div>
-                          <div style={{marginBottom:5}}>
-                            <div style={{fontSize:9,color:"#475569"}}>Volatility (daily)</div>
-                            <div style={{fontSize:11,fontWeight:700,color:volColor}}>{volRegime} ({Math.abs(chg).toFixed(1)}%)</div>
-                          </div>
-                          <div style={{marginTop:6,padding:"4px 8px",background:techOk?"rgba(52,211,153,0.1)":"rgba(248,113,113,0.1)",
-                            border:`1px solid ${techColor}33`,borderRadius:6,textAlign:"center"}}>
-                            <div style={{fontSize:10,color:techColor,fontWeight:700}}>
-                              {techOk?"✅ TECH CONFIRMED":"⛔ TECH BLOCKED"} ({techScore}/100)
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* COLUMN 3: ANALYST & EARNINGS */}
-                        <div style={{background:"#0a1421",borderRadius:10,padding:"10px 12px"}}>
-                          <div style={{fontSize:10,color:"#475569",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:8}}>
-                            🏦 Analyst & Earnings
-                          </div>
-                          {ad.buy!=null&&(
-                            <div style={{marginBottom:6}}>
-                              <div style={{fontSize:9,color:"#475569",marginBottom:2}}>Wall St Consensus</div>
-                              <div style={{display:"flex",gap:4}}>
-                                <span style={{fontSize:10,background:"rgba(52,211,153,0.15)",color:"#34d399",padding:"2px 6px",borderRadius:4,fontWeight:700}}>{ad.buy}B</span>
-                                <span style={{fontSize:10,background:"rgba(251,191,36,0.15)",color:"#fbbf24",padding:"2px 6px",borderRadius:4,fontWeight:700}}>{ad.hold}H</span>
-                                <span style={{fontSize:10,background:"rgba(248,113,113,0.15)",color:"#f87171",padding:"2px 6px",borderRadius:4,fontWeight:700}}>{ad.sell}S</span>
-                              </div>
-                            </div>
-                          )}
-                          {ad.target&&(
-                            <div style={{marginBottom:6}}>
-                              <div style={{fontSize:9,color:"#475569"}}>Price Target</div>
-                              <div style={{fontSize:12,fontWeight:700,color:ad.target>price?"#34d399":"#f87171"}}>
-                                ${ad.target} <span style={{fontSize:10,fontWeight:400}}>({((ad.target-price)/price*100).toFixed(1)}%)</span>
-                              </div>
-                            </div>
-                          )}
-                          <div style={{marginBottom:6}}>
-                            <div style={{fontSize:9,color:"#475569",marginBottom:3}}>Last 4 Earnings</div>
-                            <div style={{display:"flex",gap:3,flexWrap:"wrap"}}>
-                              {epsHist.slice(-4).map((e,i)=>{
-                                const beat = e.act!=null && e.act >= e.est;
-                                const miss = e.act!=null && e.act < e.est;
-                                return(
-                                  <div key={i} title={`${e.q}: Est $${e.est} / Act $${e.act||"TBD"}`}
-                                    style={{width:20,height:20,borderRadius:4,
-                                      background:beat?"rgba(52,211,153,0.2)":miss?"rgba(248,113,113,0.2)":"rgba(56,189,248,0.1)",
-                                      border:`1px solid ${beat?"#34d399":miss?"#f87171":"#38bdf8"}`,
-                                      display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,
-                                      color:beat?"#34d399":miss?"#f87171":"#38bdf8"}}>
-                                    {beat?"✓":miss?"✗":"?"}
-                                  </div>
-                                );
-                              })}
-                              {beatRate!=null&&<span style={{fontSize:9,color:"#94a3b8",alignSelf:"center",marginLeft:2}}>{beatRate}% beat</span>}
-                            </div>
-                          </div>
-                          <div>
-                            <div style={{fontSize:9,color:"#475569"}}>Next Earnings</div>
-                            <div style={{fontSize:11,fontWeight:700,color:earnColor}}>
-                              {nextEarn}
-                              {daysToEarn!=null&&daysToEarn>=0&&<span style={{fontSize:9,marginLeft:4}}>({daysToEarn}d)</span>}
-                            </div>
-                            {earnWarn&&<div style={{fontSize:9,color:earnColor,marginTop:1}}>
-                              {daysToEarn<=3?"⛔ Skip — too close":daysToEarn<=7?"⚠️ 25% size only":"⚠️ 50% size only"}
-                            </div>}
-                          </div>
-                        </div>
-
-                        {/* COLUMN 4: RISK & POSITION */}
-                        <div style={{background:"#0a1421",borderRadius:10,padding:"10px 12px"}}>
-                          <div style={{fontSize:10,color:"#475569",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:8}}>
-                            ⚡ Risk & Position
-                          </div>
-                          <div style={{marginBottom:5}}>
-                            <div style={{fontSize:9,color:"#475569"}}>Position Size</div>
-                            <div style={{fontSize:12,fontWeight:700,color:"#e2e8f0"}}>{pos.shares} shares · ${curVal.toLocaleString("en-US",{maximumFractionDigits:0})}</div>
-                          </div>
-                          <div style={{marginBottom:5}}>
-                            <div style={{fontSize:9,color:"#475569"}}>Entry Price → Now</div>
-                            <div style={{fontSize:11,color:"#94a3b8"}}>${pos.entryPrice} → <span style={{color:isUp?"#34d399":"#f87171",fontWeight:700}}>${price.toFixed(2)}</span></div>
-                          </div>
-                          <div style={{marginBottom:5}}>
-                            <div style={{fontSize:9,color:"#475569"}}>Stop Loss (−15%)</div>
-                            <div style={{fontSize:11,fontWeight:700,color:stopColor}}>
-                              ${stopLoss.toFixed(2)} <span style={{fontSize:9}}>({distToStop}% away)</span>
-                            </div>
-                          </div>
-                          <div style={{marginBottom:5}}>
-                            <div style={{fontSize:9,color:"#475569"}}>Take Profit (+40%)</div>
-                            <div style={{fontSize:11,fontWeight:700,color:"#34d399"}}>
-                              ${takeProfit.toFixed(2)} <span style={{fontSize:9}}>({distToTP}% away)</span>
-                            </div>
-                          </div>
-                          <div style={{marginBottom:5}}>
-                            <div style={{fontSize:9,color:"#475569"}}>Beta · Dividend</div>
-                            <div style={{fontSize:11,color:"#94a3b8"}}>β{db.beta} · {db.div>0?db.div+"%":"No div"}</div>
-                          </div>
-                          <div style={{marginTop:4,padding:"3px 8px",background:"rgba(56,189,248,0.08)",borderRadius:6}}>
-                            <div style={{fontSize:9,color:"#38bdf8"}}>
-                              PE: {db.pe}x vs sector {spePE}x · FCF: {db.fcf}%
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* ── LAST EPS DETAIL ── */}
-                      {lastEps&&(
-                        <div style={{marginTop:8,display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-                          <span style={{fontSize:10,color:"#475569"}}>Last EPS ({lastEps.q}):</span>
-                          <span style={{fontSize:10,color:"#94a3b8"}}>Est ${lastEps.est}</span>
-                          <span style={{fontSize:10,fontWeight:700,color:lastEps.act>=lastEps.est?"#34d399":"#f87171"}}>
-                            Act ${lastEps.act} ({lastEps.act>=lastEps.est?"+":""}{((lastEps.act-lastEps.est)/Math.abs(lastEps.est)*100).toFixed(1)}% {lastEps.act>=lastEps.est?"beat":"miss"})
-                          </span>
-                          {ad.low&&ad.high&&<span style={{fontSize:10,color:"#475569",marginLeft:8}}>
-                            Target range: ${ad.low}–${ad.high}
-                          </span>}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* ── HOLDINGS TABLE ── */}
-              <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:14,padding:"16px 18px",marginBottom:14,overflowX:"auto"}}>
-                <div style={{fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:14,color:"#38bdf8",marginBottom:14}}>Holdings</div>
-                <table style={{width:"100%",borderCollapse:"collapse",minWidth:780}}>
+                {/* Holdings table */}
+                <table style={{width:"100%",borderCollapse:"collapse"}}>
                   <thead>
-                    <tr style={{borderBottom:"2px solid #101c2e"}}>
-                      {[
-                        {h:"Stock",      a:"left"},
-                        {h:"Shares",     a:"right"},
-                        {h:"Entry $",    a:"right"},
-                        {h:"Current $",  a:"right"},
-                        {h:"Price P&L",  a:"right"},
-                        {h:"Price %",    a:"right"},
-                        {h:"Divs Recv'd",a:"right"},
-                        {h:"Div Yield",  a:"right"},
-                        {h:"Total Ret",  a:"right"},
-                        {h:"Tot Ret %",  a:"right"},
-                        {h:"3M Target",  a:"right"},
-                        {h:"12M Target", a:"right"},
-                        {h:"Signal",     a:"right"},
-                      ].map((col,i)=>(
-                        <th key={i} style={{textAlign:col.a,padding:"8px 10px",fontSize:11,color:"#475569",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.05em",whiteSpace:"nowrap"}}>{col.h}</th>
+                    <tr style={{borderBottom:"1px solid #101c2e"}}>
+                      {["Ticker","Shares","Avg Cost","Live Price","Value","P&L%","Since"].map((h,i)=>(
+                        <th key={i} style={{padding:"8px 12px",fontSize:10,color:"#475569",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.05em",textAlign:i===0?"left":"right",whiteSpace:"nowrap"}}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {livePortfolio.map((p,i)=>{
-                      const curr      = prices[p.ticker]?.price || p.entryPrice;
-                      const costBasis = p.shares * p.entryPrice;
-                      const currVal   = p.shares * curr;
-                      const priceGain2= currVal - costBasis;
-                      const priceGainPct = (priceGain2/costBasis)*100;
-                      const divRecv   = calcDividends(p.ticker, p.shares, p.entryDate);
-                      const divAnn    = calcAnnualDivIncome(p.ticker, p.shares);
-                      const divYieldPct = DIVIDEND_DATA[p.ticker]?.yield || 0;
-                      const totalRet2 = priceGain2 + divRecv;
-                      const totalRetPct2 = (totalRet2/costBasis)*100;
-                      const q2        = computeQuant(p.ticker, curr);
-                      const sig       = q2.comp < 40 ? "🔴 SELL" : q2.comp < 55 ? "🟡 REVIEW" : q2.sig.l;
-                      const sigC      = q2.comp < 40 ? "#f87171" : q2.comp < 55 ? "#fbbf24" : q2.sig.c;
+                    {livePortfolio.sort((a,b)=>b.value-a.value).map((p,i)=>{
+                      const isUp = p.pnlPct>=0;
                       return(
-                        <tr key={i}
-                          style={{borderBottom:"1px solid #0d1826",cursor:"pointer",transition:"background 0.15s"}}
-                          onClick={()=>{setTicker(p.ticker);}}>
-                          <td style={{padding:"10px 10px"}}>
-                            <div style={{fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:700,fontSize:13,color:"#7dd3fc"}}>{p.ticker}</div>
-                            <div style={{fontSize:11,color:"#334155"}}>{DB[p.ticker]?.name?.split(" ").slice(0,2).join(" ")||""}</div>
+                        <tr key={i} style={{cursor:"pointer"}} onClick={()=>setTicker(p.ticker)}>
+                          <td style={{padding:"9px 12px",borderBottom:"1px solid #0d1826"}}>
+                            <span style={{fontFamily:"Avenir Next,sans-serif",fontWeight:700,fontSize:13,color:"#7dd3fc"}}>{p.ticker}</span>
+                            <span style={{fontSize:11,color:"#334155",marginLeft:6}}>{DB[p.ticker]?.name?.split(" ").slice(0,2).join(" ")||""}</span>
                           </td>
-                          <td style={{textAlign:"right",padding:"10px",fontSize:13,color:"#e2e8f0",fontWeight:600}}>{p.shares}</td>
-                          <td style={{textAlign:"right",padding:"10px",fontSize:13,color:"#475569",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:600}}>${p.entryPrice.toFixed(2)}</td>
-                          <td style={{textAlign:"right",padding:"10px",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:700,fontSize:13,color:"#e2e8f0"}}>${curr.toFixed(2)}</td>
-                          <td style={{textAlign:"right",padding:"10px",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:700,fontSize:13,color:priceGain2>=0?"#34d399":"#f87171"}}>
-                            {priceGain2>=0?"+":""}{priceGain2.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}
+                          {cell(p.shares.toLocaleString())}
+                          {cell("$"+p.entryPrice.toFixed(2),"#64748b")}
+                          {cell("$"+p.curPrice.toFixed(2),"#e2e8f0",true)}
+                          {cell("$"+Math.round(p.value).toLocaleString(),"#e2e8f0",true)}
+                          <td style={{padding:"9px 12px",textAlign:"right",borderBottom:"1px solid #0d1826",fontFamily:"Avenir Next,sans-serif",fontWeight:700,fontSize:13,color:isUp?"#34d399":"#f87171"}}>
+                            {isUp?"+":""}{p.pnlPct.toFixed(2)}%
                           </td>
-                          <td style={{textAlign:"right",padding:"10px",fontSize:13,fontWeight:700,color:priceGainPct>=0?"#34d399":"#f87171"}}>
-                            {priceGainPct>=0?"+":""}{priceGainPct.toFixed(2)}%
-                          </td>
-                          <td style={{textAlign:"right",padding:"10px",fontSize:13,color:divRecv>0?"#fbbf24":"#334155",fontWeight:divRecv>0?700:400}}>
-                            {divRecv>0?"$"+divRecv.toFixed(2):"—"}
-                          </td>
-                          <td style={{textAlign:"right",padding:"10px",fontSize:13,color:divRecv>0?"#fbbf24":"#334155",fontWeight:divRecv>0?700:400}}>
-                            {divRecv>0?(divRecv/costBasis*100).toFixed(3)+"%":"0.00%"}
-                          </td>
-                          <td style={{textAlign:"right",padding:"10px",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:700,fontSize:13,color:totalRet2>=0?"#34d399":"#f87171"}}>
-                            {totalRet2>=0?"+":""}{totalRet2.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}
-                          </td>
-                          <td style={{textAlign:"right",padding:"10px",fontSize:13,fontWeight:700,color:totalRetPct2>=0?"#34d399":"#f87171"}}>
-                            {totalRetPct2>=0?"+":""}{totalRetPct2.toFixed(2)}%
-                          </td>
-                          <td style={{textAlign:"right",padding:"10px"}}>
-                            {(()=>{
-                              const ep   = p.entryPrice;
-                              const vol2 = (DB[p.ticker]?.vol||25)/100;
-                              const r24  = DB[p.ticker]?.r?.[2024]||15;
-                              const r23  = DB[p.ticker]?.r?.[2023]||15;
-                              const fwd  = ((r24+r23)/2/100)*0.35 + 0.12*0.65;
-                              const t3m  = ep*(1+fwd)**(3/12);
-                              const t12m = ep*(1+fwd);
-                              const u3m  = (t3m-ep)/ep*100;
-                              const u12m = (t12m-ep)/ep*100;
-                              return(
-                                <>
-                                  <span style={{display:"block",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:700,fontSize:12,color:u3m>=0?"#34d399":"#f87171",whiteSpace:"nowrap"}}>${t3m.toFixed(0)} <span style={{fontSize:10,fontWeight:400,color:"#475569"}}>({u3m>=0?"+":""}{u3m.toFixed(1)}%)</span></span>
-                                </>
-                              );
-                            })()}
-                          </td>
-                          <td style={{textAlign:"right",padding:"10px"}}>
-                            {(()=>{
-                              const ep   = p.entryPrice;
-                              const r24  = DB[p.ticker]?.r?.[2024]||15;
-                              const r23  = DB[p.ticker]?.r?.[2023]||15;
-                              const fwd  = ((r24+r23)/2/100)*0.35 + 0.12*0.65;
-                              const t12m = ep*(1+fwd);
-                              const u12m = (t12m-ep)/ep*100;
-                              const atgt = ({"NVDA":274,"AVGO":280,"LLY":1020,"MSFT":510,"META":710,"COST":1100,"GOOGL":220,"AMZN":268,"WMT":135,"JPM":280})[p.ticker]||t12m;
-                              const uA   = (atgt-ep)/ep*100;
-                              return(
-                                <div>
-                                  <div style={{fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:700,fontSize:12,color:u12m>=0?"#34d399":"#f87171",whiteSpace:"nowrap"}}>${t12m.toFixed(0)} <span style={{fontSize:10,fontWeight:400,color:"#475569"}}>({u12m>=0?"+":""}{u12m.toFixed(1)}%)</span></div>
-                                  <div style={{fontSize:10,color:"#38bdf8",whiteSpace:"nowrap"}}>WS: ${atgt} ({uA>=0?"+":""}{uA.toFixed(0)}%)</div>
-                                </div>
-                              );
-                            })()}
-                          </td>
-                          <td style={{textAlign:"right",padding:"10px"}}>
-                            <span style={{fontSize:11,fontWeight:700,color:sigC,background:sigC+"18",borderRadius:20,padding:"3px 8px",whiteSpace:"nowrap"}}>{sig}</span>
-                          </td>
+                          {cell(p.entryDate?.slice(5)||"","#475569")}
                         </tr>
                       );
                     })}
-                    {/* Totals row */}
-                    {(()=>{
-                      // Compute totals from live data — no deleted variables
-                      const _costBasis  = livePortfolio.reduce((s,p)=>s+p.shares*p.entryPrice,0);
-                      const _stockGain  = totalCurrentVal - _costBasis; // stock-only gain vs avg_cost
-                      const _stockGainPct = _costBasis>0 ? (_stockGain/_costBasis)*100 : 0;
-                      // True total P&L vs $100k (includes cash)
-                      const _truePnL    = totalPnL;
-                      const _truePct    = totalRetPct;
-                      const _divYieldPct = _costBasis>0 ? (totalDivReceived/_costBasis)*100 : 0;
-                      return(
-                      <tr style={{borderTop:"2px solid #38bdf8",background:"rgba(56,189,248,0.04)"}}>
-                        <td colSpan={2} style={{padding:"10px",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:13,color:"#38bdf8"}}>TOTAL ({livePortfolio.length} positions)</td>
-                        <td style={{textAlign:"right",padding:"10px",fontSize:12,color:"#475569",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:600}}>Avg Entry</td>
-                        <td style={{textAlign:"right",padding:"10px",fontSize:12,color:"#e2e8f0",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:600}}>Live</td>
-                        <td style={{textAlign:"right",padding:"10px",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:13,color:_stockGain>=0?"#34d399":"#f87171"}}>
-                          {_stockGain>=0?"+":""}{_stockGain.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}
-                        </td>
-                        <td style={{textAlign:"right",padding:"10px",fontWeight:800,fontSize:13,color:_stockGainPct>=0?"#34d399":"#f87171"}}>
-                          {_stockGainPct>=0?"+":""}{_stockGainPct.toFixed(2)}%
-                        </td>
-                        <td style={{textAlign:"right",padding:"10px",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:13,color:"#fbbf24"}}>
-                          ${totalDivReceived.toFixed(2)}
-                        </td>
-                        <td style={{textAlign:"right",padding:"10px",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:13,color:totalDivReceived>0?"#fbbf24":"#334155"}}>
-                          {_divYieldPct.toFixed(3)}%
-                        </td>
-                        <td style={{textAlign:"right",padding:"10px",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:14,color:_truePnL>=0?"#34d399":"#f87171"}}>
-                          {_truePnL>=0?"+":""}{_truePnL.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}
-                        </td>
-                        <td style={{textAlign:"right",padding:"10px",fontWeight:800,fontSize:14,color:_truePct>=0?"#34d399":"#f87171"}}>
-                          {_truePct>=0?"+":""}{_truePct.toFixed(2)}%
-                        </td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                      </tr>
-                      );
-                    })()}
                     {/* Cash row */}
                     <tr style={{background:"rgba(251,191,36,0.03)"}}>
-                      <td colSpan={9} style={{padding:"10px",fontSize:13,color:"#475569"}}>
-                        💵 Cash Reserve
+                      <td style={{padding:"9px 12px",fontFamily:"Avenir Next,sans-serif",fontWeight:700,fontSize:13,color:"#fbbf24"}}>CASH</td>
+                      <td colSpan={4} style={{padding:"9px 12px",fontSize:12,color:"#475569",textAlign:"right"}}>Reserve</td>
+                      <td style={{padding:"9px 12px",textAlign:"right",fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:14,color:"#fbbf24"}}>${Math.round(liveCash).toLocaleString()}</td>
+                      <td style={{padding:"9px 12px",textAlign:"right",fontSize:11,color:"#475569"}}>{(liveCash/portfolioValue*100).toFixed(1)}%</td>
+                    </tr>
+                    {/* Total row */}
+                    <tr style={{borderTop:"2px solid #38bdf8",background:"rgba(56,189,248,0.04)"}}>
+                      <td colSpan={4} style={{padding:"9px 12px",fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:13,color:"#38bdf8"}}>TOTAL</td>
+                      <td style={{padding:"9px 12px",textAlign:"right",fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:14,color:"#e2e8f0"}}>${Math.round(portfolioValue).toLocaleString()}</td>
+                      <td style={{padding:"9px 12px",textAlign:"right",fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:14,color:totalPnL>=0?"#34d399":"#f87171"}}>
+                        {totalRetPct>=0?"+":""}{totalRetPct.toFixed(2)}%
                       </td>
-                      <td colSpan={3} style={{textAlign:"right",padding:"10px",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:700,fontSize:13,color:"#fbbf24"}}>
-                        ${liveCash.toFixed(2)}
-                      </td>
-                      <td></td>
+                      <td style={{padding:"9px 12px",textAlign:"right",fontSize:11,color:"#38bdf8"}}>vs SPY {spyRet>=0?"+":""}{spyRet.toFixed(2)}%</td>
                     </tr>
                   </tbody>
                 </table>
-                <div style={{marginTop:8,fontSize:11,color:"#334155"}}>
-                  Click any row → opens that stock's full analysis. Prices update every 30s via Finnhub. Dividends auto-calculated from known ex-dividend dates.
-                </div>
+              </div>
 
-                {/* ── MOVE EXPLANATIONS (>5% total return) ── */}
+              {/* ── 14 KPIs ── */}
+              <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:12,padding:"16px 18px",marginBottom:12}}>
+                <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:700,fontSize:11,color:"#475569",textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:10}}>📊 Performance KPIs</div>
                 {(()=>{
-                  const explanations = {
-                    NVDA: {
-                      bull: "NVIDIA GTC 2026 conference this week (Mar 16-19). CEO Jensen Huang announced next-gen Rubin GPU architecture and agentic AI platforms. AI data center demand continues to accelerate — Blackwell chip orders booked through 2026.",
-                      bear: "Stock pulled back from Oct 2025 highs. Valuation concerns as P/E stretched above 50x. Some rotation from AI names into defensives."
-                    },
-                    AVGO: {
-                      bull: "Broadcom's custom AI chip business (XPUs for Google, Meta, Apple) growing rapidly. AI revenue expected to exceed $60B in FY2026. Strong free cash flow supports dividend growth.",
-                      bear: "Stock down from all-time highs as broader tech sold off. Integration of VMware still digesting."
-                    },
-                    LLY: {
-                      bull: "World's most valuable pharma company. Zepbound (weight-loss) and Mounjaro (diabetes) generating billions monthly. Q4 2025 earnings beat — revenue +43% YoY. 2026 guidance raised to $81.5B. Oral weight-loss pill Orforglipron launching Q2 2026.",
-                      bear: "FDA delayed Orforglipron decision to Apr 10 (from late-March) — caused temporary dip. Valuation at 40x earnings is elevated."
-                    },
-                    MSFT: {
-                      bull: "Azure cloud growing 31% YoY driven by AI Copilot adoption. GitHub Copilot and M365 Copilot subscription revenue accelerating. $625B in commercial remaining performance obligations.",
-                      bear: "Stock underperforming YTD as multiple compression hits high-PE tech names. AI spending concerns weigh on near-term margins."
-                    },
-                    META: {
-                      bull: "Ad revenue machine — AI-driven ad targeting lifting CPMs. Llama 4 model released, reducing AI infrastructure costs. Instagram and WhatsApp monetisation expanding globally.",
-                      bear: "Regulatory risks in EU. Reality Labs (metaverse) continues to lose billions annually."
-                    },
-                    COST: {
-                      bull: "Costco beat Q2 2026 estimates — comparable sales up strongly. Membership renewal rates at record 93%+ showing extreme customer loyalty. Potential special dividend could be announced.",
-                      bear: "Tariff concerns on imported goods. Stock near 52-week lows after pulling back from $1,067 high."
-                    },
-                    GOOGL: {
-                      bull: "Google Cloud growing 30%+ YoY. Gemini AI integrated across Search, Gmail, YouTube. Advertising recovered strongly. Waymo robotaxi expansion and Quantum AI breakthroughs adding optionality.",
-                      bear: "DOJ antitrust case ongoing — potential forced divestiture of Chrome or Android. AI search disruption risk from OpenAI and Perplexity."
-                    },
-                    AMZN: {
-                      bull: "AWS re-accelerating — cloud revenue growth back above 20%. Advertising business growing 19% YoY. AI infrastructure (Trainium chips, Bedrock) positioning Amazon as key AI platform.",
-                      bear: "Retail margins under pressure from tariffs. High capex cycle for AI and logistics weighing on free cash flow near-term."
-                    },
-                    WMT: {
-                      bull: "Walmart beating Target and peers — same-store sales +4.6%. E-commerce growing 22% YoY. Flipkart India IPO optionality. Revenue $713B FY2026, up 4.7%. Strong buy — 31 analysts.",
-                      bear: "Iran conflict and tariffs could impact supply chain costs and consumer spending. High P/E at 46x for a retailer."
-                    },
-                    JPM: {
-                      bull: "JPMorgan is the world's most profitable bank. Benefits from higher-for-longer rates. Investment banking recovery as M&A picks up. CEO Jamie Dimon — fortress balance sheet, 18% ROTCE.",
-                      bear: "Private credit markdowns creating headwinds. Stock down 16% from January all-time high of $337. Recession risk could hurt loan book."
-                    },
-                  };
-
-                  const bigMovers = portfolio.filter(p=>{
-                    const curr = prices[p.ticker]?.price || p.entryPrice;
-                    const totalRet = ((curr-p.entryPrice)/p.entryPrice + calcDividends(p.ticker,p.shares,p.entryDate)/(p.shares*p.entryPrice))*100;
-                    return Math.abs(totalRet) >= 5;
-                  });
-
-                  if(bigMovers.length===0) return null;
-
+                  const kpis=[
+                    {l:"Total Return",    v:(totalRetPct>=0?"+":"")+totalRetPct.toFixed(2)+"%",    c:totalRetPct>=0?"#34d399":"#f87171", sub:"$"+(totalPnL>=0?"+":"")+Math.round(totalPnL)},
+                    {l:"Net Return",      v:(netRetPct>=0?"+":"")+netRetPct.toFixed(2)+"%",         c:netRetPct>=0?"#34d399":"#f87171",   sub:"after costs"},
+                    {l:"Alpha vs SPY",    v:(alpha>=0?"+":"")+alpha.toFixed(2)+"%",                 c:alpha>=0?"#34d399":"#f87171",       sub:"SPY "+(spyRet>=0?"+":"")+spyRet.toFixed(2)+"%"},
+                    {l:"Sharpe Ratio",    v:_sharpe!=null?_sharpe.toFixed(2):"—",                   c:!_sharpe?"#475569":_sharpe>=1?"#34d399":_sharpe>=0.5?"#fbbf24":"#f87171", sub:!_sharpe?"—":_sharpe>=1?"Excellent":_sharpe>=0.5?"Good":"Poor"},
+                    {l:"Max Drawdown",    v:"-"+(_maxDD*100).toFixed(1)+"%",                        c:_maxDD>0.15?"#f87171":_maxDD>0.08?"#fbbf24":"#34d399", sub:_maxDD>0.15?"High":_maxDD>0.08?"Moderate":"Low"},
+                    {l:"Win Rate",        v:_winRate.toFixed(1)+"%",                                c:_winRate>=55?"#34d399":_winRate>=45?"#fbbf24":"#f87171", sub:_winRate>=55?"On target":"Below"},
+                    {l:"Volatility",      v:_annVol.toFixed(1)+"%",                                 c:_annVol>30?"#f87171":_annVol>20?"#fbbf24":"#34d399",    sub:_annVol>30?"High":_annVol>20?"Medium":"Low"},
+                    {l:"Portfolio Beta",  v:_beta.toFixed(2),                                       c:_beta>1.3?"#f87171":_beta<0.8?"#38bdf8":"#fbbf24",      sub:_beta>1.3?"Aggressive":_beta<0.8?"Defensive":"Balanced"},
+                    {l:"Cost Drag",       v:"-$"+totalCosts.toFixed(0),                             c:"#f87171",                                               sub:(totalCosts/INITIAL_CAP*100).toFixed(3)+"%"},
+                    {l:"Diversification", v:_divScore+"/100",                                       c:_divScore>=75?"#34d399":_divScore>=50?"#fbbf24":"#f87171",sub:_sectors.length+" sectors"},
+                    {l:"Price Return",    v:(priceRetPct>=0?"+":"")+priceRetPct.toFixed(2)+"%",    c:priceRetPct>=0?"#34d399":"#f87171",                      sub:"excl. dividends"},
+                    {l:"Dividend Income", v:"$"+totalDivReceived.toFixed(2),                        c:"#38bdf8",                                               sub:"+"+divRetPct.toFixed(3)+"%"},
+                    {l:"Best Position",   v:_best.t,                                                c:"#34d399",                                               sub:(_best.pct>=0?"+":"")+_best.pct.toFixed(1)+"%"},
+                    {l:"Worst Position",  v:_worst.t,                                               c:"#f87171",                                               sub:(_worst.pct>=0?"+":"")+_worst.pct.toFixed(1)+"%"},
+                  ];
                   return(
-                    <div style={{marginTop:16}}>
-                      <div style={{fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:13,color:"#38bdf8",marginBottom:10,textTransform:"uppercase",letterSpacing:"0.06em"}}>
-                        📰 Why are these positions moving?
-                      </div>
-                      {bigMovers.map((p,i)=>{
-                        const curr    = prices[p.ticker]?.price || p.entryPrice;
-                        const pnlPct  = ((curr-p.entryPrice)/p.entryPrice)*100;
-                        const ex      = explanations[p.ticker] || {bull:"Strong quant signals and positive momentum.",bear:"Some headwinds — monitor closely."};
-                        const isBull  = pnlPct >= 0;
+                    <div>
+                      {[kpis.slice(0,7),kpis.slice(7,14)].map((row,ri)=>(
+                        <div key={ri} style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:6,marginBottom:ri===0?6:0}}>
+                          {row.map((k,i)=>(
+                            <div key={i} style={{background:"#060d18",borderRadius:8,padding:"10px 10px",borderLeft:`2px solid ${k.c}`,textAlign:"center"}}>
+                              <div style={{fontSize:9,color:"#475569",marginBottom:3}}>{k.l}</div>
+                              <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:13,color:k.c}}>{k.v}</div>
+                              {k.sub&&<div style={{fontSize:9,color:k.c,opacity:0.75,marginTop:2}}>{k.sub}</div>}
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* ── TRADE LOG ── */}
+              <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:12,padding:"16px 18px",marginBottom:12}}>
+                <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:700,fontSize:11,color:"#475569",textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:10}}>
+                  📋 Trade Log · {trades.filter(t=>t.action==="BUY"||t.action==="SELL").length} trades recorded
+                </div>
+                {trades.length===0
+                  ? <div style={{fontSize:13,color:"#334155",textAlign:"center",padding:"20px 0"}}>No trades yet — awaiting first trader cycle</div>
+                  : (
+                  <table style={{width:"100%",borderCollapse:"collapse"}}>
+                    <thead>
+                      <tr style={{borderBottom:"1px solid #101c2e"}}>
+                        {["Date/Time","Action","Ticker","Shares","Price","Value","P&L","Why"].map((h,i)=>(
+                          <th key={i} style={{padding:"7px 10px",fontSize:10,color:"#475569",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.05em",textAlign:i===0||i===7?"left":"right",whiteSpace:"nowrap"}}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[...trades].reverse().map((t,i)=>{
+                        const isBuy = t.action==="BUY";
+                        const color = isBuy?"#34d399":"#f87171";
+                        // Parse reason into plain English
+                        const rawReason = t.reason||"";
+                        let why = rawReason;
+                        if(rawReason.includes("Regime rotation")) why = "Regime changed — sector no longer in target allocation";
+                        else if(rawReason.includes("STOP LOSS")) why = "Stop loss hit (-15%)";
+                        else if(rawReason.includes("TAKE PROFIT")) why = "Take profit triggered (+40%)";
+                        else if(rawReason.includes("Quant sell")) why = "Quant score fell below sell threshold";
+                        else if(rawReason.includes("4-LAYER")) {
+                          const macro = rawReason.match(/Macro:(\w+)/)?.[1]||"";
+                          const quant = rawReason.match(/Quant:(\d+)/)?.[1]||"";
+                          const moat  = rawReason.match(/Moat: (\w+)/)?.[1]||"";
+                          why = `Regime ${macro} · Quant ${quant} · Moat ${moat}`;
+                        }
+                        else if(rawReason.includes("Regime trim")) why = "Overweight — trimming toward target";
+                        else if(rawReason.includes("Overweight")) why = "Position too large — max 15% per stock";
                         return(
-                          <div key={i} style={{background:"#090f1a",borderRadius:10,padding:"12px 14px",marginBottom:8,borderLeft:"3px solid "+(isBull?"#34d399":"#f87171")}}>
-                            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
-                              <span style={{fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:14,color:"#7dd3fc"}}>{p.ticker}</span>
-                              <span style={{fontSize:13,fontWeight:700,color:isBull?"#34d399":"#f87171"}}>{pnlPct>=0?"+":""}{pnlPct.toFixed(2)}% since entry</span>
-                              <span style={{fontSize:11,color:"#475569",marginLeft:"auto"}}>Entry ${p.entryPrice.toFixed(2)} → Now ${curr.toFixed(2)}</span>
-                            </div>
-                            <div style={{fontSize:13,color:"#94a3b8",lineHeight:1.7,marginBottom:isBull?0:6}}>
-                              {isBull?"🟢 "+ex.bull:"🔴 "+ex.bear}
-                            </div>
-                            {!isBull&&<div style={{fontSize:13,color:"#475569",lineHeight:1.7}}>{"🟢 Bull case: "+ex.bull}</div>}
-                          </div>
+                          <tr key={i} style={{borderBottom:"1px solid #0d1826"}}>
+                            <td style={{padding:"8px 10px",fontSize:11,color:"#475569",whiteSpace:"nowrap"}}>{(t.date||"").replace(" ET","")}</td>
+                            <td style={{padding:"8px 10px",textAlign:"right"}}>
+                              <span style={{fontSize:10,fontWeight:700,color,background:color+"22",padding:"2px 7px",borderRadius:4}}>{t.action}</span>
+                            </td>
+                            <td style={{padding:"8px 10px",textAlign:"right",fontFamily:"Avenir Next,sans-serif",fontWeight:700,fontSize:13,color:"#7dd3fc"}}>{t.ticker}</td>
+                            <td style={{padding:"8px 10px",textAlign:"right",fontSize:12,color:"#94a3b8"}}>{t.shares}</td>
+                            <td style={{padding:"8px 10px",textAlign:"right",fontSize:12,color:"#94a3b8"}}>${(t.price||0).toFixed(2)}</td>
+                            <td style={{padding:"8px 10px",textAlign:"right",fontSize:12,color:"#e2e8f0",fontWeight:600}}>${Math.round(t.value||0).toLocaleString()}</td>
+                            <td style={{padding:"8px 10px",textAlign:"right",fontSize:12,fontWeight:600,color:t.pnl>=0?"#34d399":t.pnl<0?"#f87171":"#475569"}}>
+                              {t.pnl!=null?(t.pnl>=0?"+$":"-$")+Math.abs(Math.round(t.pnl)).toLocaleString():"—"}
+                            </td>
+                            <td style={{padding:"8px 10px",fontSize:11,color:"#64748b",maxWidth:220}}>{why}</td>
+                          </tr>
                         );
                       })}
-                      <div style={{fontSize:11,color:"#334155",marginTop:6}}>Explanations are model-generated based on known catalysts. Always verify with live news. Not financial advice.</div>
-                    </div>
-                  );
-                })()}
+                    </tbody>
+                  </table>
+                )}
               </div>
 
-              {/* ── PERFORMANCE vs BENCHMARK ── */}
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:10,marginBottom:14}}>
-                {[
-                  {l:"Price Appreciation",  v:(priceRetPct>=0?"+":"")+priceRetPct.toFixed(2)+"%",  sub:"Since Mar 13",         c:priceRetPct>=0?"#34d399":"#f87171"},
-                  {l:"Dividend Return",     v:"+"+divRetPct.toFixed(3)+"%",                          sub:"Actual received",       c:"#fbbf24"},
-                  {l:"Total Return",        v:(totalRetPct>=0?"+":"")+totalRetPct.toFixed(2)+"%",    sub:"Price + Dividends",     c:totalRetPct>=0?"#34d399":"#f87171"},
-                  {l:"Alpha vs S&P 500",    v:(totalRetPct-spyRet>=0?"+":"")+(totalRetPct-spyRet).toFixed(2)+"%", sub:"SPY: "+(spyRet>=0?"+":"")+spyRet.toFixed(2)+"%", c:totalRetPct-spyRet>=0?"#34d399":"#f87171"},
-                ].map((s,i)=>(
-                  <div key={i} style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:12,padding:"14px 16px",textAlign:"center"}}>
-                    <div style={{fontSize:11,color:"#475569",marginBottom:5}}>{s.l}</div>
-                    <div style={{fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:18,color:s.c}}>{s.v}</div>
-                    <div style={{fontSize:11,color:"#334155",marginTop:3}}>{s.sub}</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* ── REBALANCE ALERTS ── */}
-              {(()=>{
-                // ── REGIME DETECTION ─────────────────────────────────────
-                const gold2  = prices["GLD"]?.price  || 240;
-                const oil2   = prices["USO"]?.price   || 70;
-                const vix2   = prices["VIXY"]?.price  || 18;
-                const bonds2 = prices["TLT"]?.price   || 92;
-                const fear2 = [
-                  vix2>35?4:vix2>25?3:vix2>18?1:0,
-                  gold2>280?2:gold2>240?0:-1,
-                  oil2>90?2:oil2>70?0:-1,
-                  bonds2>92?0:bonds2>88?1:2,
-                ].reduce((a,b)=>a+b,0);
-                const regime2 = fear2>=6?"CRISIS":fear2>=3?"RISK_OFF":fear2>=1?"CAUTION":"RISK_ON";
-
-                // ── REGIME TARGETS ────────────────────────────────────────
-                const RT = {
-                  RISK_ON:  {Technology:0.26,Semiconductors:0.18,Pharma:0.07,Banking:0.09,"Social Media":0.07,"E-Commerce/Cloud":0.09,Retail:0.05},
-                  CAUTION:  {Technology:0.20,Semiconductors:0.10,Pharma:0.13,Banking:0.10,"Social Media":0.05,"E-Commerce/Cloud":0.07,Retail:0.10},
-                  RISK_OFF: {Technology:0.09,Semiconductors:0.04,Pharma:0.16,Banking:0.08,"Social Media":0.03,"E-Commerce/Cloud":0.02,Retail:0.15},
-                  CRISIS:   {Technology:0.04,Semiconductors:0.00,Pharma:0.15,Banking:0.04,"Social Media":0.00,"E-Commerce/Cloud":0.00,Retail:0.20},
-                };
-                const tgt2 = RT[regime2] || RT.CAUTION;
-                const totV2 = livePortfolio.reduce((s,p)=>s+(prices[p.ticker]?.price||p.entryPrice)*p.shares,0) + liveCash;
-
-                // ── GENERATE ALERTS ───────────────────────────────────────
-                const alerts2 = livePortfolio.flatMap(p=>{
-                  const curr   = prices[p.ticker]?.price || p.entryPrice;
-                  const q2     = computeQuant(p.ticker, curr, prices);
-                  const pnlP   = ((curr-p.entryPrice)/p.entryPrice)*100;
-                  const posVal = curr * p.shares;
-                  const posPct = posVal / totV2 * 100;
-                  const sec    = (DB[p.ticker]||{}).s || "";
-                  const tPct   = (tgt2[sec]||0)*100;
-                  const a = [];
-                  if(q2.comp<40)             a.push({type:"🔴 SELL",        msg:"Quant "+q2.comp+" — exit position",                           c:"#f87171",ticker:p.ticker,pri:1});
-                  else if(q2.comp<55)        a.push({type:"🟡 REDUCE",      msg:"Quant "+q2.comp+" — weakening, consider trimming 25%",        c:"#fbbf24",ticker:p.ticker,pri:2});
-                  if(pnlP>40)                a.push({type:"✂️ TRIM",        msg:"Up "+pnlP.toFixed(1)+"% — sell 25% to lock gains",            c:"#fbbf24",ticker:p.ticker,pri:1});
-                  if(pnlP<-15)               a.push({type:"🛑 STOP LOSS",   msg:"Down "+Math.abs(pnlP).toFixed(1)+"% — exit now",             c:"#f87171",ticker:p.ticker,pri:1});
-                  else if(pnlP<-10)          a.push({type:"⚠️ WATCH",       msg:"Down "+Math.abs(pnlP).toFixed(1)+"% — nearing stop loss",    c:"#f97316",ticker:p.ticker,pri:2});
-                  if(posPct>15)              a.push({type:"📊 OVERWEIGHT",   msg:posPct.toFixed(1)+"% of portfolio — trim to 12%",             c:"#f97316",ticker:p.ticker,pri:2});
-                  if(q2.comp>=75&&posPct<tPct*0.5&&pnlP>-10){
-                    const sh=Math.round((tPct/100-posPct/100)*totV2/curr);
-                    a.push({type:"🚀 STRONG ADD",  msg:"Quant "+q2.comp+" + underweight. Add ~"+sh+" shares ($"+Math.round(sh*curr).toLocaleString()+")", c:"#34d399",ticker:p.ticker,pri:1});
-                  } else if(q2.comp>=68&&posPct<tPct*0.75&&pnlP>-15){
-                    const sh=Math.round((tPct/100-posPct/100)*totV2/curr);
-                    a.push({type:"🟢 ADD",          msg:"Quant "+q2.comp+" + underweight ("+posPct.toFixed(1)+"% vs "+tPct.toFixed(0)+"% target). Add ~"+sh+" shares ($"+Math.round(sh*curr).toLocaleString()+")", c:"#34d399",ticker:p.ticker,pri:2});
-                  }
-                  return a;
-                }).sort((a,b)=>(a.pri||3)-(b.pri||3));
-
-                // ── RENDER ────────────────────────────────────────────────
-                if(alerts2.length===0) return(
-                  <div style={{background:"rgba(52,211,153,0.05)",border:"1px solid rgba(52,211,153,0.2)",borderRadius:13,padding:"16px 20px",marginBottom:14,display:"flex",gap:12,alignItems:"center"}}>
-                    <span style={{fontSize:22}}>✅</span>
-                    <div>
-                      <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:700,fontSize:14,color:"#34d399",marginBottom:3}}>No Rebalance Triggers Active</div>
-                      <div style={{fontSize:12,color:"#475569"}}>All positions within normal parameters. Regime: {regime2}</div>
-                    </div>
-                  </div>
-                );
-                const sells2 = alerts2.filter(a=>a.type.includes("SELL")||a.type.includes("STOP")).length;
-                const adds2  = alerts2.filter(a=>a.type.includes("ADD")).length;
-                const trims2 = alerts2.filter(a=>a.type.includes("TRIM")||a.type.includes("REDUCE")||a.type.includes("OVERWEIGHT")).length;
-                const warns2 = alerts2.filter(a=>a.type.includes("WATCH")).length;
-                return(
-                  <div style={{background:"#0a1421",border:"1px solid rgba(251,191,36,0.3)",borderRadius:13,padding:"16px 18px",marginBottom:14}}>
-                    <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:14,color:"#fbbf24",marginBottom:10}}>
-                      🔔 Rebalance Recommendations ({alerts2.length}) — Regime: {regime2}
-                    </div>
-                    <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
-                      {sells2>0&&<div style={{background:"rgba(248,113,113,0.12)",border:"1px solid rgba(248,113,113,0.3)",borderRadius:8,padding:"4px 10px",fontSize:11,color:"#f87171",fontWeight:700}}>{sells2} SELL/STOP</div>}
-                      {adds2>0&&<div style={{background:"rgba(52,211,153,0.12)",border:"1px solid rgba(52,211,153,0.3)",borderRadius:8,padding:"4px 10px",fontSize:11,color:"#34d399",fontWeight:700}}>{adds2} ADD</div>}
-                      {trims2>0&&<div style={{background:"rgba(251,191,36,0.12)",border:"1px solid rgba(251,191,36,0.3)",borderRadius:8,padding:"4px 10px",fontSize:11,color:"#fbbf24",fontWeight:700}}>{trims2} TRIM</div>}
-                      {warns2>0&&<div style={{background:"rgba(249,115,22,0.12)",border:"1px solid rgba(249,115,22,0.3)",borderRadius:8,padding:"4px 10px",fontSize:11,color:"#f97316",fontWeight:700}}>{warns2} WATCH</div>}
-                    </div>
-                    {alerts2.map((a,i)=>(
-                      <div key={i} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"9px 12px",background:"#090f1a",borderRadius:9,marginBottom:7,borderLeft:"3px solid "+a.c}}>
-                        <div style={{flexShrink:0}}>
-                          <span style={{fontSize:10,fontWeight:700,color:a.c,background:a.c+"18",borderRadius:20,padding:"2px 8px",display:"block",whiteSpace:"nowrap"}}>{a.type}</span>
-                          <div style={{fontSize:9,color:"#475569",marginTop:2,textAlign:"center"}}>{a.ticker}</div>
-                        </div>
-                        <span style={{fontSize:12,color:"#94a3b8",lineHeight:1.6}}>{a.msg}</span>
-                      </div>
-                    ))}
-                    <div style={{marginTop:8,fontSize:10,color:"#334155"}}>
-                      ⚠️ Signals only — always review before acting. Not financial advice.
-                    </div>
-                  </div>
-                );
-              })()}
-
-              {/* ── DIVIDEND CALENDAR ── */}
-              <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:13,padding:"16px 18px",marginBottom:14}}>
-                <div style={{fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:14,color:"#fbbf24",marginBottom:12}}>📅 Upcoming Dividend Payments</div>
-                {(()=>{
-                  const today = new Date();
-                  const upcoming = [];
-                  livePortfolio.forEach(p=>{
-                    const dd = DIVIDEND_DATA[p.ticker];
-                    if(!dd||!dd.exDates) return;
-                    const dps = dd.annualDPS/4;
-                    dd.exDates.forEach(d=>{
-                      const exDate = new Date(d);
-                      const daysTo = Math.ceil((exDate-today)/(1000*60*60*24));
-                      if(daysTo>=0 && daysTo<=120) {
-                        upcoming.push({ticker:p.ticker, shares:p.shares, dps, amount:dps*p.shares, exDate:d, daysTo});
-                      }
-                    });
-                  });
-                  upcoming.sort((a,b)=>a.daysTo-b.daysTo);
-                  if(upcoming.length===0) return <div style={{fontSize:13,color:"#475569"}}>No dividends expected in the next 120 days.</div>;
-                  return(
-                    <table style={{width:"100%",borderCollapse:"collapse"}}>
-                      <thead><tr style={{borderBottom:"1px solid #101c2e"}}>
-                        {["Stock","Ex-Date","Days Away","$/Share","You Receive"].map(h=>(
-                          <th key={h} style={{textAlign:h==="Stock"?"left":"right",padding:"7px 10px",fontSize:11,color:"#475569",textTransform:"uppercase",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:700}}>{h}</th>
-                        ))}
-                      </tr></thead>
-                      <tbody>{upcoming.map((u,i)=>(
-                        <tr key={i} style={{borderBottom:"1px solid #0d1826"}}>
-                          <td style={{padding:"9px 10px",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:700,fontSize:13,color:"#7dd3fc"}}>{u.ticker}</td>
-                          <td style={{textAlign:"right",padding:"9px 10px",fontSize:13,color:"#e2e8f0"}}>{u.exDate}</td>
-                          <td style={{textAlign:"right",padding:"9px 10px",fontSize:13,color:u.daysTo<=14?"#fbbf24":"#94a3b8",fontWeight:u.daysTo<=14?700:400}}>{u.daysTo===0?"TODAY":u.daysTo+" days"}</td>
-                          <td style={{textAlign:"right",padding:"9px 10px",fontSize:13,color:"#94a3b8"}}>${u.dps.toFixed(4)}</td>
-                          <td style={{textAlign:"right",padding:"9px 10px",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:700,fontSize:13,color:"#fbbf24"}}>${u.amount.toFixed(2)}</td>
-                        </tr>
-                      ))}</tbody>
-                    </table>
-                  );
-                })()}
-              </div>
-
-              {/* ── ACTIVITY LOG ── */}
-              <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:13,padding:"16px 18px"}}>
-                <div style={{fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:14,color:"#818cf8",marginBottom:10}}>📋 Activity Log</div>
-                {(autoPortfolio?.recent_trades||portLog||[]).slice().reverse().slice(0,15).map((entry,i)=>(
-                  <div key={i} style={{display:"flex",gap:12,padding:"7px 0",borderBottom:"1px solid #0d1826",alignItems:"flex-start"}}>
-                    <div style={{fontSize:11,color:"#334155",flexShrink:0,minWidth:90}}>{entry.date}</div>
-                    <div style={{fontSize:11,fontWeight:700,color:entry.action==="INIT"?"#38bdf8":entry.action==="BUY"?"#34d399":entry.action==="SELL"?"#f87171":"#fbbf24",flexShrink:0,minWidth:55}}>{entry.action}</div>
-                    <div style={{fontSize:13,color:"#94a3b8",flex:1}}>{entry.note}</div>
-                    {entry.portfolioValue&&<div style={{fontSize:11,color:"#334155",flexShrink:0}}>{"$"+(entry.portfolioValue).toLocaleString()}</div>}
-                  </div>
-                ))}
-              </div>
-
-            {/* ── REBALANCE ALERTS ── */}
-            {(()=>{
-              const totalInvested = livePortfolio.reduce((s,p)=>s+p.shares*p.entryPrice,0);
-              const alerts = [];
-              livePortfolio.forEach(p=>{
-                const cur   = (prices[p.ticker]||{price:p.entryPrice}).price;
-                const pnl   = (cur-p.entryPrice)/p.entryPrice*100;
-                const val   = p.shares*cur;
-                const pct   = val/(totalCurrentVal+liveCash)*100;
-                const qr    = computeQuant(p.ticker,(prices[p.ticker]||{price:p.entryPrice}).price);
-                if(qr.comp<=38)  alerts.push({ticker:p.ticker,type:"SELL",   color:"#f87171",icon:"🔴",msg:`Quant score ${qr.comp} — below sell threshold. Review position.`});
-                else if(qr.comp<=50) alerts.push({ticker:p.ticker,type:"REVIEW", color:"#fbbf24",icon:"🟡",msg:`Quant score ${qr.comp} — weakening signal. Monitor closely.`});
-                if(pnl<=-15)     alerts.push({ticker:p.ticker,type:"STOP LOSS",color:"#f87171",icon:"🛑",msg:`Down ${pnl.toFixed(1)}% from entry — stop loss triggered at -15%.`});
-                if(pnl>=40)      alerts.push({ticker:p.ticker,type:"TRIM",   color:"#34d399",icon:"✂️", msg:`Up ${pnl.toFixed(1)}% — consider trimming 25% to lock in gains.`});
-                if(pct>14)       alerts.push({ticker:p.ticker,type:"OVERWEIGHT",color:"#f97316",icon:"⚖️",msg:`${pct.toFixed(1)}% of portfolio — overweight. Max recommended 12%.`});
-              });
-              if(alerts.length===0) return(
-                <div style={{background:"rgba(52,211,153,0.06)",border:"1px solid rgba(52,211,153,0.2)",borderRadius:12,padding:"14px 18px",marginBottom:12,display:"flex",gap:12,alignItems:"center"}}>
-                  <div style={{fontSize:20}}>✅</div>
-                  <div>
-                    <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:700,fontSize:13,color:"#34d399",marginBottom:2}}>Portfolio Healthy — No Rebalance Needed</div>
-                    <div style={{fontSize:12,color:"#94a3b8"}}>All positions within risk parameters. No stop losses, no overweight positions, all quant scores above threshold.</div>
-                  </div>
-                </div>
-              );
-              return(
-                <div style={{marginBottom:12}}>
-                  <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:700,fontSize:11,color:"#f87171",textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:8}}>
-                    🚨 Rebalance Alerts ({alerts.length})
-                  </div>
-                  <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                    {alerts.map((a,i)=>(
-                      <div key={i} style={{background:"#0a1421",border:`1px solid ${a.color+"44"}`,borderRadius:10,padding:"11px 14px",display:"flex",gap:12,alignItems:"flex-start",borderLeft:`3px solid ${a.color}`}}>
-                        <div style={{fontSize:16,flexShrink:0}}>{a.icon}</div>
-                        <div>
-                          <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:3}}>
-                            <span style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:14,color:a.color}}>{a.ticker}</span>
-                            <span style={{fontSize:10,fontWeight:700,color:a.color,background:a.color+"22",padding:"1px 7px",borderRadius:4}}>{a.type}</span>
-                          </div>
-                          <div style={{fontSize:12,color:"#94a3b8",lineHeight:1.6}}>{a.msg}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* ── TODAY'S ACTIVITY ── */}
-            {(()=>{
-              const today = new Date().toISOString().slice(0,10);
-              const allActivity = autoPortfolio?.recent_trades || portLog || [];
-              const todayLog = allActivity.filter(t=>t.date&&t.date.slice(0,10)===today&&t.action!=="INIT");
-              if(todayLog.length===0) return null;
-              return(
-                <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:13,padding:"14px 16px",marginBottom:12}}>
-                  <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:700,fontSize:11,color:"#475569",textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:10}}>
-                    📋 Today's Trade Activity ({todayLog.length} trades)
-                  </div>
-                  <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                    {todayLog.map((t,i)=>{
-                      const isBuy  = t.action==="BUY";
-                      const color  = isBuy?"#34d399":"#f87171";
-                      const pnl    = t.pnl ? (t.pnl>=0?"+$":"−$")+Math.abs(t.pnl).toFixed(0) : null;
-                      return(
-                        <div key={i} style={{display:"flex",alignItems:"center",gap:10,background:"#090f1a",borderRadius:8,padding:"9px 12px",borderLeft:`3px solid ${color}`}}>
-                          <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:14,color,minWidth:48}}>
-                            {isBuy?"▲ BUY":"▼ SELL"}
-                          </div>
-                          <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:700,fontSize:14,color:"#e2e8f0",minWidth:52}}>{t.ticker}</div>
-                          <div style={{fontSize:12,color:"#94a3b8"}}>{t.shares} shares @ ${t.price}</div>
-                          <div style={{fontSize:12,color,fontWeight:600,marginLeft:"auto"}}>${t.value?.toLocaleString()}</div>
-                          {pnl&&<div style={{fontSize:12,color,fontWeight:700}}>{pnl}</div>}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* ── TRADING FREQUENCY MONITOR ── */}
-            {(()=>{
-              const COST_PCT=0.0008,INITIAL_CAP=100000;
-              // Use GitHub authoritative costs — fallback to portLog
-              const allT= autoPortfolio?.recent_trades
-                ? autoPortfolio.recent_trades.filter(t=>t.action==="BUY"||t.action==="SELL")
-                : (portLog||[]).filter(t=>t.action==="BUY"||t.action==="SELL");
-              const totCosts= autoPortfolio?.total_costs ?? allT.reduce((s,t)=>s+(t.price&&t.shares?t.price*t.shares:(t.value||0))*COST_PCT,0);
-              const mth=new Date().toISOString().slice(0,7);
-              const mthT=allT.filter(t=>(t.date||"").startsWith(mth)).length;
-              const annualisedCostDrag=(totCosts/INITIAL_CAP)*100*(12/Math.max(1,(new Date()-new Date("2026-03-13"))/(1000*60*60*24*30)));
-              return(
-                <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:13,padding:"14px 16px",marginBottom:12}}>
-                  <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:700,fontSize:11,color:"#475569",textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:10}}>
-                    🔄 Trading Frequency & Cost Tracker
-                  </div>
-                  <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:10}}>
-                    {[
-                      {l:"Total Trades",     v:allT.length,            c:"#e2e8f0"},
-                      {l:"This Month",       v:mthT,                   c:mthT>20?"#f87171":"#38bdf8"},
-                      {l:"Total Cost Drag",  v:"$"+totCosts.toFixed(0),c:"#f87171"},
-                      {l:"Cost % of Capital",v:(totCosts/INITIAL_CAP*100).toFixed(3)+"%",c:"#f87171"},
-                    ].map((s,i)=>(
-                      <div key={i} style={{textAlign:"center",background:"#090f1a",borderRadius:8,padding:"8px"}}>
-                        <div style={{fontSize:10,color:"#475569",marginBottom:2}}>{s.l}</div>
-                        <div style={{fontSize:15,fontWeight:700,color:s.c}}>{s.v}</div>
-                      </div>
-                    ))}
-                  </div>
-                  <div style={{fontSize:11,color:"#475569",lineHeight:1.7}}>
-                    <span style={{color:"#38bdf8",fontWeight:600}}>Cost model:</span> 0.08% per trade (0.03% spread + 0.05% slippage). Commission-free on Alpaca.
-                    {mthT>20&&<span style={{color:"#f87171",fontWeight:700}}> ⚠️ OVERTRADING: {mthT} trades this month — cost drag accelerating.</span>}
-                    {mthT<=20&&<span style={{color:"#34d399"}}> ✅ Frequency normal — {20-mthT} trades remaining before overtrading threshold.</span>}
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* ── RISK METRICS ── */}
-            <div style={{marginTop:16}}>
-              {lbl("⚡ Risk Metrics","#f97316")}
-              {(()=>{
-                // Self-contained risk metrics calculations
-                const rets = livePortfolio.map(p=>{
-                  const cur = (prices[p.ticker]||{price:p.entryPrice}).price;
-                  return (cur - p.entryPrice) / p.entryPrice;
-                });
-                const _rmBase = livePortfolio.reduce((s,q)=>s+q.shares*q.entryPrice,0)||1;
-                const weights  = livePortfolio.map(p=>p.shares*p.entryPrice / _rmBase);
-                const portVol  = Math.sqrt(weights.reduce((s,w,i)=>s+
-                  Math.pow(w*(DB[livePortfolio[i].ticker]?.vol||25),2),0))/100;
-                const daysHeld = Math.max(1,Math.round((Date.now()-new Date("2026-03-13"))/86400000));
-                const portRet  = totalRetPct/100; // correct: (portfolioValue-100000)/100000
-                const annRet   = portRet*(365/daysHeld);
-                const rfRate   = 0.043;
-                const sharpe   = portVol>0 ? ((annRet-rfRate)/portVol).toFixed(2) : "—";
-                // maxDD from actual snapshot history, not just current position returns
-                const _rmSnaps = (autoPortfolio?.daily_snapshots||[]).map(s=>s.value||100000);
-                const _rmAllV  = [100000,..._rmSnaps,portfolioValue];
-                let _rmPeak=100000,_rmDD=0;
-                _rmAllV.forEach(v=>{_rmPeak=Math.max(_rmPeak,v);_rmDD=Math.max(_rmDD,(_rmPeak-v)/_rmPeak);});
-                const maxDD    = -_rmDD*100;
-                const upCount  = rets.filter(r=>r>0).length;
-                const corrProxy= Math.abs((upCount/rets.length-0.5)*2);
-                const sharpeN  = parseFloat(sharpe)||0;
-                const sharpeColor = sharpeN>=1?"#34d399":sharpeN>=0?"#fbbf24":"#f87171";
-                return(
-                  <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:16}}>
-                    {[
-                      {
-                        label:"Sharpe Ratio",
-                        value:sharpe,
-                        sub:"Return per unit of risk",
-                        color:sharpeColor,
-                        note:sharpeN>=1?"Excellent — strong risk-adjusted return":sharpeN>=0.5?"Good — acceptable risk/reward":sharpeN>=0?"Poor — low return for risk taken":"Negative — losing vs risk-free rate",
-                        explain:"Sharpe = (Portfolio Return − Risk-Free Rate) ÷ Volatility. Above 1.0 = excellent. Above 0.5 = good. Below 0 = you'd be better in T-bills."
-                      },
-                      {
-                        label:"Max Drawdown",
-                        value:`${maxDD.toFixed(1)}%`,
-                        sub:"Worst single position loss",
-                        color:maxDD>-10?"#34d399":maxDD>-20?"#fbbf24":"#f87171",
-                        note:maxDD>-10?"Low drawdown — well managed":maxDD>-20?"Moderate — within normal range":"High — review your stop-loss strategy",
-                        explain:"The largest peak-to-trough loss in the portfolio. Less than -10% is healthy for a growth portfolio. Over -25% signals concentration risk."
-                      },
-                      {
-                        label:"Correlation",
-                        value:`${(corrProxy*100).toFixed(0)}%`,
-                        sub:"Positions moving together",
-                        color:corrProxy<0.5?"#34d399":corrProxy<0.75?"#fbbf24":"#f87171",
-                        note:corrProxy<0.5?"Good diversification — positions not all moving together":corrProxy<0.75?"Moderate — some correlation, normal for sector-focused portfolio":"High correlation — portfolio moves as one block, low diversification benefit",
-                        explain:"When all positions move up/down together, diversification isn't working. Aim for <60% correlation — means your stocks respond to different catalysts."
-                      },
-                    ].map((m,i)=>(
-                      <div key={i} style={{background:"#0a1421",border:`1px solid ${m.color+"33"}`,borderRadius:12,padding:"14px 16px"}}>
-                        <div style={{fontSize:11,color:"#475569",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:4}}>{m.label}</div>
-                        <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:26,color:m.color,marginBottom:2}}>{m.value}</div>
-                        <div style={{fontSize:11,color:"#94a3b8",marginBottom:8}}>{m.sub}</div>
-                        <div style={{fontSize:12,color:m.color,fontWeight:600,marginBottom:6}}>{m.note}</div>
-                        <div style={{fontSize:11,color:"#475569",lineHeight:1.6,borderTop:"1px solid #101c2e",paddingTop:6}}>{m.explain}</div>
-                      </div>
-                    ))}
-                  </div>
-                );
-              })()}
             </div>
-
-            {/* ── SECTOR DIVERSIFICATION ── */}
-            <div style={{marginTop:4,marginBottom:16}}>
-              {lbl("🌍 Sector Diversification","#818cf8")}
-              {(()=>{
-                const totalInvested = livePortfolio.reduce((s,p)=>s+p.shares*p.entryPrice,0);
-                const sectorMap = {};
-                livePortfolio.forEach(p=>{
-                  const sec = DB[p.ticker]?.sector || DB[p.ticker]?.s || "Other";
-                  const val = p.shares*p.entryPrice;
-                  sectorMap[sec] = (sectorMap[sec]||0) + val;
-                });
-                const sectors = Object.entries(sectorMap).sort((a,b)=>b[1]-a[1]);
-                const sectorColors = {
-                  "Technology":"#38bdf8","Semiconductors":"#818cf8","Financials":"#34d399",
-                  "Healthcare":"#f472b6","Consumer Disc":"#f97316","Consumer Staples":"#a3e635",
-                  "Energy":"#fbbf24","Communication":"#e879f9","ETF":"#94a3b8","Other":"#64748b"
-                };
-                // Diversification score: penalise concentration
-                const pcts = sectors.map(([,v])=>v/totalInvested);
-                const hhi  = pcts.reduce((s,p)=>s+p*p,0); // Herfindahl index
-                const divScore = Math.round((1-hhi)*100);
-                const topSector = sectors[0];
-                const topPct = (topSector[1]/totalInvested*100).toFixed(0);
-
-                // Recommended additions for diversification
-                const recommendations = [
-                  {ticker:"GLD",  sector:"Commodities",      reason:"Backtest: Gold +36% in 2020 Crisis, +0% in 2022 Risk Off. Best crisis hedge in universe.", color:"#fbbf24"},
-                  {ticker:"XOM",  sector:"Energy",           reason:"Backtest: Energy +70% in 2022 Risk Off when SPY -18%. Oil at $97 = buy signal now.",      color:"#f97316"},
-                  {ticker:"KO",   sector:"Consumer Staples", reason:"Backtest: Staples +26% in 2020 Crisis. Coca-Cola survives every recession, 3.1% div.",    color:"#a3e635"},
-                  {ticker:"JNJ",  sector:"Healthcare",       reason:"Backtest: Healthcare +30% in 2018 Caution. Defensive growth, low beta 0.54.",              color:"#f472b6"},
-                  {ticker:"CVX",  sector:"Energy",           reason:"Backtest: Chevron +53% in 2022. Second energy position doubles oil hedge.",                color:"#38bdf8"},
-                ];
-
-                return(
-                  <>
-                    {/* Diversification score */}
-                    <div style={{display:"flex",gap:12,marginBottom:12,alignItems:"stretch"}}>
-                      <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:12,padding:"14px 18px",minWidth:160,textAlign:"center"}}>
-                        <div style={{fontSize:11,color:"#475569",fontWeight:700,textTransform:"uppercase",marginBottom:4}}>Diversification Score</div>
-                        <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:32,color:divScore>60?"#34d399":divScore>40?"#fbbf24":"#f87171"}}>{divScore}</div>
-                        <div style={{fontSize:11,color:"#94a3b8",marginTop:2}}>/100</div>
-                        <div style={{fontSize:11,color:divScore>60?"#34d399":divScore>40?"#fbbf24":"#f87171",marginTop:6,fontWeight:600}}>
-                          {divScore>60?"Well diversified":divScore>40?"Moderate concentration":"High concentration risk"}
-                        </div>
-                      </div>
-                      <div style={{flex:1,background:"#0a1421",border:"1px solid #101c2e",borderRadius:12,padding:"14px 18px"}}>
-                        <div style={{fontSize:11,color:"#475569",fontWeight:700,textTransform:"uppercase",marginBottom:10}}>Sector Breakdown</div>
-                        {sectors.map(([sec,val],i)=>{
-                          const pct = val/totalInvested*100;
-                          const col = sectorColors[sec]||"#64748b";
-                          return(
-                            <div key={i} style={{marginBottom:7}}>
-                              <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
-                                <span style={{fontSize:12,color:"#cbd5e1",fontWeight:600}}>{sec}</span>
-                                <span style={{fontSize:12,color:col,fontWeight:700}}>{pct.toFixed(1)}%</span>
-                              </div>
-                              <div style={{height:5,background:"#0d1826",borderRadius:3,overflow:"hidden"}}>
-                                <div style={{width:`${pct}%`,height:"100%",background:col,borderRadius:3}}/>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Recommendations */}
-                    {parseFloat(topPct)>40&&(
-                      <div style={{background:"rgba(251,191,36,0.06)",border:"1px solid rgba(251,191,36,0.2)",borderRadius:12,padding:"14px 16px",marginBottom:12}}>
-                        <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:700,fontSize:13,color:"#fbbf24",marginBottom:8}}>
-                          ⚠ {topSector[0]} is {topPct}% of portfolio — consider diversifying
-                        </div>
-                        <div style={{fontSize:12,color:"#94a3b8",lineHeight:1.6}}>
-                          A portfolio heavy in one sector amplifies both gains AND losses. The 2022 tech crash lost 40-60% for tech-only portfolios while a diversified portfolio lost only 15-20%.
-                        </div>
-                      </div>
-                    )}
-
-                    <div style={{fontSize:11,color:"#475569",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:8}}>Recommended Additions for Balance</div>
-                    <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                      {recommendations.map((r,i)=>(
-                        <div key={i} style={{background:"#0a1421",border:`1px solid ${r.color+"22"}`,borderRadius:10,padding:"11px 14px",display:"flex",gap:12,alignItems:"center"}}>
-                          <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:15,color:r.color,minWidth:50}}>{r.ticker}</div>
-                          <div style={{fontSize:11,color:"#475569",minWidth:120,fontWeight:600}}>{r.sector}</div>
-                          <div style={{fontSize:12,color:"#94a3b8",flex:1,lineHeight:1.5}}>{r.reason}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                );
-              })()}
-            </div>
-
-            {/* ── BACKTEST VALIDATION ── */}
-            <div style={{marginTop:4,marginBottom:16}}>
-              {lbl("🧪 Quant Score Backtest — Did The Signal Work?","#34d399")}
-              {(()=>{
-                // Show historical quant score accuracy using known annual returns
-                // Compare: stocks in top quant quintile vs bottom quintile
-                const backtestData = [
-                  {year:"2019",topQ:[88.9,63.5,48.2,38.1,29.4],botQ:[-5.1,8.3,12.1,15.2,18.4],spy:31.5},
-                  {year:"2020",topQ:[80.7,76.3,48.2,44.1,38.9],botQ:[-8.2,3.1,5.4,9.2,12.3],spy:18.4},
-                  {year:"2021",topQ:[33.8,48.5,52.1,28.4,22.3],botQ:[-5.4,2.1,8.3,11.2,14.1],spy:28.7},
-                  {year:"2022",topQ:[-26.4,-12.1,-8.3,-4.2,-2.1],botQ:[-44.1,-38.2,-31.4,-22.3,-18.8],spy:-18.1},
-                  {year:"2023",topQ:[48.2,38.1,29.4,24.2,18.3],botQ:[4.2,8.1,11.3,14.2,18.1],spy:26.3},
-                  {year:"2024",topQ:[30.1,28.4,24.2,22.1,18.3],botQ:[-2.1,4.3,8.2,11.4,14.2],spy:25.0},
-                ];
-                const avgTopQ = backtestData.reduce((s,d)=>s+d.topQ[0],0)/backtestData.length;
-                const avgBotQ = backtestData.reduce((s,d)=>s+d.botQ[0],0)/backtestData.length;
-                const avgSpy  = backtestData.reduce((s,d)=>s+d.spy, 0)/backtestData.length;
-                const hitRate = backtestData.filter(d=>d.topQ[0]>d.botQ[0]).length;
-
-                return(
-                  <>
-                    {/* Summary stats */}
-                    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:14}}>
-                      {[
-                        {label:"Top Quant Avg Return",value:`+${avgTopQ.toFixed(1)}%`,color:"#34d399"},
-                        {label:"Bottom Quant Avg",    value:`${avgBotQ.toFixed(1)}%`, color:"#f87171"},
-                        {label:"vs SPY Average",      value:`+${avgSpy.toFixed(1)}%`, color:"#38bdf8"},
-                        {label:"Signal Hit Rate",     value:`${hitRate}/6 yrs`,        color:"#fbbf24"},
-                      ].map((m,i)=>(
-                        <div key={i} style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:10,padding:"12px 14px",textAlign:"center"}}>
-                          <div style={{fontSize:10,color:"#475569",fontWeight:700,textTransform:"uppercase",marginBottom:4}}>{m.label}</div>
-                          <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:20,color:m.color}}>{m.value}</div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Year by year */}
-                    <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:12,padding:"14px 16px",marginBottom:12}}>
-                      <div style={{fontSize:11,color:"#475569",fontWeight:700,textTransform:"uppercase",marginBottom:10}}>Year-by-Year: Top Quant Pick vs SPY</div>
-                      <div style={{overflowX:"auto"}}>
-                        <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
-                          <thead>
-                            <tr>
-                              {["Year","#1 Quant Pick","Return","SPY","Alpha","Signal Correct?"].map((h,i)=>(
-                                <th key={i} style={{textAlign:i===0?"left":"right",padding:"6px 10px",fontSize:10,color:"#475569",fontWeight:700,textTransform:"uppercase",borderBottom:"1px solid #101c2e"}}>{h}</th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {[
-                              {year:"2019",pick:"AAPL",ret:88.9, spy:31.5},
-                              {year:"2020",pick:"NVDA",ret:122.0,spy:18.4},
-                              {year:"2021",pick:"MSFT",ret:52.1, spy:28.7},
-                              {year:"2022",pick:"XOM", ret:87.3, spy:-18.1},
-                              {year:"2023",pick:"NVDA",ret:239.0,spy:26.3},
-                              {year:"2024",pick:"META",ret:73.0, spy:25.0},
-                            ].map((row,i)=>{
-                              const alpha = row.ret - row.spy;
-                              const correct = row.ret > row.spy;
-                              return(
-                                <tr key={i} style={{borderBottom:"1px solid #0d1826"}}>
-                                  <td style={{padding:"9px 10px",color:"#94a3b8",fontWeight:600}}>{row.year}</td>
-                                  <td style={{textAlign:"right",padding:"9px 10px",color:"#38bdf8",fontWeight:700}}>{row.pick}</td>
-                                  <td style={{textAlign:"right",padding:"9px 10px",color:row.ret>0?"#34d399":"#f87171",fontWeight:700}}>{row.ret>0?"+":""}{row.ret}%</td>
-                                  <td style={{textAlign:"right",padding:"9px 10px",color:"#94a3b8"}}>{row.spy>0?"+":""}{row.spy}%</td>
-                                  <td style={{textAlign:"right",padding:"9px 10px",color:alpha>0?"#34d399":"#f87171",fontWeight:700}}>{alpha>0?"+":""}{alpha.toFixed(1)}%</td>
-                                  <td style={{textAlign:"right",padding:"9px 10px",fontSize:14}}>{correct?"✅":"❌"}</td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                      <div style={{fontSize:11,color:"#334155",marginTop:10,lineHeight:1.6}}>
-                        ⚠ Survivorship bias: these picks are chosen with hindsight. Past performance does not guarantee future results. The quant signal is a starting point for research, not a buy guarantee.
-                      </div>
-                    </div>
-                  </>
-                );
-              })()}
-            </div>
-
-            </div>
-
             );
           })()}
-
 
           {tab==="macro"&&(
             <div style={{animation:"fadeUp 0.3s ease"}}>
