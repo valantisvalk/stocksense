@@ -8,6 +8,7 @@
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
@@ -21,6 +22,13 @@
 </head>
 <body style="margin:0;padding:0;background:#05080f;">
 <div id="root"></div>
+<script>
+window._chartQueue = window._chartQueue || [];
+window._runChartQueue = function() {
+  var q = window._chartQueue.splice(0);
+  q.forEach(function(fn){ try{ fn(); }catch(e){} });
+};
+</script>
 <script type="text/babel">
 const { useState,useCallback, useEffect, useMemo } = React;
 
@@ -992,6 +1000,66 @@ function LiveCandleChart({ticker, timeframe, overlays, chartType}) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAIN APP
 // ═══════════════════════════════════════════════════════════════════════════════
+function ChartRenderer({id1,id2,labels,portData,spyData,portEntry,posLabels,posVals,posColors,posPcts}){
+  React.useEffect(()=>{
+    if(typeof Chart==="undefined") return;
+    const gridCol="rgba(255,255,255,0.05)";
+    const textCol="#64748b";
+
+    const c1=document.getElementById(id1);
+    const c2=document.getElementById(id2);
+    if(!c1||!c2) return;
+
+    // Destroy existing charts if any
+    const ex1=Chart.getChart(c1); if(ex1) ex1.destroy();
+    const ex2=Chart.getChart(c2); if(ex2) ex2.destroy();
+
+    const minY=Math.floor(Math.min(...portData,...spyData)*0.995/1000)*1000;
+    const maxY=Math.ceil(Math.max(...portData,...spyData)*1.005/1000)*1000;
+
+    new Chart(c1,{
+      type:"line",
+      data:{
+        labels,
+        datasets:[
+          {label:"StockSense",data:portData,borderColor:"#34d399",borderWidth:2,pointRadius:4,pointBackgroundColor:"#34d399",tension:0.3,fill:false},
+          {label:"SPY",data:spyData,borderColor:"#38bdf8",borderWidth:1.5,pointRadius:3,pointBackgroundColor:"#38bdf8",tension:0.3,fill:false,borderDash:[4,3]},
+          {label:"Baseline",data:labels.map(()=>portEntry),borderColor:"#475569",borderWidth:1,pointRadius:0,fill:false,borderDash:[2,4]}
+        ]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.dataset.label+": $"+Math.round(ctx.raw).toLocaleString()}}},
+        scales:{
+          x:{grid:{color:gridCol},ticks:{color:textCol,font:{size:10}}},
+          y:{grid:{color:gridCol},ticks:{color:textCol,font:{size:10},callback:v=>"$"+(v/1000).toFixed(0)+"k"},min:minY,max:maxY}
+        }
+      }
+    });
+
+    new Chart(c2,{
+      type:"bar",
+      data:{
+        labels:posLabels,
+        datasets:[{label:"Value",data:posVals,backgroundColor:posColors,borderRadius:3,barThickness:20}]
+      },
+      options:{
+        indexAxis:"y",
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{
+          const pct=posPcts[ctx.dataIndex];
+          return "$"+ctx.raw.toLocaleString()+" ("+(pct>=0?"+":"")+pct+"%)";
+        }}}},
+        scales:{
+          x:{grid:{color:gridCol},ticks:{color:textCol,font:{size:10},callback:v=>"$"+(v/1000).toFixed(0)+"k"}},
+          y:{grid:{display:false},ticks:{color:"#94a3b8",font:{size:11,weight:"600"}}}
+        }
+      }
+    });
+  },[id1,id2,JSON.stringify(portData),JSON.stringify(posVals)]);
+  return null;
+}
+
 function StockSense(){
   const[ticker,setTicker]=useState("AAPL");
   const[tab,setTab]=useState("portfolio");
@@ -2531,118 +2599,116 @@ function StockSense(){
                 const chartId1 = "perfChart_"+Math.random().toString(36).slice(2,7);
                 const chartId2 = "posChart_"+Math.random().toString(36).slice(2,7);
 
+                // Computed vars needed for stats + KPIs (same as outer scope)
+                const spyRetPctNow = ((spyNow - SPY_ENTRY) / SPY_ENTRY)*100;
+                const alphaNow     = totalRetPct - spyRetPctNow;
+                const netRetPct    = ((portfolioValue - 100000 - totalCosts)/100000)*100;
+
                 return(
                   <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:14,padding:"18px 20px",marginBottom:14}}>
-                    {/* Header */}
-                    <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:15,color:"#e2e8f0",marginBottom:4}}>
-                      📈 Performance Over Time (vs $100k Baseline)
-                    </div>
-                    <div style={{fontSize:11,color:"#475569",marginBottom:12}}>
-                      {chartPoints.length} data points · {autoPortfolio?"Live from GitHub":"Waiting for trader run"} · Updates after every trade
+
+                    {/* ── HEADER ── */}
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:12,marginBottom:14}}>
+                      <div>
+                        <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:16,color:"#e2e8f0"}}>
+                          📈 Portfolio Performance — Since Mar 13 2026
+                        </div>
+                        <div style={{fontSize:11,color:"#475569",marginTop:3}}>
+                          {chartPoints.length} data points · {autoPortfolio?"Live from GitHub":"Waiting for first trader run"} · Updates after every trade
+                        </div>
+                      </div>
+                      <div style={{display:"flex",gap:12,alignItems:"center"}}>
+                        {[{c:"#34d399",l:"StockSense"},{c:"#38bdf8",l:"SPY",op:0.6}].map((x,i)=>(
+                          <div key={i} style={{display:"flex",alignItems:"center",gap:5}}>
+                            <div style={{width:20,height:3,background:x.c,borderRadius:2,opacity:x.op||1}}/>
+                            <span style={{fontSize:11,color:"#94a3b8"}}>{x.l}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
 
-                    {/* Legend */}
-                    <div style={{display:"flex",gap:16,marginBottom:8}}>
-                      {[{c:"#34d399",l:"StockSense"},{c:"#38bdf8",l:"SPY"},{c:"#475569",l:"$100k baseline",dash:true}].map((x,i)=>(
-                        <div key={i} style={{display:"flex",alignItems:"center",gap:5,fontSize:11,color:"#94a3b8"}}>
-                          <div style={{width:18,height:3,background:x.dash?"transparent":x.c,border:x.dash?`1px dashed ${x.c}`:"none",borderRadius:2}}/>
-                          {x.l}
+                    {/* ── STATS ROW ── */}
+                    <div style={{display:"flex",gap:10,marginBottom:14,flexWrap:"wrap"}}>
+                      {[
+                        {l:"Portfolio Value", v:"$"+portfolioValue.toLocaleString("en-US",{maximumFractionDigits:0}), c:"#e2e8f0", sub:"incl. $"+Math.round(liveCash).toLocaleString()+" cash"},
+                        {l:"Gross Return",    v:(totalRetPct>=0?"+":"")+totalRetPct.toFixed(2)+"%",   c:totalRetPct>=0?"#34d399":"#f87171"},
+                        {l:"Net Return",      v:(netRetPct>=0?"+":"")+netRetPct.toFixed(2)+"%",       c:netRetPct>=0?"#34d399":"#f87171", sub:"after costs"},
+                        {l:"Cost Drag",       v:"-$"+totalCosts.toFixed(0),                           c:"#f87171", sub:(totalCosts/100000*100).toFixed(3)+"%"},
+                        {l:"Alpha vs SPY",    v:(alphaNow>=0?"+":"")+alphaNow.toFixed(2)+"%",         c:alphaNow>=0?"#34d399":"#f87171"},
+                        {l:"SPY since Mar 13",v:(spyRetPctNow>=0?"+":"")+spyRetPctNow.toFixed(2)+"%",c:"#38bdf8"},
+                      ].map((s,i)=>(
+                        <div key={i} style={{textAlign:"center",background:"#090f1a",borderRadius:10,padding:"10px 14px",flex:1,minWidth:100}}>
+                          <div style={{fontSize:10,color:"#475569",marginBottom:2}}>{s.l}</div>
+                          <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:15,color:s.c}}>{s.v}</div>
+                          {s.sub&&<div style={{fontSize:9,color:s.c,opacity:0.7,marginTop:1}}>{s.sub}</div>}
                         </div>
                       ))}
                     </div>
 
-                    {/* Performance chart */}
+                    {/* ── ADVANCED KPIs ROW ── */}
+                    {(()=>{
+                      const kpis = [
+                        {l:"Total Return",    v:(totalRetPct>=0?"+":"")+totalRetPct.toFixed(2)+"%",        c:totalRetPct>=0?"#34d399":"#f87171",      sub:"$"+(totalPnL>=0?"+":"")+totalPnL.toFixed(0)},
+                        {l:"Net Return",      v:(netRetPct>=0?"+":"")+netRetPct.toFixed(2)+"%",            c:netRetPct>=0?"#34d399":"#f87171",        sub:"after costs"},
+                        {l:"Alpha vs SPY",    v:(alphaNow>=0?"+":"")+alphaNow.toFixed(2)+"%",              c:alphaNow>=0?"#34d399":"#f87171",         sub:"SPY "+(spyRetPctNow>=0?"+":"")+spyRetPctNow.toFixed(2)+"%"},
+                        {l:"Sharpe Ratio",    v:_sharpe!=null?_sharpe.toFixed(2):"—",                      c:!_sharpe?"#475569":_sharpe>=1?"#34d399":_sharpe>=0.5?"#fbbf24":"#f87171", sub:!_sharpe?"—":_sharpe>=1?"Excellent":_sharpe>=0.5?"Good":"Poor"},
+                        {l:"Max Drawdown",    v:"-"+(_maxDD*100).toFixed(1)+"%",                           c:_maxDD>0.15?"#f87171":_maxDD>0.08?"#fbbf24":"#34d399", sub:_maxDD>0.15?"High":_maxDD>0.08?"Moderate":"Low"},
+                        {l:"Win Rate",        v:_winRate.toFixed(1)+"%",                                   c:_winRate>=55?"#34d399":_winRate>=45?"#fbbf24":"#f87171", sub:_winRate>=55?"Above target":_winRate>=45?"At target":"Below"},
+                        {l:"Volatility",      v:_annVol.toFixed(1)+"%",                                   c:_annVol>30?"#f87171":_annVol>20?"#fbbf24":"#34d399",    sub:_annVol>30?"High":_annVol>20?"Medium":"Low"},
+                        {l:"Portfolio Beta",  v:_beta.toFixed(2),                                         c:_beta>1.3?"#f87171":_beta<0.8?"#38bdf8":"#fbbf24",      sub:_beta>1.3?"Aggressive":_beta<0.8?"Defensive":"Balanced"},
+                        {l:"Correlation",     v:_corr+"%",                                                 c:_corr>80?"#f87171":_corr>60?"#fbbf24":"#34d399",        sub:_corr>80?"High":_corr>60?"Medium":"Low"},
+                        {l:"Diversification", v:_divScore+"/100",                                          c:_divScore>=75?"#34d399":_divScore>=50?"#fbbf24":"#f87171",sub:_sectors.length+" sectors"},
+                        {l:"Price Return",    v:(priceRetPct>=0?"+":"")+priceRetPct.toFixed(2)+"%",       c:priceRetPct>=0?"#34d399":"#f87171",      sub:"excl. dividends"},
+                        {l:"Dividend Income", v:"$"+_divRec.toFixed(2),                                   c:"#38bdf8",                               sub:"+"+(_divRec/100000*100).toFixed(3)+"%"},
+                        {l:"Best Position",   v:_best.t,                                                  c:"#34d399",                               sub:(_best.pct>=0?"+":"")+_best.pct.toFixed(1)+"%"},
+                        {l:"Worst Position",  v:_worst.t,                                                 c:"#f87171",                               sub:(_worst.pct>=0?"+":"")+_worst.pct.toFixed(1)+"%"},
+                      ];
+                      return(
+                        <div style={{marginBottom:14}}>
+                          <div style={{fontSize:10,color:"#475569",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:8,paddingTop:10,borderTop:"1px solid #0d1f33"}}>
+                            📊 Advanced Portfolio KPIs
+                          </div>
+                          {[kpis.slice(0,7),kpis.slice(7,14)].map((row,ri)=>(
+                            <div key={ri} style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:6,marginBottom:ri===0?6:0}}>
+                              {row.map((k,i)=>(
+                                <div key={i} style={{background:"#090f1a",borderRadius:9,padding:"10px 12px",borderLeft:`2px solid ${k.c}`,textAlign:"center"}}>
+                                  <div style={{fontSize:9,color:"#475569",marginBottom:3}}>{k.l}</div>
+                                  <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:13,color:k.c,lineHeight:1}}>{k.v}</div>
+                                  {k.sub&&<div style={{fontSize:9,color:k.c,opacity:0.75,marginTop:3}}>{k.sub}</div>}
+                                </div>
+                              ))}
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
+
+                    {/* ── PERFORMANCE CHART (Chart.js line) ── */}
                     <div style={{position:"relative",width:"100%",height:200,marginBottom:20}}>
                       <canvas id={chartId1}></canvas>
                     </div>
 
-                    {/* Positions header */}
-                    <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:15,color:"#e2e8f0",marginBottom:4}}>
+                    {/* ── POSITIONS CHART HEADER ── */}
+                    <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:14,color:"#e2e8f0",marginBottom:4}}>
                       Current Positions ({livePortfolio.length} Holdings)
                     </div>
                     <div style={{fontSize:11,color:"#475569",marginBottom:8}}>
-                      Bar = position value · Color = P&L vs avg cost
+                      Bar = position value · Green = gain · Red = loss vs avg cost
                     </div>
 
-                    {/* Positions chart */}
+                    {/* ── POSITIONS CHART (Chart.js horizontal bar) ── */}
                     <div style={{position:"relative",width:"100%",height:Math.max(160,livePortfolio.length*34+40)}}>
                       <canvas id={chartId2}></canvas>
                     </div>
 
                     {/* Chart.js init */}
-                    <script dangerouslySetInnerHTML={{__html:`
-(function(){
-  function tryInit(){
-    if(typeof Chart==="undefined"){ setTimeout(tryInit,200); return; }
-    var c1=document.getElementById("${chartId1}");
-    var c2=document.getElementById("${chartId2}");
-    if(!c1||!c2){ setTimeout(tryInit,100); return; }
-    if(c1._chartjs||c2._chartjs) return;
+                    <ChartRenderer
+                      id1={chartId1} id2={chartId2}
+                      labels={labels} portData={portData} spyData={spyData}
+                      portEntry={PORT_ENTRY}
+                      posLabels={posLabels} posVals={posVals} posColors={posColors} posPcts={posPcts}
+                    />
 
-    var gridCol="rgba(255,255,255,0.05)";
-    var textCol="#64748b";
-
-    // Performance line chart
-    new Chart(c1,{
-      type:"line",
-      data:{
-        labels:${JSON.stringify(labels)},
-        datasets:[
-          {label:"StockSense",data:${JSON.stringify(portData)},borderColor:"#34d399",borderWidth:2,pointRadius:4,pointBackgroundColor:"#34d399",tension:0.3,fill:false},
-          {label:"SPY",data:${JSON.stringify(spyData)},borderColor:"#38bdf8",borderWidth:1.5,pointRadius:3,pointBackgroundColor:"#38bdf8",tension:0.3,fill:false,borderDash:[4,3]},
-          {label:"Baseline",data:${JSON.stringify(chartPoints.map(()=>PORT_ENTRY))},borderColor:"#475569",borderWidth:1,pointRadius:0,fill:false,borderDash:[2,4]}
-        ]
-      },
-      options:{
-        responsive:true,maintainAspectRatio:false,
-        plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return ctx.dataset.label+": $"+Math.round(ctx.raw).toLocaleString();}}}},
-        scales:{
-          x:{grid:{color:gridCol},ticks:{color:textCol,font:{size:10}}},
-          y:{grid:{color:gridCol},ticks:{color:textCol,font:{size:10},callback:function(v){return"$"+(v/1000).toFixed(0)+"k";}},
-             min:${Math.floor(Math.min(...portData,...spyData)*0.995/1000)*1000},
-             max:${Math.ceil(Math.max(...portData,...spyData)*1.005/1000)*1000}}
-        }
-      }
-    });
-
-    // Positions horizontal bar chart
-    new Chart(c2,{
-      type:"bar",
-      data:{
-        labels:${JSON.stringify(posLabels)},
-        datasets:[{
-          label:"Value",
-          data:${JSON.stringify(posVals)},
-          backgroundColor:${JSON.stringify(posColors)},
-          borderRadius:3,
-          barThickness:20
-        }]
-      },
-      options:{
-        indexAxis:"y",
-        responsive:true,maintainAspectRatio:false,
-        plugins:{legend:{display:false},tooltip:{callbacks:{
-          label:function(ctx){
-            var pcts=${JSON.stringify(posPcts)};
-            var pct=pcts[ctx.dataIndex];
-            var sign=pct>=0?"+":"";
-            return "$"+ctx.raw.toLocaleString()+" ("+sign+pct+"%)";
-          }
-        }}},
-        scales:{
-          x:{grid:{color:gridCol},ticks:{color:textCol,font:{size:10},callback:function(v){return"$"+(v/1000).toFixed(0)+"k";}}},
-          y:{grid:{display:false},ticks:{color:"#94a3b8",font:{size:11,weight:"600"}}}
-        }
-      }
-    });
-  }
-  if(document.readyState==="complete"||document.readyState==="interactive") tryInit();
-  else document.addEventListener("DOMContentLoaded",tryInit);
-  setTimeout(tryInit,500);
-})();
-    `}}/>
-
-                    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"/>
 
                     {/* Summary row */}
                     <div style={{display:"flex",gap:8,marginTop:14,flexWrap:"wrap"}}>
