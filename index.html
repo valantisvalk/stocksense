@@ -993,6 +993,362 @@ function LiveCandleChart({ticker, timeframe, overlays, chartType}) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAIN APP
 // ═══════════════════════════════════════════════════════════════════════════════
+function VixChart({liveVix, crisisSelected, setCrisisSelected}) {
+  const [vixData, setVixData] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError]     = React.useState(null);
+
+  React.useEffect(()=>{
+    // Fetch daily VIX from FRED (free, no API key, 1990–present)
+    fetch("https://fred.stlouisfed.org/graph/fredgraph.csv?id=VIXCLS")
+      .then(r=>r.text())
+      .then(csv=>{
+        const rows = csv.trim().split("\n").slice(1); // skip header
+        const parsed = rows
+          .map(row=>{ const [d,v]=row.split(","); return {date:d, val:parseFloat(v)}; })
+          .filter(r=>!isNaN(r.val) && r.date>="1990-01-01");
+        setVixData(parsed);
+        setLoading(false);
+      })
+      .catch(e=>{ setError("Could not load VIX data from FRED"); setLoading(false); });
+  },[]);
+
+  const crisisZones = [
+    {id:"gulf_war",   name:"Gulf War",       start:"1990-08-02", end:"1991-03-01", color:"#f97316"},
+    {id:"dotcom",     name:"Dot-Com",        start:"2000-03-01", end:"2002-10-09", color:"#f87171"},
+    {id:"9_11",       name:"9/11",           start:"2001-09-11", end:"2001-10-11", color:"#818cf8"},
+    {id:"gfc",        name:"GFC",            start:"2007-10-01", end:"2009-03-09", color:"#dc2626"},
+    {id:"covid",      name:"COVID",          start:"2020-02-19", end:"2020-04-07", color:"#dc2626"},
+    {id:"ukraine",    name:"Ukraine",        start:"2022-01-01", end:"2022-12-31", color:"#f97316"},
+    {id:"liberation", name:"Liberation Day", start:"2025-04-01", end:"2025-06-01", color:"#fbbf24"},
+  ];
+
+  const thresholds = [
+    {v:80, label:"80 — GFC peak", c:"#dc2626"},
+    {v:66, label:"66 — COVID peak", c:"#f87171"},
+    {v:35, label:"35 — CRISIS", c:"#fbbf24"},
+    {v:25, label:"25 — RISK_OFF", c:"#38bdf8"},
+  ];
+
+  const W = 900, H = 280, PAD_L = 42, PAD_R = 12, PAD_T = 16, PAD_B = 32;
+  const plotW = W - PAD_L - PAD_R;
+  const plotH = H - PAD_T - PAD_B;
+  const maxVix = 90;
+
+  const toX = i => PAD_L + (i / Math.max(1, vixData.length - 1)) * plotW;
+  const toY = v => PAD_T + plotH - (Math.min(v, maxVix) / maxVix) * plotH;
+
+  // Build path — subsample for performance (every 3rd point = ~2500 pts)
+  const sample = vixData.filter((_,i)=>i%3===0);
+  const linePath = sample.map((d,i)=>`${i===0?"M":"L"}${(PAD_L + (vixData.indexOf(d)/Math.max(1,vixData.length-1))*plotW).toFixed(1)},${toY(d.val).toFixed(1)}`).join(" ");
+
+  // Date to X position
+  const dateToX = dateStr => {
+    if(!vixData.length) return PAD_L;
+    const idx = vixData.findIndex(d=>d.date>=dateStr);
+    const i = idx<0 ? vixData.length-1 : idx;
+    return PAD_L + (i/(vixData.length-1))*plotW;
+  };
+
+  // X axis labels — one per 5 years
+  const xLabels = [];
+  for(let y=1990; y<=2026; y+=5) {
+    const dateStr = `${y}-01-01`;
+    if(vixData.length) {
+      const x = dateToX(dateStr);
+      xLabels.push({x, label:String(y)});
+    }
+  }
+
+  return(
+    <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:14,padding:"20px 22px",marginBottom:14}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8,marginBottom:12}}>
+        <div>
+          <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:15,color:"#e2e8f0"}}>
+            📈 VIX Daily — Every Crisis Since 1990
+          </div>
+          <div style={{fontSize:11,color:"#475569",marginTop:3}}>
+            {loading?"Loading daily VIX from FRED…":error?error:`${vixData.length.toLocaleString()} daily observations · Source: CBOE via FRED · Click any shaded zone`}
+          </div>
+        </div>
+        {liveVix&&(
+          <div style={{background:"rgba(251,191,36,0.1)",border:"1px solid rgba(251,191,36,0.3)",borderRadius:8,padding:"6px 14px",textAlign:"center",flexShrink:0}}>
+            <div style={{fontSize:10,color:"#475569",marginBottom:2}}>LIVE VIX</div>
+            <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:20,color:liveVix>35?"#f87171":liveVix>25?"#fbbf24":"#34d399"}}>{liveVix.toFixed(1)}</div>
+            <div style={{fontSize:9,color:"#475569",marginTop:1}}>{liveVix>35?"🚨 CRISIS":liveVix>25?"⚠️ RISK_OFF":liveVix>18?"🟡 CAUTION":"🟢 RISK_ON"}</div>
+          </div>
+        )}
+      </div>
+
+      {loading&&<div style={{height:280,display:"flex",alignItems:"center",justifyContent:"center",color:"#334155",fontSize:13}}>Loading 35 years of daily VIX data from FRED…</div>}
+      {error&&<div style={{height:280,display:"flex",alignItems:"center",justifyContent:"center",color:"#f87171",fontSize:13}}>{error}</div>}
+
+      {!loading&&!error&&vixData.length>0&&(
+        <div style={{overflowX:"auto"}}>
+          <svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%",minWidth:600,height:"auto",display:"block"}}>
+
+            {/* Crisis shaded zones */}
+            {crisisZones.map((z,i)=>{
+              const x1 = dateToX(z.start);
+              const x2 = dateToX(z.end);
+              const isSelected = crisisSelected===z.id;
+              return(
+                <g key={i} style={{cursor:"pointer"}} onClick={()=>setCrisisSelected(z.id)}>
+                  <rect x={x1} y={PAD_T} width={Math.max(1,x2-x1)} height={plotH}
+                    fill={z.color} opacity={isSelected?0.2:0.08}
+                    style={{transition:"opacity 0.2s"}}/>
+                  {/* Zone label at top */}
+                  <text x={(x1+x2)/2} y={PAD_T+10} fontSize={7.5} fill={z.color}
+                    textAnchor="middle" opacity={isSelected?1:0.7} fontWeight={isSelected?"700":"400"}>
+                    {z.name}
+                  </text>
+                </g>
+              );
+            })}
+
+            {/* Threshold lines */}
+            {thresholds.map((t,i)=>(
+              <g key={i}>
+                <line x1={PAD_L} y1={toY(t.v)} x2={W-PAD_R} y2={toY(t.v)}
+                  stroke={t.c} strokeWidth={0.7} strokeDasharray="4,3" strokeOpacity={0.5}/>
+                <text x={PAD_L-4} y={toY(t.v)+3} fontSize={8} fill={t.c} textAnchor="end" opacity={0.8}>{t.v}</text>
+              </g>
+            ))}
+
+            {/* VIX line */}
+            <path d={linePath} fill="none" stroke="#818cf8" strokeWidth={1.2} opacity={0.9}/>
+
+            {/* Live VIX horizontal line */}
+            {liveVix&&(
+              <g>
+                <line x1={PAD_L} y1={toY(liveVix)} x2={W-PAD_R} y2={toY(liveVix)}
+                  stroke="#fbbf24" strokeWidth={1.5} strokeDasharray="3,2" opacity={0.9}/>
+                <text x={W-PAD_R+2} y={toY(liveVix)+3} fontSize={8} fill="#fbbf24">NOW {liveVix.toFixed(0)}</text>
+              </g>
+            )}
+
+            {/* X axis labels */}
+            {xLabels.map((l,i)=>(
+              <g key={i}>
+                <line x1={l.x} y1={PAD_T+plotH} x2={l.x} y2={PAD_T+plotH+4} stroke="#334155" strokeWidth={0.5}/>
+                <text x={l.x} y={H-6} fontSize={9} fill="#475569" textAnchor="middle">{l.label}</text>
+              </g>
+            ))}
+
+            {/* Y axis */}
+            <line x1={PAD_L} y1={PAD_T} x2={PAD_L} y2={PAD_T+plotH} stroke="#1e3a5f" strokeWidth={0.5}/>
+          </svg>
+        </div>
+      )}
+
+      {/* Legend */}
+      {!loading&&!error&&(
+        <div style={{display:"flex",flexWrap:"wrap",gap:10,marginTop:8,fontSize:11,color:"#475569",alignItems:"center"}}>
+          <div style={{display:"flex",alignItems:"center",gap:4}}>
+            <div style={{width:16,height:2,background:"#818cf8",borderRadius:1}}/>
+            <span>Daily VIX</span>
+          </div>
+          {thresholds.map((t,i)=>(
+            <div key={i} style={{display:"flex",alignItems:"center",gap:4}}>
+              <div style={{width:16,height:1.5,background:t.c,opacity:0.7,borderTop:`1px dashed ${t.c}`}}/>
+              <span>{t.label}</span>
+            </div>
+          ))}
+          <div style={{marginLeft:"auto",fontSize:10,color:"#334155"}}>Click any shaded zone to load that crisis below ↓</div>
+        </div>
+      )}
+
+      {/* ── EARLY WARNING SIGNALS ── */}
+      {(()=>{
+        if(loading||error||!vixData.length) return null;
+
+        // Compute live signals from VIX data
+        const recent = vixData.slice(-30).map(d=>d.val);
+        const last   = vixData[vixData.length-1]?.val || 0;
+        const prev20 = vixData.slice(-20).map(d=>d.val);
+        const ma20   = prev20.reduce((s,v)=>s+v,0)/prev20.length;
+        const ma5    = vixData.slice(-5).map(d=>d.val).reduce((s,v)=>s+v,0)/5;
+        const prev252= vixData.slice(-252).map(d=>d.val);
+        const ma252  = prev252.reduce((s,v)=>s+v,0)/prev252.length;
+        const pct95  = [...prev252].sort((a,b)=>a-b)[Math.floor(prev252.length*0.95)];
+        const trend  = ma5 - ma20; // positive = rising
+        const live   = liveVix || last;
+
+        // 5 signals with status
+        const signals = [
+          {
+            name: "Absolute level",
+            desc: "Where VIX sits relative to crisis thresholds",
+            value: `${live.toFixed(1)}`,
+            status: live>=35?"CRISIS":live>=25?"RISK_OFF":live>=18?"CAUTION":"CALM",
+            color: live>=35?"#f87171":live>=25?"#fbbf24":live>=18?"#38bdf8":"#34d399",
+            detail: live>=35
+              ? `VIX above 35 — full CRISIS regime. Historical context: GFC peaked at 80, COVID at 66. Current level signals severe stress.`
+              : live>=25
+              ? `VIX 25–35 — elevated fear. Market expecting >1.5% daily moves. Defensive rotation warranted.`
+              : live>=18
+              ? `VIX 18–25 — caution zone. Normal uncertainty. Monitor for acceleration above 25.`
+              : `VIX below 18 — complacency zone. Historically, sustained VIX below 12 often precedes spikes. Low fear = good entry for hedges.`,
+            research: "CBOE threshold research; Schwert (2011)"
+          },
+          {
+            name: "20-day trend (momentum)",
+            desc: "Is VIX rising or falling? Speed of change matters",
+            value: `${trend>=0?"+":""}${trend.toFixed(1)} pts vs 20d MA`,
+            status: trend>5?"ACCELERATING":trend>2?"RISING":trend>-2?"FLAT":trend>-5?"FALLING":"COLLAPSING",
+            color: trend>5?"#f87171":trend>2?"#fbbf24":trend>-2?"#94a3b8":trend>-5?"#34d399":"#38bdf8",
+            detail: trend>5
+              ? `VIX rising sharply — ${trend.toFixed(1)} pts above 20d average. Acceleration is a key early warning. In 2008 and 2020, VIX rose 10+ points in a week before the crash deepened.`
+              : trend>2
+              ? `VIX trending up. Not alarming yet but direction matters. Watch for cross above 25.`
+              : trend>-2
+              ? `VIX flat. No clear directional signal. Monitor other indicators.`
+              : `VIX declining — fear retreating. Typical RISK_ON entry signal when combined with VIX below 20.`,
+            research: "VIX momentum: Whaley (2009), CBOE Attribution Report (2025)"
+          },
+          {
+            name: "52-week percentile",
+            desc: "How extreme is current VIX vs its own 1-year history?",
+            value: `${Math.round(prev252.filter(v=>v<live).length/prev252.length*100)}th percentile`,
+            status: (()=>{
+              const pct = prev252.filter(v=>v<live).length/prev252.length;
+              return pct>=0.95?"EXTREME":pct>=0.80?"ELEVATED":pct>=0.50?"NORMAL":pct>=0.20?"LOW":"SUPPRESSED";
+            })(),
+            color: (()=>{
+              const pct = prev252.filter(v=>v<live).length/prev252.length;
+              return pct>=0.95?"#f87171":pct>=0.80?"#fbbf24":pct>=0.50?"#94a3b8":"#34d399";
+            })(),
+            detail: (()=>{
+              const pct = Math.round(prev252.filter(v=>v<live).length/prev252.length*100);
+              return pct>=95
+                ? `VIX at ${pct}th percentile of past year — extreme. Historically, readings above 95th pct correspond to peak fear and often mark buying opportunities for contrarian investors.`
+                : pct>=80
+                ? `VIX at ${pct}th percentile — elevated vs recent history. Markets in stress mode. Defensive positioning appropriate.`
+                : `VIX at ${pct}th percentile — within normal range for the past year. No percentile signal.`;
+            })(),
+            research: "Percentile approach: Ang et al. (2006); VIX quantile spillover research (2024)"
+          },
+          {
+            name: "VIX vs long-run mean reversion",
+            desc: "VIX always reverts to ~20. Extreme divergence = signal",
+            value: `${live.toFixed(1)} vs ${ma252.toFixed(1)} 1yr avg`,
+            status: live/ma252>=2?"EXTREME SPIKE":live/ma252>=1.5?"ELEVATED":live/ma252>=0.85?"NORMAL":live/ma252>=0.6?"LOW":"SUPPRESSED",
+            color: live/ma252>=2?"#dc2626":live/ma252>=1.5?"#f87171":live/ma252>=0.85?"#94a3b8":"#34d399",
+            detail: live/ma252>=2
+              ? `VIX is ${(live/ma252).toFixed(1)}x its 1-year average — extreme spike. Mean reversion is powerful: after spikes above 2x average, VIX has historically fallen 40%+ within 3 months. This signals peak fear, often a market bottom.`
+              : live/ma252>=1.5
+              ? `VIX is ${(live/ma252).toFixed(1)}x its 1-year average — elevated. Stress above normal but not at panic levels. Continue defensive positioning.`
+              : live/ma252<=0.6
+              ? `VIX is suppressed at ${(live/ma252).toFixed(1)}x average — dangerously low. Complacency is a contrarian warning. Pre-crisis VIX is often at multi-year lows (2006: 10, early 2020: 12).`
+              : `VIX near its 1-year average. No mean reversion signal.`,
+            research: "Mean reversion: Christoffersen & Jacobs (2004); FRED VIX long-run avg ~20"
+          },
+          {
+            name: "VIX spike rate (3-day change)",
+            desc: "Sudden jumps are more dangerous than gradual rises",
+            value: (()=>{
+              if(vixData.length<4) return "N/A";
+              const d3 = vixData[vixData.length-4]?.val||live;
+              return `${live>d3?"+":""}${(live-d3).toFixed(1)} pts in 3 days`;
+            })(),
+            status: (()=>{
+              if(vixData.length<4) return "N/A";
+              const d3 = vixData[vixData.length-4]?.val||live;
+              const chg = live-d3;
+              return chg>15?"SHOCK":chg>8?"SPIKE":chg>3?"RISING":chg>-3?"FLAT":"FALLING";
+            })(),
+            color: (()=>{
+              if(vixData.length<4) return "#94a3b8";
+              const d3 = vixData[vixData.length-4]?.val||live;
+              const chg = live-d3;
+              return chg>15?"#dc2626":chg>8?"#f87171":chg>3?"#fbbf24":"#34d399";
+            })(),
+            detail: (()=>{
+              if(vixData.length<4) return "Insufficient data.";
+              const d3 = vixData[vixData.length-4]?.val||live;
+              const chg = live-d3;
+              return chg>15
+                ? `VIX jumped ${chg.toFixed(1)} pts in 3 days — shock event. CBOE data shows: April 2025 Liberation Day +23.8 pts, COVID Feb 2020 +30 pts, GFC Oct 2008 +40 pts. Spike of this magnitude = immediate CRISIS regime.`
+                : chg>8
+                ? `VIX up ${chg.toFixed(1)} pts in 3 days — significant spike. Monitor closely. If sustained above 25, defensive rotation warranted.`
+                : chg>3
+                ? `VIX up ${chg.toFixed(1)} pts in 3 days — rising. Not a spike yet. Watch for acceleration.`
+                : `No significant spike. VIX movement within normal daily variation.`;
+            })(),
+            research: "Spike rate: CBOE Attribution Report (2025); Whaley (2000) VIX as fear index"
+          },
+        ];
+
+        // Overall risk score
+        let riskScore = 0;
+        if(live>=35) riskScore+=3; else if(live>=25) riskScore+=2; else if(live>=18) riskScore+=1;
+        if(trend>5) riskScore+=2; else if(trend>2) riskScore+=1;
+        const pctRank = prev252.filter(v=>v<live).length/prev252.length;
+        if(pctRank>=0.95) riskScore+=2; else if(pctRank>=0.80) riskScore+=1;
+        if(live/ma252>=2) riskScore+=2; else if(live/ma252>=1.5) riskScore+=1;
+        if(vixData.length>=4){const d3=vixData[vixData.length-4]?.val||live;const chg=live-d3;if(chg>15)riskScore+=3;else if(chg>8)riskScore+=2;else if(chg>3)riskScore+=1;}
+        const maxScore = 12;
+        const riskPct  = Math.round(riskScore/maxScore*100);
+        const riskLabel= riskScore>=9?"CRISIS IMMINENT":riskScore>=6?"HIGH ALERT":riskScore>=3?"ELEVATED":riskScore>=1?"MONITOR":"ALL CLEAR";
+        const riskColor= riskScore>=9?"#dc2626":riskScore>=6?"#f87171":riskScore>=3?"#fbbf24":riskScore>=1?"#38bdf8":"#34d399";
+
+        return(
+        <div style={{marginTop:12}}>
+
+          {/* Composite risk gauge */}
+          <div style={{background:"#060d18",border:`1px solid ${riskColor}44`,borderRadius:12,padding:"14px 18px",marginBottom:10}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,flexWrap:"wrap",gap:8}}>
+              <div>
+                <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:14,color:"#e2e8f0"}}>
+                  🎯 Crisis Early Warning — Composite Signal
+                </div>
+                <div style={{fontSize:11,color:"#475569",marginTop:2}}>5 independent VIX-based indicators combined · Based on CBOE research & academic literature</div>
+              </div>
+              <div style={{textAlign:"center"}}>
+                <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:22,color:riskColor}}>{riskScore}/{maxScore}</div>
+                <div style={{fontSize:10,fontWeight:700,color:riskColor,letterSpacing:"0.06em"}}>{riskLabel}</div>
+              </div>
+            </div>
+            {/* Progress bar */}
+            <div style={{background:"#0a1421",borderRadius:4,height:8,overflow:"hidden",marginBottom:6}}>
+              <div style={{width:riskPct+"%",height:"100%",background:riskColor,borderRadius:4,transition:"width 0.6s ease"}}/>
+            </div>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:"#334155"}}>
+              <span>All Clear (0)</span><span>Monitor (1-2)</span><span>Elevated (3-5)</span><span>High Alert (6-8)</span><span>Crisis (9-12)</span>
+            </div>
+          </div>
+
+          {/* Individual signals */}
+          <div style={{display:"flex",flexDirection:"column",gap:6}}>
+            {signals.map((s,i)=>(
+              <div key={i} style={{background:"#060d18",border:"1px solid #0d1826",borderRadius:10,padding:"12px 14px",borderLeft:`3px solid ${s.color}`}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8,marginBottom:4,flexWrap:"wrap"}}>
+                  <div>
+                    <span style={{fontFamily:"Avenir Next,sans-serif",fontWeight:700,fontSize:12,color:"#e2e8f0"}}>{s.name}</span>
+                    <span style={{fontSize:10,color:"#334155",marginLeft:6}}>{s.desc}</span>
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
+                    <span style={{fontFamily:"Avenir Next,sans-serif",fontWeight:700,fontSize:12,color:s.color}}>{s.value}</span>
+                    <span style={{fontSize:9,fontWeight:700,color:s.color,background:s.color+"22",padding:"2px 7px",borderRadius:4,whiteSpace:"nowrap"}}>{s.status}</span>
+                  </div>
+                </div>
+                <div style={{fontSize:11,color:"#64748b",lineHeight:1.65}}>{s.detail}</div>
+                <div style={{fontSize:9,color:"#1e3a5f",marginTop:4}}>Source: {s.research}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Disclaimer */}
+          <div style={{fontSize:10,color:"#1e3a5f",marginTop:8,lineHeight:1.6,textAlign:"center"}}>
+            These signals are indicators, not predictions. VIX measures implied volatility — it reflects fear, not the future. No single indicator predicts crashes reliably. StockSense uses these as inputs to the macro regime score, not as standalone triggers.
+          </div>
+        </div>
+        );
+      })()}
+    </div>
+  );
+}
+
 function StockSense(){
   const[ticker,setTicker]=useState("AAPL");
   const[tab,setTab]=useState("portfolio");
@@ -3478,126 +3834,12 @@ function StockSense(){
                 );
               })()}
 
-              {/* ── VIX HISTORICAL CHART ── */}
-              {(()=>{
-                const vixHistory = [
-                  {id:"gulf_war",   name:"Gulf War",        year:"1990", peak:36,  spyDrop:-15.4, duration:225, color:"#f97316"},
-                  {id:"dotcom",     name:"Dot-Com Crash",   year:"2000", peak:43,  spyDrop:-49.1, duration:929, color:"#f87171"},
-                  {id:"9_11",       name:"9/11",            year:"2001", peak:48,  spyDrop:-14.3, duration:17,  color:"#f87171"},
-                  {id:"gfc",        name:"GFC",             year:"2008", peak:80,  spyDrop:-56.8, duration:510, color:"#dc2626"},
-                  {id:"covid",      name:"COVID",           year:"2020", peak:66,  spyDrop:-33.9, duration:33,  color:"#dc2626"},
-                  {id:"ukraine",    name:"Ukraine War",     year:"2022", peak:38,  spyDrop:-18.1, duration:300, color:"#f97316"},
-                  {id:"liberation", name:"Liberation Day",  year:"2025", peak:52,  spyDrop:-15.3, duration:21,  color:"#fbbf24"},
-                ];
-                const liveVix = prices["VIXY"]?.price || null;
-                const maxPeak = 90;
-                const BAR_W = 64;
-                const GAP   = 20;
-                const CHART_H = 220;
-                const CHART_W = vixHistory.length * (BAR_W + GAP) + 60;
-                const toY = v => CHART_H - 40 - (v / maxPeak) * (CHART_H - 60);
-
-                // Danger zones
-                const zones = [
-                  {v:80, label:"GFC peak (80)", c:"#dc2626"},
-                  {v:66, label:"COVID peak (66)", c:"#f87171"},
-                  {v:35, label:"CRISIS threshold", c:"#fbbf24"},
-                  {v:25, label:"RISK_OFF threshold", c:"#38bdf8"},
-                ];
-
-                return(
-                <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:14,padding:"20px 22px",marginBottom:14}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8,marginBottom:4}}>
-                    <div>
-                      <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:15,color:"#e2e8f0"}}>📈 VIX Peak — Every Crisis Since 1990</div>
-                      <div style={{fontSize:11,color:"#475569",marginTop:3}}>Fear index peak during each crisis · Dashed lines = regime thresholds · Current VIX shown in real time</div>
-                    </div>
-                    {liveVix&&(
-                      <div style={{background:"rgba(251,191,36,0.1)",border:"1px solid rgba(251,191,36,0.3)",borderRadius:8,padding:"6px 14px",textAlign:"center"}}>
-                        <div style={{fontSize:10,color:"#475569",marginBottom:2}}>LIVE VIX (VIXY)</div>
-                        <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:18,color:liveVix>35?"#f87171":liveVix>25?"#fbbf24":"#34d399"}}>{liveVix.toFixed(1)}</div>
-                        <div style={{fontSize:9,color:"#475569"}}>{liveVix>35?"CRISIS":liveVix>25?"RISK_OFF":liveVix>18?"CAUTION":"RISK_ON"}</div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* SVG Chart */}
-                  <div style={{overflowX:"auto",marginTop:12}}>
-                    <svg viewBox={`0 0 ${CHART_W+20} ${CHART_H+10}`} style={{width:"100%",minWidth:CHART_W,height:"auto",display:"block"}}>
-
-                      {/* Threshold lines */}
-                      {zones.map((z,i)=>(
-                        <g key={i}>
-                          <line x1={30} y1={toY(z.v)} x2={CHART_W} y2={toY(z.v)}
-                            stroke={z.c} strokeWidth={0.8} strokeDasharray="4,3" strokeOpacity={0.5}/>
-                          <text x={28} y={toY(z.v)+4} fontSize={8} fill={z.c} textAnchor="end" opacity={0.8}>{z.v}</text>
-                        </g>
-                      ))}
-
-                      {/* Live VIX line */}
-                      {liveVix&&(
-                        <g>
-                          <line x1={30} y1={toY(liveVix)} x2={CHART_W} y2={toY(liveVix)}
-                            stroke="#fbbf24" strokeWidth={1.5} strokeDasharray="2,2"/>
-                          <text x={CHART_W+2} y={toY(liveVix)+4} fontSize={8} fill="#fbbf24">NOW</text>
-                        </g>
-                      )}
-
-                      {/* Bars */}
-                      {vixHistory.map((c,i)=>{
-                        const x   = 40 + i*(BAR_W+GAP);
-                        const barH = (c.peak/maxPeak)*(CHART_H-60);
-                        const y   = CHART_H - 40 - barH;
-                        const isSelected = crisisSelected===c.id;
-                        return(
-                          <g key={i} style={{cursor:"pointer"}} onClick={()=>setCrisisSelected(c.id)}>
-                            {/* Bar */}
-                            <rect x={x} y={y} width={BAR_W} height={barH}
-                              fill={c.color} opacity={isSelected?1:0.55} rx={3}
-                              style={{transition:"opacity 0.2s"}}/>
-                            {/* Peak label */}
-                            <text x={x+BAR_W/2} y={y-5} fontSize={10} fill={c.color}
-                              textAnchor="middle" fontWeight="700">{c.peak}</text>
-                            {/* Year label */}
-                            <text x={x+BAR_W/2} y={CHART_H-22} fontSize={9} fill="#64748b"
-                              textAnchor="middle">{c.year}</text>
-                            {/* Name label */}
-                            <text x={x+BAR_W/2} y={CHART_H-10} fontSize={8} fill={isSelected?"#e2e8f0":"#475569"}
-                              textAnchor="middle" fontWeight={isSelected?"700":"400"}>{c.name}</text>
-                            {/* SPY drop label inside bar if tall enough */}
-                            {barH>35&&<text x={x+BAR_W/2} y={y+barH/2+4} fontSize={8} fill="rgba(255,255,255,0.7)"
-                              textAnchor="middle">SPY {c.spyDrop}%</text>}
-                            {/* Selection indicator */}
-                            {isSelected&&<rect x={x} y={CHART_H-6} width={BAR_W} height={3} fill={c.color} rx={1}/>}
-                          </g>
-                        );
-                      })}
-
-                      {/* Y-axis label */}
-                      <text x={8} y={CHART_H/2} fontSize={9} fill="#475569"
-                        textAnchor="middle" transform={`rotate(-90,8,${CHART_H/2})`}>VIX Peak</text>
-                    </svg>
-                  </div>
-
-                  {/* Legend */}
-                  <div style={{display:"flex",flexWrap:"wrap",gap:12,marginTop:8,fontSize:11,color:"#475569"}}>
-                    {zones.map((z,i)=>(
-                      <div key={i} style={{display:"flex",alignItems:"center",gap:4}}>
-                        <div style={{width:16,height:1.5,background:z.c,opacity:0.7}}/>
-                        <span>{z.label}</span>
-                      </div>
-                    ))}
-                    {liveVix&&<div style={{display:"flex",alignItems:"center",gap:4}}>
-                      <div style={{width:16,height:1.5,background:"#fbbf24"}}/>
-                      <span style={{color:"#fbbf24",fontWeight:600}}>Live VIX: {liveVix.toFixed(1)}</span>
-                    </div>}
-                  </div>
-
-                  {/* Click prompt */}
-                  <div style={{fontSize:10,color:"#334155",marginTop:8,textAlign:"center"}}>Click any bar to load that crisis below</div>
-                </div>
-                );
-              })()}
+              {/* ── VIX DAILY LINE CHART (FRED data 1990–present) ── */}
+              <VixChart
+                liveVix={prices["VIXY"]?.price||null}
+                crisisSelected={crisisSelected}
+                setCrisisSelected={setCrisisSelected}
+              />
 
             </div>
           )}
