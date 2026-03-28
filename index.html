@@ -999,18 +999,27 @@ function VixChart({liveVix, crisisSelected, setCrisisSelected}) {
   const [error, setError]     = React.useState(null);
 
   React.useEffect(()=>{
-    // Fetch daily VIX from FRED (free, no API key, 1990–present)
-    fetch("https://fred.stlouisfed.org/graph/fredgraph.csv?id=VIXCLS")
-      .then(r=>r.text())
+    // Fetch daily VIX from datahub.io (CORS-friendly, permanent r-link, updated daily)
+    // Format: DATE(MM/DD/YYYY), OPEN, HIGH, LOW, CLOSE
+    fetch("https://datahub.io/core/finance-vix/_r/-/data/vix-daily.csv")
+      .then(r=>{ if(!r.ok) throw new Error(r.status); return r.text(); })
       .then(csv=>{
-        const rows = csv.trim().split("\n").slice(1); // skip header
+        const rows = csv.trim().split("\n").slice(1);
         const parsed = rows
-          .map(row=>{ const [d,v]=row.split(","); return {date:d, val:parseFloat(v)}; })
-          .filter(r=>!isNaN(r.val) && r.date>="1990-01-01");
+          .map(row=>{
+            const cols = row.split(",");
+            if(cols.length<5) return null;
+            const [m,d,y] = cols[0].trim().split("/");
+            const iso = `${y}-${m.padStart(2,"0")}-${d.padStart(2,"0")}`;
+            const val = parseFloat(cols[4]); // CLOSE column
+            return {date:iso, val};
+          })
+          .filter(r=>r&&!isNaN(r.val))
+          .sort((a,b)=>a.date.localeCompare(b.date));
         setVixData(parsed);
         setLoading(false);
       })
-      .catch(e=>{ setError("Could not load VIX data from FRED"); setLoading(false); });
+      .catch(e=>{ setError("Could not load VIX data ("+e.message+")"); setLoading(false); });
   },[]);
 
   const crisisZones = [
