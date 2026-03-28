@@ -328,33 +328,34 @@ async function fetchCandles(ticker, resolution, days) {
 }
 
 async function fetchMarketStatus() {
+  // All times shown in Cyprus time (UTC+3)
+  const nowCY = new Date(new Date().toLocaleString("en-US", {timeZone:"Asia/Nicosia"}));
+  const dayCY  = nowCY.getDay();   // Cyprus local day
+  const hourCY = nowCY.getHours(); // Cyprus local hour
+  const minCY  = nowCY.getMinutes();
+  const isWeekend = dayCY === 0 || dayCY === 6;
+  // US market: 09:30-16:00 ET = 16:30-23:00 Cyprus (UTC+3)
+  const cyOpen  = 16 * 60 + 30; // 16:30 Cyprus
+  const cyClose = 23 * 60;       // 23:00 Cyprus
+  const cyNow   = hourCY * 60 + minCY;
+  const isMarketHours = !isWeekend && cyNow >= cyOpen && cyNow < cyClose;
+  const isPreMarket   = !isWeekend && cyNow >= 11*60 && cyNow < cyOpen;
+  const isAfterHours  = !isWeekend && (cyNow >= cyClose || cyNow < 11*60) && cyNow > 0;
+  const days    = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  // Next session in Cyprus time labels
+  const nextMap = {0:"Mon 16:30",1:"Tue 16:30",2:"Wed 16:30",3:"Thu 16:30",4:"Fri 16:30",5:"Mon 16:30",6:"Mon 16:30"};
+  const openToday = isMarketHours ? "Open" : cyNow < cyOpen && !isWeekend ? `Today 16:30` : nextMap[dayCY];
   try {
     const res = await fetch(`https://finnhub.io/api/v1/stock/market-status?exchange=US&token=${FINNHUB_KEY}`);
     const d = await res.json();
-    const now = new Date();
-    const day = now.getDay(); // 0=Sun, 6=Sat
-    const hour = now.getUTCHours();
-    const isWeekend = day === 0 || day === 6;
-    const isMarketHours = !isWeekend && hour >= 14 && hour < 21; // 9:30am-4pm ET = 14:30-21 UTC
-    const isPreMarket  = !isWeekend && hour >= 9  && hour < 14;
-    const isAfterHours = !isWeekend && hour >= 21 && hour < 24;
-    const days = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
-    const nextMap = {0:"Monday",1:"Tuesday",2:"Wednesday",3:"Thursday",4:"Friday",5:"Monday",6:"Monday"};
     marketStatus = {
       isOpen: d.isOpen !== undefined ? d.isOpen : isMarketHours,
       session: d.isOpen ? "OPEN" : isPreMarket ? "PRE-MARKET" : isAfterHours ? "AFTER-HOURS" : "CLOSED",
-      nextSession: nextMap[day],
-      day: days[day],
+      nextSession: openToday,
+      day: days[dayCY],
     };
   } catch(e) {
-    // Fallback: calculate from time
-    const now = new Date();
-    const day = now.getDay();
-    const hour = now.getUTCHours();
-    const isWeekend = day === 0 || day === 6;
-    const isOpen = !isWeekend && hour >= 14 && hour < 21;
-    const nextMap = {0:"Monday",1:"Tuesday",2:"Wednesday",3:"Thursday",4:"Friday",5:"Monday",6:"Monday"};
-    marketStatus = { isOpen, session: isOpen ? "OPEN" : "CLOSED", nextSession: nextMap[day] };
+    marketStatus = { isOpen: isMarketHours, session: isMarketHours ? "OPEN" : "CLOSED", nextSession: openToday };
   }
 }
 
@@ -2443,7 +2444,21 @@ function StockSense(){
                 {autoLoading
                   ? <div style={{fontSize:11,color:"#fbbf24",background:"rgba(251,191,36,0.1)",border:"1px solid rgba(251,191,36,0.2)",borderRadius:6,padding:"3px 10px"}}>⏳ Syncing…</div>
                   : autoPortfolio
-                    ? <div style={{fontSize:11,color:"#34d399",background:"rgba(52,211,153,0.1)",border:"1px solid rgba(52,211,153,0.15)",borderRadius:6,padding:"3px 10px"}}>✅ Live · {updated}</div>
+                    ? <div style={{fontSize:11,color:"#34d399",background:"rgba(52,211,153,0.1)",border:"1px solid rgba(52,211,153,0.15)",borderRadius:6,padding:"3px 10px"}}>✅ Live · {(()=>{
+                      // Convert ET timestamp to Cyprus time (ET = UTC-4 in summer, UTC-5 in winter; Cyprus = UTC+3)
+                      if(!updated) return "";
+                      try {
+                        const [datePart, timePart] = updated.replace(" ET","").split(" ");
+                        const [y,mo,d] = datePart.split("-").map(Number);
+                        const [h,m] = timePart.split(":").map(Number);
+                        // ET is UTC-4 (EDT) or UTC-5 (EST). March = EDT = UTC-4
+                        const etOffset = 4; // EDT March-November
+                        const utcH = h + etOffset;
+                        const cyH  = (utcH + 3) % 24; // Cyprus = UTC+3
+                        const pad  = n => String(n).padStart(2,"0");
+                        return `${datePart} ${pad(cyH)}:${pad(m)} CY`;
+                      } catch(e){ return updated; }
+                    })()}</div>
                     : <div style={{fontSize:11,color:"#f87171",background:"rgba(248,113,113,0.1)",border:"1px solid rgba(248,113,113,0.2)",borderRadius:6,padding:"3px 10px"}}>⚠️ Using entry data</div>
                 }
               </div>
@@ -2611,7 +2626,17 @@ function StockSense(){
                         else if(rawReason.includes("Overweight")) why = "Position too large — max 15% per stock";
                         return(
                           <tr key={i} style={{borderBottom:"1px solid #0d1826"}}>
-                            <td style={{padding:"8px 10px",fontSize:11,color:"#475569",whiteSpace:"nowrap"}}>{(t.date||"").replace(" ET","")}</td>
+                            <td style={{padding:"8px 10px",fontSize:11,color:"#475569",whiteSpace:"nowrap"}}>{(()=>{
+                            const raw = t.date||"";
+                            try {
+                              const clean = raw.replace(" ET","");
+                              const [dp, tp] = clean.split(" ");
+                              if(!tp) return clean;
+                              const [h,m] = tp.split(":").map(Number);
+                              const cyH = (h + 4 + 3) % 24; // ET(EDT)+4=UTC, UTC+3=Cyprus
+                              return dp+" "+String(cyH).padStart(2,"0")+":"+String(m).padStart(2,"0")+" CY";
+                            } catch(e){ return raw.replace(" ET",""); }
+                          })()}</td>
                             <td style={{padding:"8px 10px",textAlign:"right"}}>
                               <span style={{fontSize:10,fontWeight:700,color,background:color+"22",padding:"2px 7px",borderRadius:4}}>{t.action}</span>
                             </td>
