@@ -3478,6 +3478,127 @@ function StockSense(){
                 );
               })()}
 
+              {/* ── VIX HISTORICAL CHART ── */}
+              {(()=>{
+                const vixHistory = [
+                  {id:"gulf_war",   name:"Gulf War",        year:"1990", peak:36,  spyDrop:-15.4, duration:225, color:"#f97316"},
+                  {id:"dotcom",     name:"Dot-Com Crash",   year:"2000", peak:43,  spyDrop:-49.1, duration:929, color:"#f87171"},
+                  {id:"9_11",       name:"9/11",            year:"2001", peak:48,  spyDrop:-14.3, duration:17,  color:"#f87171"},
+                  {id:"gfc",        name:"GFC",             year:"2008", peak:80,  spyDrop:-56.8, duration:510, color:"#dc2626"},
+                  {id:"covid",      name:"COVID",           year:"2020", peak:66,  spyDrop:-33.9, duration:33,  color:"#dc2626"},
+                  {id:"ukraine",    name:"Ukraine War",     year:"2022", peak:38,  spyDrop:-18.1, duration:300, color:"#f97316"},
+                  {id:"liberation", name:"Liberation Day",  year:"2025", peak:52,  spyDrop:-15.3, duration:21,  color:"#fbbf24"},
+                ];
+                const liveVix = prices["VIXY"]?.price || null;
+                const maxPeak = 90;
+                const BAR_W = 64;
+                const GAP   = 20;
+                const CHART_H = 220;
+                const CHART_W = vixHistory.length * (BAR_W + GAP) + 60;
+                const toY = v => CHART_H - 40 - (v / maxPeak) * (CHART_H - 60);
+
+                // Danger zones
+                const zones = [
+                  {v:80, label:"GFC peak (80)", c:"#dc2626"},
+                  {v:66, label:"COVID peak (66)", c:"#f87171"},
+                  {v:35, label:"CRISIS threshold", c:"#fbbf24"},
+                  {v:25, label:"RISK_OFF threshold", c:"#38bdf8"},
+                ];
+
+                return(
+                <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:14,padding:"20px 22px",marginBottom:14}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8,marginBottom:4}}>
+                    <div>
+                      <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:15,color:"#e2e8f0"}}>📈 VIX Peak — Every Crisis Since 1990</div>
+                      <div style={{fontSize:11,color:"#475569",marginTop:3}}>Fear index peak during each crisis · Dashed lines = regime thresholds · Current VIX shown in real time</div>
+                    </div>
+                    {liveVix&&(
+                      <div style={{background:"rgba(251,191,36,0.1)",border:"1px solid rgba(251,191,36,0.3)",borderRadius:8,padding:"6px 14px",textAlign:"center"}}>
+                        <div style={{fontSize:10,color:"#475569",marginBottom:2}}>LIVE VIX (VIXY)</div>
+                        <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:18,color:liveVix>35?"#f87171":liveVix>25?"#fbbf24":"#34d399"}}>{liveVix.toFixed(1)}</div>
+                        <div style={{fontSize:9,color:"#475569"}}>{liveVix>35?"CRISIS":liveVix>25?"RISK_OFF":liveVix>18?"CAUTION":"RISK_ON"}</div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* SVG Chart */}
+                  <div style={{overflowX:"auto",marginTop:12}}>
+                    <svg viewBox={`0 0 ${CHART_W+20} ${CHART_H+10}`} style={{width:"100%",minWidth:CHART_W,height:"auto",display:"block"}}>
+
+                      {/* Threshold lines */}
+                      {zones.map((z,i)=>(
+                        <g key={i}>
+                          <line x1={30} y1={toY(z.v)} x2={CHART_W} y2={toY(z.v)}
+                            stroke={z.c} strokeWidth={0.8} strokeDasharray="4,3" strokeOpacity={0.5}/>
+                          <text x={28} y={toY(z.v)+4} fontSize={8} fill={z.c} textAnchor="end" opacity={0.8}>{z.v}</text>
+                        </g>
+                      ))}
+
+                      {/* Live VIX line */}
+                      {liveVix&&(
+                        <g>
+                          <line x1={30} y1={toY(liveVix)} x2={CHART_W} y2={toY(liveVix)}
+                            stroke="#fbbf24" strokeWidth={1.5} strokeDasharray="2,2"/>
+                          <text x={CHART_W+2} y={toY(liveVix)+4} fontSize={8} fill="#fbbf24">NOW</text>
+                        </g>
+                      )}
+
+                      {/* Bars */}
+                      {vixHistory.map((c,i)=>{
+                        const x   = 40 + i*(BAR_W+GAP);
+                        const barH = (c.peak/maxPeak)*(CHART_H-60);
+                        const y   = CHART_H - 40 - barH;
+                        const isSelected = crisisSelected===c.id;
+                        return(
+                          <g key={i} style={{cursor:"pointer"}} onClick={()=>setCrisisSelected(c.id)}>
+                            {/* Bar */}
+                            <rect x={x} y={y} width={BAR_W} height={barH}
+                              fill={c.color} opacity={isSelected?1:0.55} rx={3}
+                              style={{transition:"opacity 0.2s"}}/>
+                            {/* Peak label */}
+                            <text x={x+BAR_W/2} y={y-5} fontSize={10} fill={c.color}
+                              textAnchor="middle" fontWeight="700">{c.peak}</text>
+                            {/* Year label */}
+                            <text x={x+BAR_W/2} y={CHART_H-22} fontSize={9} fill="#64748b"
+                              textAnchor="middle">{c.year}</text>
+                            {/* Name label */}
+                            <text x={x+BAR_W/2} y={CHART_H-10} fontSize={8} fill={isSelected?"#e2e8f0":"#475569"}
+                              textAnchor="middle" fontWeight={isSelected?"700":"400"}>{c.name}</text>
+                            {/* SPY drop label inside bar if tall enough */}
+                            {barH>35&&<text x={x+BAR_W/2} y={y+barH/2+4} fontSize={8} fill="rgba(255,255,255,0.7)"
+                              textAnchor="middle">SPY {c.spyDrop}%</text>}
+                            {/* Selection indicator */}
+                            {isSelected&&<rect x={x} y={CHART_H-6} width={BAR_W} height={3} fill={c.color} rx={1}/>}
+                          </g>
+                        );
+                      })}
+
+                      {/* Y-axis label */}
+                      <text x={8} y={CHART_H/2} fontSize={9} fill="#475569"
+                        textAnchor="middle" transform={`rotate(-90,8,${CHART_H/2})`}>VIX Peak</text>
+                    </svg>
+                  </div>
+
+                  {/* Legend */}
+                  <div style={{display:"flex",flexWrap:"wrap",gap:12,marginTop:8,fontSize:11,color:"#475569"}}>
+                    {zones.map((z,i)=>(
+                      <div key={i} style={{display:"flex",alignItems:"center",gap:4}}>
+                        <div style={{width:16,height:1.5,background:z.c,opacity:0.7}}/>
+                        <span>{z.label}</span>
+                      </div>
+                    ))}
+                    {liveVix&&<div style={{display:"flex",alignItems:"center",gap:4}}>
+                      <div style={{width:16,height:1.5,background:"#fbbf24"}}/>
+                      <span style={{color:"#fbbf24",fontWeight:600}}>Live VIX: {liveVix.toFixed(1)}</span>
+                    </div>}
+                  </div>
+
+                  {/* Click prompt */}
+                  <div style={{fontSize:10,color:"#334155",marginTop:8,textAlign:"center"}}>Click any bar to load that crisis below</div>
+                </div>
+                );
+              })()}
+
             </div>
           )}
 
