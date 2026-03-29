@@ -1778,11 +1778,11 @@ function StockSense(){
           {/* Right: regime pill + market status */}
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             <span style={{fontSize:10,fontWeight:700,
-              color:regime==="CRISIS"?"#818cf8":regime==="RISK_OFF"?"#f87171":regime==="CAUTION"?"#fbbf24":"#34d399",
-              background:regime==="CRISIS"?"rgba(129,140,248,0.1)":regime==="RISK_OFF"?"rgba(248,113,113,0.1)":regime==="CAUTION"?"rgba(251,191,36,0.1)":"rgba(52,211,153,0.1)",
-              border:`1px solid ${regime==="CRISIS"?"rgba(129,140,248,0.3)":regime==="RISK_OFF"?"rgba(248,113,113,0.3)":regime==="CAUTION"?"rgba(251,191,36,0.3)":"rgba(52,211,153,0.3)"}`,
+              color:(autoPortfolio?.regime||"")===("CRISIS")?"#818cf8":(autoPortfolio?.regime||"")==="RISK_OFF"?"#f87171":(autoPortfolio?.regime||"")==="CAUTION"?"#fbbf24":"#34d399",
+              background:(autoPortfolio?.regime||"")==="CRISIS"?"rgba(129,140,248,0.1)":(autoPortfolio?.regime||"")==="RISK_OFF"?"rgba(248,113,113,0.1)":(autoPortfolio?.regime||"")==="CAUTION"?"rgba(251,191,36,0.1)":"rgba(52,211,153,0.1)",
+              border:`1px solid ${(autoPortfolio?.regime||"")==="CRISIS"?"rgba(129,140,248,0.3)":(autoPortfolio?.regime||"")==="RISK_OFF"?"rgba(248,113,113,0.3)":(autoPortfolio?.regime||"")==="CAUTION"?"rgba(251,191,36,0.3)":"rgba(52,211,153,0.3)"}`,
               padding:"2px 8px",borderRadius:4}}>
-              {regime||"—"}
+              {autoPortfolio?.regime||"—"}
             </span>
             <span style={{fontSize:10,color:marketStatus.isOpen?"#34d399":"#475569",fontWeight:600}}>
               {marketStatus.isOpen?"🟢 Market open":"⚫ Market closed"}
