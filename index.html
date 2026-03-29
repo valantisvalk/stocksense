@@ -1728,6 +1728,66 @@ function StockSense(){
           </div>
         </div>
 
+        {/* ── GLOBAL SYNC STATUS BAR ── */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
+          background:"#060d18",borderBottom:"1px solid #0d1826",
+          padding:"5px 20px",gap:8,flexWrap:"wrap"}}>
+          {/* Left: last push timestamp */}
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            {autoLoading
+              ? <span style={{fontSize:10,color:"#fbbf24"}}>⏳ Syncing with GitHub…</span>
+              : autoPortfolio
+                ? <span style={{fontSize:10,color:"#34d399",fontWeight:700}}>
+                    ✅ Last push: {(()=>{
+                      if(!updated) return "—";
+                      try {
+                        const [dp,tp] = updated.replace(" ET","").split(" ");
+                        const [h,m]   = tp.split(":").map(Number);
+                        const cyH     = (h+4+3)%24;
+                        return dp+" "+String(cyH).padStart(2,"0")+":"+String(m).padStart(2,"0")+" CY";
+                      } catch(e){ return updated; }
+                    })()}
+                  </span>
+                : <span style={{fontSize:10,color:"#f87171",fontWeight:700}}>⚠️ No live data — using entry prices</span>
+            }
+            {/* Staleness warning — if last push > 45 min ago during market hours */}
+            {(()=>{
+              if(!updated||!autoPortfolio) return null;
+              try {
+                const [dp,tp] = updated.replace(" ET","").split(" ");
+                const [h,m]   = tp.split(":").map(Number);
+                const cyH     = (h+4+3)%24;
+                const lastPush = new Date();
+                lastPush.setHours(cyH,m,0,0);
+                const nowCY    = new Date(new Date().toLocaleString("en-US",{timeZone:"Asia/Nicosia"}));
+                const diffMin  = (nowCY-lastPush)/60000;
+                // Warn only during market hours (16:30-23:00 Cyprus)
+                const cy_h = nowCY.getHours();
+                const inMarket = cy_h>=16 && cy_h<23;
+                if(inMarket && diffMin>45 && diffMin<1440) {
+                  return <span style={{fontSize:10,color:"#f97316",fontWeight:700,marginLeft:6}}>
+                    ⚠️ {Math.round(diffMin)}min since last push — trader may be down
+                  </span>;
+                }
+              } catch(e){}
+              return null;
+            })()}
+          </div>
+          {/* Right: regime pill + market status */}
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <span style={{fontSize:10,fontWeight:700,
+              color:regime==="CRISIS"?"#818cf8":regime==="RISK_OFF"?"#f87171":regime==="CAUTION"?"#fbbf24":"#34d399",
+              background:regime==="CRISIS"?"rgba(129,140,248,0.1)":regime==="RISK_OFF"?"rgba(248,113,113,0.1)":regime==="CAUTION"?"rgba(251,191,36,0.1)":"rgba(52,211,153,0.1)",
+              border:`1px solid ${regime==="CRISIS"?"rgba(129,140,248,0.3)":regime==="RISK_OFF"?"rgba(248,113,113,0.3)":regime==="CAUTION"?"rgba(251,191,36,0.3)":"rgba(52,211,153,0.3)"}`,
+              padding:"2px 8px",borderRadius:4}}>
+              {regime||"—"}
+            </span>
+            <span style={{fontSize:10,color:marketStatus.isOpen?"#34d399":"#475569",fontWeight:600}}>
+              {marketStatus.isOpen?"🟢 Market open":"⚫ Market closed"}
+            </span>
+          </div>
+        </div>
+
         {/* Tabs */}
         <div style={{display:"flex",background:"#08111e",borderBottom:"1px solid #101c2e",padding:"0 20px",overflowX:"auto"}}>
           {[["macro","🌍 Macro"],["portfolio","💼 Portfolio"],["quant","🧮 Quant"],["overview","📊 Deck"],["analyst","🏦 Analyst"],["financials","💰 Financials"],["charts","📈 Charts"],["history","📅 10-Year"],["crisis","🚨 Crisis"],["backtest","🧪 Backtest"],["news","📰 News"],["prediction","🔮 Forecast"],["guide","📖 Guide"],["ask","🤖 Ask AI"]].map(([v,l])=>{
