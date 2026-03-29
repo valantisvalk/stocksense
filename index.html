@@ -1739,22 +1739,24 @@ function StockSense(){
               : autoPortfolio
                 ? <span style={{fontSize:10,color:"#34d399",fontWeight:700}}>
                     ✅ Last push: {(()=>{
-                      if(!updated) return "—";
+                      if(!autoPortfolio?.updated) return "—";
                       try {
-                        const [dp,tp] = updated.replace(" ET","").split(" ");
+                        const u = autoPortfolio?.updated||"";
+                        const [dp,tp] = u.replace(" ET","").split(" ");
                         const [h,m]   = tp.split(":").map(Number);
                         const cyH     = (h+4+3)%24;
                         return dp+" "+String(cyH).padStart(2,"0")+":"+String(m).padStart(2,"0")+" CY";
-                      } catch(e){ return updated; }
+                      } catch(e){ return autoPortfolio?.updated||""; }
                     })()}
                   </span>
                 : <span style={{fontSize:10,color:"#f87171",fontWeight:700}}>⚠️ No live data — using entry prices</span>
             }
             {/* Staleness warning — if last push > 45 min ago during market hours */}
             {(()=>{
-              if(!updated||!autoPortfolio) return null;
+              if(!autoPortfolio?.updated||!autoPortfolio) return null;
               try {
-                const [dp,tp] = updated.replace(" ET","").split(" ");
+                const u2 = autoPortfolio?.updated||"";
+                const [dp,tp] = u2.replace(" ET","").split(" ");
                 const [h,m]   = tp.split(":").map(Number);
                 const cyH     = (h+4+3)%24;
                 const lastPush = new Date();
