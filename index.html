@@ -1380,12 +1380,12 @@ function StockSense(){
   // Never reference these from tab-scoped const definitions — use these instead.
   const regime        = autoPortfolio?.regime || "—";
   const updated       = autoPortfolio?.updated || "";
-  const livePortfolio = autoPortfolio?.positions || {};
+  const livePortfolio = Array.isArray(autoPortfolio?.positions) ? autoPortfolio.positions : [];
   const liveCash      = autoPortfolio?.cash ?? 24157.22;
   const totalCosts    = autoPortfolio?.total_costs ?? 0;
   const spyNow        = prices["SPY"]?.price || 662.29;
   const spyRet        = (spyNow - 662.29) / 662.29 * 100;
-  const totalStockVal = Object.entries(livePortfolio).reduce((s,[t,p])=>s+(prices[t]?.price||p.avg_cost)*p.shares,0);
+  const totalStockVal = livePortfolio.reduce((s,p)=>s+(prices[p.ticker]?.price||p.avg_cost)*p.shares,0);
   const portfolioValue= totalStockVal + liveCash;
   const totalRetPct   = (portfolioValue - 100000) / 100000 * 100;
   const alpha         = totalRetPct - spyRet;
@@ -3159,6 +3159,670 @@ function StockSense(){
           {/* ── GUIDE TAB ── */}
           {/* ── PORTFOLIO TAB ── */}
           {/* ── PORTFOLIO TAB ── */}
+          {tab==="quant"&&(
+            <div style={{animation:"fadeUp 0.3s ease",overflow:"hidden"}}>
+
+              <div style={{background:"rgba(129,140,248,0.06)",border:"1px solid rgba(129,140,248,0.2)",borderRadius:14,padding:"14px 20px",marginBottom:16}}>
+                <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:17,color:"#818cf8",marginBottom:5}}>🧮 Quant Rankings</div>
+                <div style={{fontSize:12,color:"#94a3b8",lineHeight:1.7}}>All 26 stocks ranked 1-20 by quantitative score (0-100). Momentum + Valuation + Quality + Risk + Sentiment + Moat. Top ranked = buy candidates.</div>
+              </div>
+              <div style={{background:q.sig.bg,border:`1px solid ${q.sig.c+"44"}`,borderRadius:16,padding:"20px 22px",marginBottom:14,display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:14}}>
+                <div>
+                  {lbl("Composite Quant Score",q.sig.c)}
+                  <div style={{fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:24,color:q.sig.c,lineHeight:1}}>{q.comp}</div>
+                  <div style={{fontSize:11,color:"#94a3b8",marginTop:4}}>out of 100</div>
+                </div>
+                <div>
+                  <div style={{fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:20,color:q.sig.c,marginBottom:6}}>{q.sig.e} {q.sig.l}</div>
+                  <div style={{fontSize:17,color:"#cbd5e1",marginBottom:3}}>Confidence: <strong style={{color:"#818cf8"}}>{q.conf}%</strong></div>
+                  <div style={{fontSize:17,color:"#cbd5e1"}}>Risk-Adj Return: <strong style={{color:fc(q.rar)}}>{q.rar>0?"+":""}{q.rar}</strong></div>
+                </div>
+              </div>
+              <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:14,padding:"18px 20px",marginBottom:14}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+                  {lbl("5-Pillar Breakdown","#38bdf8")}
+                  <div style={{fontSize:11,color:"#94a3b8"}}>Total: <strong style={{color:Object.values(pillarW).reduce((a,b)=>a+b,0)===100?"#34d399":"#f87171"}}>{Object.values(pillarW).reduce((a,b)=>a+b,0)}%</strong> {Object.values(pillarW).reduce((a,b)=>a+b,0)!==100&&<span style={{color:"#f87171"}}>(must = 100%)</span>}</div>
+                </div>
+                {[
+                  {key:"trend",label:"Trend",score:q.tS,color:"#38bdf8"},
+                  {key:"momentum",label:"Momentum",score:q.mS,color:"#a3e635"},
+                  {key:"volatility",label:"Volatility",score:q.vS,color:"#fbbf24"},
+                  {key:"fundamental",label:"Fundamental",score:q.fS,color:"#818cf8"},
+                  {key:"macro",label:"Macro",score:q.maS,color:"#f97316"},
+                ].map((p,i)=>(
+                  <div key={i} style={{marginBottom:14}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4,flexWrap:"wrap",gap:4}}>
+                      <span style={{fontSize:13,color:"#e2e8f0",fontWeight:600}}>{p.label}</span>
+                      <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
+                        <span style={{fontSize:11,color:"#94a3b8"}}>Weight:</span>
+                        <input type="range" min="0" max="50" value={pillarW[p.key]}
+                          onChange={e=>setPillarW(prev=>({...prev,[p.key]:parseInt(e.target.value)}))}
+                          style={{width:70,accentColor:p.color}}/>
+                        <span style={{fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:16,color:p.color,minWidth:28}}>{pillarW[p.key]}%</span>
+                        <span style={{fontSize:15,color:sc(p.score),fontWeight:700,minWidth:40,textAlign:"right"}}>{p.score}/100</span>
+                      </div>
+                    </div>
+                    <div style={{height:7,background:"#101c2e",borderRadius:4,overflow:"hidden"}}>
+                      <div style={{width:`${p.score}%`,height:"100%",background:`linear-gradient(90deg,${p.color+"88"},${p.color})`,borderRadius:4,transition:"width 1.2s ease"}}/>
+                    </div>
+                  </div>
+                ))}
+                {/* Custom weighted score */}
+                {(()=>{
+                  const total=Object.values(pillarW).reduce((a,b)=>a+b,0);
+                  if(total!==100) return null;
+                  const custom=Math.round(q.tS*(pillarW.trend/100)+q.mS*(pillarW.momentum/100)+q.vS*(pillarW.volatility/100)+q.fS*(pillarW.fundamental/100)+q.maS*(pillarW.macro/100));
+                  return(
+                    <div style={{marginTop:10,padding:"10px 12px",background:"rgba(56,189,248,0.06)",border:"1px solid rgba(56,189,248,0.15)",borderRadius:9,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                      <span style={{fontSize:11,color:"#94a3b8"}}>Your custom weighted score:</span>
+                      <span style={{fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:18,color:sc(custom)}}>{custom}/100</span>
+                    </div>
+                  );
+                })()}
+                <div style={{marginTop:8,padding:"10px 12px",background:"#090f1a",borderRadius:9,fontSize:13,color:"#cbd5e1",lineHeight:1.7}}>{q.note}</div>
+              </div>
+              <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:14,padding:"18px 20px",marginBottom:14}}>
+                {lbl("📐 Technical Indicators","#38bdf8")}
+                <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
+                  {[
+                    {l:"RSI-14",v:q.rsi,sub:q.rsi>70?"Overbought ⚠️":q.rsi<30?"Oversold 🎯":"Normal range",c:q.rsi>70?"#f87171":q.rsi<30?"#34d399":"#fbbf24"},
+                    {l:"Bollinger %B",v:`${q.bbPct}%`,sub:q.bbPct>80?"Near upper band ⚠️":q.bbPct<20?"Near lower band 🎯":"Mid-band",c:q.bbPct>80?"#f87171":q.bbPct<20?"#34d399":"#fbbf24"},
+                    {l:"Vol Regime",v:q.volRegime,sub:"Current volatility state",c:q.volRegime.includes("Exp")?"#f87171":q.volRegime.includes("Comp")?"#34d399":"#fbbf24"},
+                    {l:"P/E vs Sector",v:stock.pe>0?`${stock.pe}x vs ${SECTOR_PE[stock.s]||22}x`:"N/A",sub:stock.pe>0&&stock.pe<(SECTOR_PE[stock.s]||22)?"Cheap vs sector 🎯":"Premium vs sector",c:stock.pe>0&&stock.pe<(SECTOR_PE[stock.s]||22)?"#34d399":"#fbbf24"},
+                    {l:"Wall St Signal",v:totalAN>0?consLabel:"N/A",sub:totalAN>0?`${totalAN} analysts · $${an.target} target`:"No coverage",c:consColor},
+                    {l:"Risk-Adj Return",v:`${q.rar>0?"+":""}${q.rar}`,sub:"Expected return ÷ volatility",c:fc(q.rar)},
+                  ].map((s,i)=>(
+                    <div key={i} style={{background:"#090f1a",border:"1px solid #0d1826",borderRadius:10,padding:"12px 13px"}}>
+                      {lbl(s.l)}<div style={{fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:18,color:s.c}}>{s.v}</div>
+                      <div style={{fontSize:17,color:"#7dd3fc",marginTop:3}}>{s.sub}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:14,padding:"18px 20px"}}>
+                {lbl("📉 Volatility Decomposition","#fbbf24")}
+                <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:14}}>
+                  {[
+                    {l:"Historical Vol",v:`${stock.vol}%`,sub:"10yr annual avg",c:"#fbbf24"},
+                    {l:"Recent Vol (3yr)",v:`${q.vS<50?stock.vol*1.2:stock.vol*0.8}%`,sub:"Last 3yr annualised",c:q.vS<50?"#f87171":"#34d399"},
+                    {l:"Vol Regime",v:q.volRegime,sub:"Current state",c:q.volRegime.includes("Exp")?"#f87171":q.volRegime.includes("Comp")?"#34d399":"#fbbf24"},
+                    {l:"Vol Score",v:`${q.vS}/100`,sub:"Higher = calmer",c:sc(q.vS)},
+                  ].map((s,i)=>(
+                    <div key={i} style={{background:"#090f1a",border:"1px solid #0d1826",borderRadius:10,padding:"11px 12px"}}>
+                      {lbl(s.l)}<div style={{fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:18,color:s.c}}>{s.v}</div>
+                      <div style={{fontSize:17,color:"#7dd3fc",marginTop:3}}>{s.sub}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
+                  {[
+                    {r:"🧊 Compressing",d:"Volatility falling — a breakout move may be approaching. Lower risk short-term.",c:"#34d399"},
+                    {r:"➡️ Stable",d:"Volatility within normal range. Average price moves expected.",c:"#fbbf24"},
+                    {r:"💥 Expanding",d:"Volatility rising — larger swings expected. Higher risk of sharp moves.",c:"#f87171"},
+                  ].map((item,i)=>(
+                    <div key={i} style={{background:"#090f1a",border:`1px solid ${item.c+"22"}`,borderRadius:10,padding:"11px 12px",borderLeft:`3px solid ${item.c}`}}>
+                      <div style={{fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:700,fontSize:15,color:item.c,marginBottom:5}}>{item.r}</div>
+                      <div style={{fontSize:13,color:"#cbd5e1",lineHeight:1.6}}>{item.d}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── PREDICTION ── */}
+          {tab==="prediction"&&(
+            <div style={{animation:"fadeUp 0.3s ease"}}>
+
+              <div style={{background:"rgba(249,115,22,0.06)",border:"1px solid rgba(249,115,22,0.2)",borderRadius:14,padding:"14px 20px",marginBottom:16}}>
+                <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:17,color:"#f97316",marginBottom:5}}>🔮 Price Forecast</div>
+                <div style={{fontSize:12,color:"#94a3b8",lineHeight:1.7}}>Quantitative price targets for next session, this week, 1 month and 3 months. Based on quant score, historical volatility, and momentum signals.</div>
+              </div>
+              <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:15,padding:"18px 20px",marginBottom:12}}>
+                {lbl("🔮 52-Week Price Forecast","#818cf8")}
+                <div style={{fontSize:11,color:"#94a3b8",marginBottom:14}}>Driven by 5-pillar composite score, 10-year CAGR model, and volatility-adjusted drift</div>
+                <ForecastLine current={lp.price} m1={q.p1M} m3={q.p3M} y1={q.p1Y} weekly={q.wk}/>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
+                {[{l:"📅 Today",p:((q.p1D/lp.price)-1)*100,t:q.p1D},{l:"📆 This Week",p:((q.p1W/lp.price)-1)*100,t:q.p1W}].map((item,i)=>(
+                  <div key={i} style={{background:"#0a1421",border:`1px solid ${item.p>=0?"rgba(52,211,153,0.2)":"rgba(248,113,113,0.2)"}`,borderRadius:14,padding:"17px 20px"}}>
+                    {lbl(item.l)}
+                    <div style={{fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:22,color:fc(item.p)}}>{fp(item.p)}</div>
+                    <div style={{fontSize:17,color:"#7dd3fc",marginTop:6}}>Target: <strong style={{color:fc(item.p)}}>${item.t}</strong></div>
+                  </div>
+                ))}
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:12}}>
+                {[["1-Month",q.p1M],["3-Month",q.p3M],["1-Year",q.p1Y]].map(([l,v],i)=>(
+                  <div key={i} style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:13,padding:"13px 15px",textAlign:"center"}}>
+                    {lbl(l+" Target")}
+                    <div style={{fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:18,color:v>=lp.price?"#34d399":"#f87171"}}>${v}</div>
+                    <div style={{fontSize:17,color:v>=lp.price?"#34d399":"#f87171",marginTop:4}}>{fp(((v/lp.price)-1)*100)}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
+                <div style={{background:"rgba(52,211,153,0.04)",border:"1px solid rgba(52,211,153,0.18)",borderRadius:13,padding:"15px 17px"}}>
+                  <div style={{fontSize:15,color:"#34d399",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:700,marginBottom:7}}>🐂 Bull Case</div>
+                  <div style={{fontSize:13,color:"#cbd5e1",lineHeight:1.8}}>If {ticker} maintains its {q.avg10}% historical average and momentum continues, shares could reach ${(lp.price*(1+Math.abs(q.adjCAGR)*1.5)).toFixed(0)} — a {(Math.abs(q.adjCAGR)*150).toFixed(0)}% gain.</div>
+                </div>
+                <div style={{background:"rgba(248,113,113,0.04)",border:"1px solid rgba(248,113,113,0.18)",borderRadius:13,padding:"15px 17px"}}>
+                  <div style={{fontSize:15,color:"#f87171",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:700,marginBottom:7}}>🐻 Bear Case</div>
+                  <div style={{fontSize:13,color:"#cbd5e1",lineHeight:1.8}}>A downturn similar to {ticker}'s worst year ({Math.min(...vals).toFixed(0)}%) could see the stock drop to ${(lp.price*(1+Math.min(...vals)/100*0.6)).toFixed(0)} — a {(Math.min(...vals)*0.6).toFixed(0)}% decline.</div>
+                </div>
+              </div>
+              <div style={{padding:"10px 14px",background:"rgba(251,191,36,0.05)",border:"1px solid rgba(251,191,36,0.12)",borderRadius:10,fontSize:11,color:"#94a3b8",lineHeight:1.7}}>
+                ⚠️ <strong style={{color:"#fbbf24"}}>Predictions use a 5-pillar mathematical model</strong> — not real-time data. Even the best models are right ~55% of the time. Never invest based solely on these forecasts.
+              </div>
+            </div>
+          )}
+
+          {/* ── 10-YEAR ── */}
+          {tab==="history"&&(
+            <div style={{animation:"fadeUp 0.3s ease"}}>
+
+              <div style={{background:"rgba(163,230,53,0.06)",border:"1px solid rgba(163,230,53,0.2)",borderRadius:14,padding:"14px 20px",marginBottom:16}}>
+                <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:17,color:"#a3e635",marginBottom:5}}>📅 10-Year Performance</div>
+                <div style={{fontSize:12,color:"#94a3b8",lineHeight:1.7}}>Annual returns 2015-2025. How this stock performed in each macro regime — Risk On, Caution, Risk Off, and Crisis years — compared to SPY.</div>
+              </div>
+              <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:15,padding:"18px 20px",marginBottom:12}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                  {lbl("📅 Annual Returns 2015–2025","#38bdf8")}
+                  <div style={{display:"flex",gap:6}}>
+                    {["Annual","6M (approx)","Quarterly (approx)"].map(v=>(
+                      <button key={v} onClick={()=>setHistView(v)} style={{padding:"4px 10px",borderRadius:6,fontSize:13,fontWeight:600,fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",background:histView===v?"rgba(56,189,248,0.15)":"#0d1826",border:`1px solid ${histView===v?"#38bdf8":"#101c2e"}`,color:histView===v?"#38bdf8":"#94a3b8",cursor:"pointer",transition:"all 0.15s"}}>{v}</button>
+                    ))}
+                  </div>
+                </div>
+                {histView==="Annual"&&<>
+                  <div style={{fontSize:11,color:"#94a3b8",marginBottom:16}}>Green = up year · Red = down year · Includes 2025 where data available</div>
+                  <HistBars returns={stock.r}/>
+                </>}
+                {histView!=="Annual"&&(
+                  <div style={{padding:"14px",background:"rgba(56,189,248,0.05)",border:"1px solid rgba(56,189,248,0.15)",borderRadius:10}}>
+                    <div style={{fontSize:13,color:"#38bdf8",fontWeight:600,marginBottom:8}}>{histView} view — Approximate breakdown from annual returns</div>
+                    <div style={{display:"grid",gridTemplateColumns:histView==="6M (approx)"?"repeat(2,1fr)":"repeat(4,1fr)",gap:8}}>
+                      {Object.entries(stock.r).sort((a,b)=>+a[0]-+b[0]).flatMap(([yr,ret])=>{
+                        const periods = histView==="6M (approx)"
+                          ? [{p:`H1 ${yr}`,v:(ret*0.48).toFixed(1)},{p:`H2 ${yr}`,v:(ret*0.52).toFixed(1)}]
+                          : [{p:`Q1 ${yr}`,v:(ret*0.22).toFixed(1)},{p:`Q2 ${yr}`,v:(ret*0.28).toFixed(1)},{p:`Q3 ${yr}`,v:(ret*0.24).toFixed(1)},{p:`Q4 ${yr}`,v:(ret*0.26).toFixed(1)}];
+                        return periods.map(({p,v})=>{
+                          const pos=parseFloat(v)>=0;
+                          return(<div key={p} style={{background:pos?"rgba(52,211,153,0.06)":"rgba(248,113,113,0.06)",border:`1px solid ${pos?"rgba(52,211,153,0.15)":"rgba(248,113,113,0.15)"}`,borderRadius:8,padding:"8px 10px",textAlign:"center"}}>
+                            <div style={{fontSize:11,color:"#94a3b8",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:700}}>{p}</div>
+                            <div style={{fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:18,color:pos?"#34d399":"#f87171",marginTop:3}}>{pos?"+":""}{v}%</div>
+                          </div>);
+                        });
+                      })}
+                    </div>
+                    <div style={{marginTop:10,fontSize:11,color:"#94a3b8"}}>⚠️ Sub-annual breakdowns are approximate estimates derived from annual returns. For real quarterly data, connect to Finnhub candle API.</div>
+                  </div>
+                )}
+              </div>
+              <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:15,padding:"17px 20px"}}>
+                {lbl("Year-by-Year","#38bdf8")}
+                <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:8,marginBottom:12}}>
+                  {Object.entries(stock.r).sort((a,b)=>+a[0]-+b[0]).map(([yr,ret])=>{
+                    const pos=ret>=0;
+                    return(
+                      <div key={yr} style={{background:pos?"rgba(52,211,153,0.06)":"rgba(248,113,113,0.06)",border:`1px solid ${pos?"rgba(52,211,153,0.15)":"rgba(248,113,113,0.15)"}`,borderRadius:9,padding:"9px 10px",textAlign:"center"}}>
+                        <div style={{fontSize:15,color:"#7dd3fc",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:700}}>{yr}</div>
+                        <div style={{fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:18,color:pos?"#34d399":"#f87171",marginTop:3}}>{pos?"+":""}{ret.toFixed(1)}%</div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:8}}>
+                  {[["10yr Avg",avg10.toFixed(1)+"%","#38bdf8"],["Best Year","+"+Math.max(...vals).toFixed(1)+"%","#34d399"],["Worst Year",Math.min(...vals).toFixed(1)+"%","#f87171"],["Up Years",vals.filter(v=>v>0).length+"/10","#fbbf24"]].map(([l,v,c],i)=>(
+                    <div key={i} style={{background:"#08111e",border:"1px solid #101c2e",borderRadius:9,padding:"9px 11px",textAlign:"center"}}>
+                      {lbl(l)}<div style={{fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:18,color:c}}>{v}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── NEWS ── */}
+          {tab==="news"&&(
+            <div style={{animation:"fadeUp 0.3s ease"}}>
+
+              <div style={{background:"rgba(148,163,184,0.06)",border:"1px solid rgba(148,163,184,0.2)",borderRadius:14,padding:"14px 20px",marginBottom:16}}>
+                <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:17,color:"#94a3b8",marginBottom:5}}>📰 Latest News</div>
+                <div style={{fontSize:12,color:"#94a3b8",lineHeight:1.7}}>Latest company news from Finnhub. Earnings announcements, analyst upgrades/downgrades, product launches, and macro events affecting this stock.</div>
+              </div>
+              <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:14,padding:"15px 18px",marginBottom:12,borderLeft:"3px solid #38bdf8"}}>
+                {lbl("🤖 News Summary","#38bdf8")}
+                <div style={{fontSize:13,color:"#cbd5e1",lineHeight:1.85}}>
+                  {q.comp>=70?`Recent news for ${ticker} is broadly positive with strong business momentum and growing investor confidence.`:q.comp>=50?`News flow for ${ticker} is mixed-to-positive. Fundamentals look solid but some near-term headwinds exist.`:q.comp>=35?`${ticker} faces some near-term challenges. Monitor closely before adding.`:`Recent news suggests significant headwinds for ${ticker}. Risk is elevated — wait for clarity.`}
+                </div>
+              </div>
+              {/* Live news from Finnhub or fallback to curated */}
+              {lbl("📰 Latest Headlines · "+ticker+" · Live via Finnhub","#38bdf8")}
+              {(newsCache[ticker]&&newsCache[ticker].length>0)?newsCache[ticker].map((n,i)=>(
+                <div key={i} style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:12,padding:"13px 16px",display:"flex",gap:12,alignItems:"flex-start",marginBottom:8,cursor:"pointer"}} onClick={()=>n.url&&window.open(n.url,"_blank")}>
+                  <div style={{width:26,height:26,background:"rgba(56,189,248,0.1)",border:"1px solid rgba(56,189,248,0.2)",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,color:"#38bdf8",fontWeight:700,flexShrink:0}}>📰</div>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:13,color:"#e2e8f0",lineHeight:1.65,fontWeight:500,marginBottom:4}}>{n.headline}</div>
+                    <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                      <div style={{fontSize:13,color:"#34d399",fontWeight:600}}>{n.source}</div>
+                      <div style={{fontSize:11,color:"#94a3b8"}}>·</div>
+                      <div style={{fontSize:11,color:"#94a3b8"}}>{n.datetime}</div>
+                      {n.url&&<div style={{fontSize:17,color:"#38bdf8"}}>↗ Read full story</div>}
+                    </div>
+                  </div>
+                </div>
+              )):(stNews.map((h,i)=>(
+                <div key={i} style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:12,padding:"13px 16px",display:"flex",gap:12,alignItems:"flex-start",marginBottom:8}}>
+                  <div style={{width:26,height:26,background:"rgba(56,189,248,0.1)",border:"1px solid rgba(56,189,248,0.2)",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,color:"#38bdf8",fontWeight:700,flexShrink:0}}>📰</div>
+                  <div>
+                    <div style={{fontSize:13,color:"#e2e8f0",lineHeight:1.65,fontWeight:500}}>{h}</div>
+                    <div style={{fontSize:17,color:"#fbbf24",marginTop:4}}>⚠️ Cached — live news loading…</div>
+                  </div>
+                </div>
+              )))}
+              <div style={{padding:"10px 14px",background:"rgba(52,211,153,0.04)",border:"1px solid rgba(52,211,153,0.1)",borderRadius:10,fontSize:13,color:"#166534",lineHeight:1.6,marginTop:4}}>
+                ✅ News powered by <strong>Finnhub</strong> — real headlines from the last 7 days. Click any headline to read the full story.
+              </div>
+            </div>
+          )}
+
+          {/* ── FINANCIALS ── */}
+          {tab==="financials"&&(
+            <div style={{animation:"fadeUp 0.3s ease"}}>
+
+              <div style={{background:"rgba(52,211,153,0.06)",border:"1px solid rgba(52,211,153,0.2)",borderRadius:14,padding:"14px 20px",marginBottom:16}}>
+                <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:17,color:"#34d399",marginBottom:5}}>💰 Financial Health</div>
+                <div style={{fontSize:12,color:"#94a3b8",lineHeight:1.7}}>Company financial health. Revenue growth, profit margins, free cash flow, debt-to-equity, and key metrics driving the quality pillar of the quant score.</div>
+              </div>
+              {!fin?(
+                <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:14,padding:24,textAlign:"center",color:"#cbd5e1"}}>No financial data available.</div>
+              ):fin.note&&!fin.is.length?(
+                <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:14,padding:24,textAlign:"center"}}>
+                  <div style={{fontSize:22,marginBottom:10}}>📊</div>
+                  <div style={{fontSize:13,color:"#cbd5e1",lineHeight:1.8}}>{fin.note}</div>
+                </div>
+              ):(
+                <>
+                  <div style={{display:"flex",gap:8,marginBottom:14}}>
+                    {[["is","📈 Income Statement","#38bdf8"],["bs","🏦 Balance Sheet","#818cf8"],["cf","💵 Cash Flow","#34d399"]].map(([key,label,color])=>(
+                      <button key={key} onClick={()=>setActiveFS(key)} style={{padding:"8px 16px",borderRadius:9,fontSize:13,fontWeight:600,fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",border:`1px solid ${activeFS===key?color:"#101c2e"}`,background:activeFS===key?`${color+"18"}`:"transparent",color:activeFS===key?color:"#7dd3fc",transition:"all 0.15s"}}>{label}</button>
+                    ))}
+                  </div>
+                  <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:14,padding:"16px 18px",marginBottom:12}}>
+                    {lbl(`${stock.name} · FY2022–FY2025 · USD Billions`,"#94a3b8")}
+                    <table style={{width:"100%",borderCollapse:"collapse"}}>
+                      <thead>
+                        <tr>
+                          <th style={{textAlign:"left",padding:"8px 12px",fontSize:11,color:"#cbd5e1",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:700,textTransform:"uppercase",borderBottom:"1px solid #101c2e"}}>Item</th>
+                          {[2022,2023,2024,2025].map(y=><th key={y} style={{textAlign:"right",padding:"8px 12px",fontSize:11,color:"#94a3b8",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:700,borderBottom:"1px solid #101c2e"}}>FY{y}</th>)}
+                          <th style={{textAlign:"right",padding:"8px 12px",fontSize:11,color:"#94a3b8",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:700,borderBottom:"1px solid #101c2e"}}>YoY</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(fin[activeFS]||[]).map((row,i)=>{
+                          const latestY=row[2025]!=null?2025:2024; const prevY=latestY===2025?2024:2023; const yoy=row[latestY]!=null&&row[prevY]!=null&&row[prevY]!==0?((row[latestY]-row[prevY])/Math.abs(row[prevY])*100):null;
+                          return(
+                            <tr key={i} style={{borderBottom:"1px solid #0d1826"}}>
+                              <td style={{padding:"10px 12px",fontSize:13,color:"#cbd5e1"}}>{row.i}</td>
+                              {[2022,2023,2024,2025].map(y=>(
+                                <td key={y} style={{textAlign:"right",padding:"10px 12px",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:700,fontSize:13,color:row[y]<0?"#f87171":"#7dd3fc"}}>
+                                  {row[y]!=null?(row[y]<0?`(${Math.abs(row[y]).toFixed(1)})`:`$${row[y].toFixed(1)}B`):"—"}
+                                </td>
+                              ))}
+                              <td style={{textAlign:"right",padding:"10px 12px",fontSize:13,fontWeight:700,color:yoy==null?"#94a3b8":yoy>=0?"#34d399":"#f87171"}}>
+                                {yoy!=null?`${yoy>=0?"+":""}${yoy.toFixed(1)}%`:"—"}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div style={{padding:"10px 14px",background:"rgba(56,189,248,0.04)",border:"1px solid rgba(56,189,248,0.1)",borderRadius:10,fontSize:11,color:"#94a3b8",lineHeight:1.7}}>
+                    📌 Figures approximate and rounded. Negative numbers in parentheses. YoY = FY2023→FY2024 change. Source: Company annual reports & SEC filings.
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+
+          {/* ── GUIDE TAB ── */}
+          {/* ── PORTFOLIO TAB ── */}
+          {/* ── PORTFOLIO TAB ── */}
+          {tab==="quant"&&(
+            <div style={{animation:"fadeUp 0.3s ease",overflow:"hidden"}}>
+
+              <div style={{background:"rgba(129,140,248,0.06)",border:"1px solid rgba(129,140,248,0.2)",borderRadius:14,padding:"14px 20px",marginBottom:16}}>
+                <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:17,color:"#818cf8",marginBottom:5}}>🧮 Quant Rankings</div>
+                <div style={{fontSize:12,color:"#94a3b8",lineHeight:1.7}}>All 26 stocks ranked 1-20 by quantitative score (0-100). Momentum + Valuation + Quality + Risk + Sentiment + Moat. Top ranked = buy candidates.</div>
+              </div>
+              <div style={{background:q.sig.bg,border:`1px solid ${q.sig.c+"44"}`,borderRadius:16,padding:"20px 22px",marginBottom:14,display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:14}}>
+                <div>
+                  {lbl("Composite Quant Score",q.sig.c)}
+                  <div style={{fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:24,color:q.sig.c,lineHeight:1}}>{q.comp}</div>
+                  <div style={{fontSize:11,color:"#94a3b8",marginTop:4}}>out of 100</div>
+                </div>
+                <div>
+                  <div style={{fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:20,color:q.sig.c,marginBottom:6}}>{q.sig.e} {q.sig.l}</div>
+                  <div style={{fontSize:17,color:"#cbd5e1",marginBottom:3}}>Confidence: <strong style={{color:"#818cf8"}}>{q.conf}%</strong></div>
+                  <div style={{fontSize:17,color:"#cbd5e1"}}>Risk-Adj Return: <strong style={{color:fc(q.rar)}}>{q.rar>0?"+":""}{q.rar}</strong></div>
+                </div>
+              </div>
+              <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:14,padding:"18px 20px",marginBottom:14}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+                  {lbl("5-Pillar Breakdown","#38bdf8")}
+                  <div style={{fontSize:11,color:"#94a3b8"}}>Total: <strong style={{color:Object.values(pillarW).reduce((a,b)=>a+b,0)===100?"#34d399":"#f87171"}}>{Object.values(pillarW).reduce((a,b)=>a+b,0)}%</strong> {Object.values(pillarW).reduce((a,b)=>a+b,0)!==100&&<span style={{color:"#f87171"}}>(must = 100%)</span>}</div>
+                </div>
+                {[
+                  {key:"trend",label:"Trend",score:q.tS,color:"#38bdf8"},
+                  {key:"momentum",label:"Momentum",score:q.mS,color:"#a3e635"},
+                  {key:"volatility",label:"Volatility",score:q.vS,color:"#fbbf24"},
+                  {key:"fundamental",label:"Fundamental",score:q.fS,color:"#818cf8"},
+                  {key:"macro",label:"Macro",score:q.maS,color:"#f97316"},
+                ].map((p,i)=>(
+                  <div key={i} style={{marginBottom:14}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4,flexWrap:"wrap",gap:4}}>
+                      <span style={{fontSize:13,color:"#e2e8f0",fontWeight:600}}>{p.label}</span>
+                      <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
+                        <span style={{fontSize:11,color:"#94a3b8"}}>Weight:</span>
+                        <input type="range" min="0" max="50" value={pillarW[p.key]}
+                          onChange={e=>setPillarW(prev=>({...prev,[p.key]:parseInt(e.target.value)}))}
+                          style={{width:70,accentColor:p.color}}/>
+                        <span style={{fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:16,color:p.color,minWidth:28}}>{pillarW[p.key]}%</span>
+                        <span style={{fontSize:15,color:sc(p.score),fontWeight:700,minWidth:40,textAlign:"right"}}>{p.score}/100</span>
+                      </div>
+                    </div>
+                    <div style={{height:7,background:"#101c2e",borderRadius:4,overflow:"hidden"}}>
+                      <div style={{width:`${p.score}%`,height:"100%",background:`linear-gradient(90deg,${p.color+"88"},${p.color})`,borderRadius:4,transition:"width 1.2s ease"}}/>
+                    </div>
+                  </div>
+                ))}
+                {/* Custom weighted score */}
+                {(()=>{
+                  const total=Object.values(pillarW).reduce((a,b)=>a+b,0);
+                  if(total!==100) return null;
+                  const custom=Math.round(q.tS*(pillarW.trend/100)+q.mS*(pillarW.momentum/100)+q.vS*(pillarW.volatility/100)+q.fS*(pillarW.fundamental/100)+q.maS*(pillarW.macro/100));
+                  return(
+                    <div style={{marginTop:10,padding:"10px 12px",background:"rgba(56,189,248,0.06)",border:"1px solid rgba(56,189,248,0.15)",borderRadius:9,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                      <span style={{fontSize:11,color:"#94a3b8"}}>Your custom weighted score:</span>
+                      <span style={{fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:18,color:sc(custom)}}>{custom}/100</span>
+                    </div>
+                  );
+                })()}
+                <div style={{marginTop:8,padding:"10px 12px",background:"#090f1a",borderRadius:9,fontSize:13,color:"#cbd5e1",lineHeight:1.7}}>{q.note}</div>
+              </div>
+              <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:14,padding:"18px 20px",marginBottom:14}}>
+                {lbl("📐 Technical Indicators","#38bdf8")}
+                <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
+                  {[
+                    {l:"RSI-14",v:q.rsi,sub:q.rsi>70?"Overbought ⚠️":q.rsi<30?"Oversold 🎯":"Normal range",c:q.rsi>70?"#f87171":q.rsi<30?"#34d399":"#fbbf24"},
+                    {l:"Bollinger %B",v:`${q.bbPct}%`,sub:q.bbPct>80?"Near upper band ⚠️":q.bbPct<20?"Near lower band 🎯":"Mid-band",c:q.bbPct>80?"#f87171":q.bbPct<20?"#34d399":"#fbbf24"},
+                    {l:"Vol Regime",v:q.volRegime,sub:"Current volatility state",c:q.volRegime.includes("Exp")?"#f87171":q.volRegime.includes("Comp")?"#34d399":"#fbbf24"},
+                    {l:"P/E vs Sector",v:stock.pe>0?`${stock.pe}x vs ${SECTOR_PE[stock.s]||22}x`:"N/A",sub:stock.pe>0&&stock.pe<(SECTOR_PE[stock.s]||22)?"Cheap vs sector 🎯":"Premium vs sector",c:stock.pe>0&&stock.pe<(SECTOR_PE[stock.s]||22)?"#34d399":"#fbbf24"},
+                    {l:"Wall St Signal",v:totalAN>0?consLabel:"N/A",sub:totalAN>0?`${totalAN} analysts · $${an.target} target`:"No coverage",c:consColor},
+                    {l:"Risk-Adj Return",v:`${q.rar>0?"+":""}${q.rar}`,sub:"Expected return ÷ volatility",c:fc(q.rar)},
+                  ].map((s,i)=>(
+                    <div key={i} style={{background:"#090f1a",border:"1px solid #0d1826",borderRadius:10,padding:"12px 13px"}}>
+                      {lbl(s.l)}<div style={{fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:18,color:s.c}}>{s.v}</div>
+                      <div style={{fontSize:17,color:"#7dd3fc",marginTop:3}}>{s.sub}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:14,padding:"18px 20px"}}>
+                {lbl("📉 Volatility Decomposition","#fbbf24")}
+                <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:14}}>
+                  {[
+                    {l:"Historical Vol",v:`${stock.vol}%`,sub:"10yr annual avg",c:"#fbbf24"},
+                    {l:"Recent Vol (3yr)",v:`${q.vS<50?stock.vol*1.2:stock.vol*0.8}%`,sub:"Last 3yr annualised",c:q.vS<50?"#f87171":"#34d399"},
+                    {l:"Vol Regime",v:q.volRegime,sub:"Current state",c:q.volRegime.includes("Exp")?"#f87171":q.volRegime.includes("Comp")?"#34d399":"#fbbf24"},
+                    {l:"Vol Score",v:`${q.vS}/100`,sub:"Higher = calmer",c:sc(q.vS)},
+                  ].map((s,i)=>(
+                    <div key={i} style={{background:"#090f1a",border:"1px solid #0d1826",borderRadius:10,padding:"11px 12px"}}>
+                      {lbl(s.l)}<div style={{fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:18,color:s.c}}>{s.v}</div>
+                      <div style={{fontSize:17,color:"#7dd3fc",marginTop:3}}>{s.sub}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
+                  {[
+                    {r:"🧊 Compressing",d:"Volatility falling — a breakout move may be approaching. Lower risk short-term.",c:"#34d399"},
+                    {r:"➡️ Stable",d:"Volatility within normal range. Average price moves expected.",c:"#fbbf24"},
+                    {r:"💥 Expanding",d:"Volatility rising — larger swings expected. Higher risk of sharp moves.",c:"#f87171"},
+                  ].map((item,i)=>(
+                    <div key={i} style={{background:"#090f1a",border:`1px solid ${item.c+"22"}`,borderRadius:10,padding:"11px 12px",borderLeft:`3px solid ${item.c}`}}>
+                      <div style={{fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:700,fontSize:15,color:item.c,marginBottom:5}}>{item.r}</div>
+                      <div style={{fontSize:13,color:"#cbd5e1",lineHeight:1.6}}>{item.d}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── PREDICTION ── */}
+          {tab==="prediction"&&(
+            <div style={{animation:"fadeUp 0.3s ease"}}>
+
+              <div style={{background:"rgba(249,115,22,0.06)",border:"1px solid rgba(249,115,22,0.2)",borderRadius:14,padding:"14px 20px",marginBottom:16}}>
+                <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:17,color:"#f97316",marginBottom:5}}>🔮 Price Forecast</div>
+                <div style={{fontSize:12,color:"#94a3b8",lineHeight:1.7}}>Quantitative price targets for next session, this week, 1 month and 3 months. Based on quant score, historical volatility, and momentum signals.</div>
+              </div>
+              <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:15,padding:"18px 20px",marginBottom:12}}>
+                {lbl("🔮 52-Week Price Forecast","#818cf8")}
+                <div style={{fontSize:11,color:"#94a3b8",marginBottom:14}}>Driven by 5-pillar composite score, 10-year CAGR model, and volatility-adjusted drift</div>
+                <ForecastLine current={lp.price} m1={q.p1M} m3={q.p3M} y1={q.p1Y} weekly={q.wk}/>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
+                {[{l:"📅 Today",p:((q.p1D/lp.price)-1)*100,t:q.p1D},{l:"📆 This Week",p:((q.p1W/lp.price)-1)*100,t:q.p1W}].map((item,i)=>(
+                  <div key={i} style={{background:"#0a1421",border:`1px solid ${item.p>=0?"rgba(52,211,153,0.2)":"rgba(248,113,113,0.2)"}`,borderRadius:14,padding:"17px 20px"}}>
+                    {lbl(item.l)}
+                    <div style={{fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:22,color:fc(item.p)}}>{fp(item.p)}</div>
+                    <div style={{fontSize:17,color:"#7dd3fc",marginTop:6}}>Target: <strong style={{color:fc(item.p)}}>${item.t}</strong></div>
+                  </div>
+                ))}
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:12}}>
+                {[["1-Month",q.p1M],["3-Month",q.p3M],["1-Year",q.p1Y]].map(([l,v],i)=>(
+                  <div key={i} style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:13,padding:"13px 15px",textAlign:"center"}}>
+                    {lbl(l+" Target")}
+                    <div style={{fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:18,color:v>=lp.price?"#34d399":"#f87171"}}>${v}</div>
+                    <div style={{fontSize:17,color:v>=lp.price?"#34d399":"#f87171",marginTop:4}}>{fp(((v/lp.price)-1)*100)}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
+                <div style={{background:"rgba(52,211,153,0.04)",border:"1px solid rgba(52,211,153,0.18)",borderRadius:13,padding:"15px 17px"}}>
+                  <div style={{fontSize:15,color:"#34d399",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:700,marginBottom:7}}>🐂 Bull Case</div>
+                  <div style={{fontSize:13,color:"#cbd5e1",lineHeight:1.8}}>If {ticker} maintains its {q.avg10}% historical average and momentum continues, shares could reach ${(lp.price*(1+Math.abs(q.adjCAGR)*1.5)).toFixed(0)} — a {(Math.abs(q.adjCAGR)*150).toFixed(0)}% gain.</div>
+                </div>
+                <div style={{background:"rgba(248,113,113,0.04)",border:"1px solid rgba(248,113,113,0.18)",borderRadius:13,padding:"15px 17px"}}>
+                  <div style={{fontSize:15,color:"#f87171",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:700,marginBottom:7}}>🐻 Bear Case</div>
+                  <div style={{fontSize:13,color:"#cbd5e1",lineHeight:1.8}}>A downturn similar to {ticker}'s worst year ({Math.min(...vals).toFixed(0)}%) could see the stock drop to ${(lp.price*(1+Math.min(...vals)/100*0.6)).toFixed(0)} — a {(Math.min(...vals)*0.6).toFixed(0)}% decline.</div>
+                </div>
+              </div>
+              <div style={{padding:"10px 14px",background:"rgba(251,191,36,0.05)",border:"1px solid rgba(251,191,36,0.12)",borderRadius:10,fontSize:11,color:"#94a3b8",lineHeight:1.7}}>
+                ⚠️ <strong style={{color:"#fbbf24"}}>Predictions use a 5-pillar mathematical model</strong> — not real-time data. Even the best models are right ~55% of the time. Never invest based solely on these forecasts.
+              </div>
+            </div>
+          )}
+
+          {/* ── 10-YEAR ── */}
+          {tab==="history"&&(
+            <div style={{animation:"fadeUp 0.3s ease"}}>
+
+              <div style={{background:"rgba(163,230,53,0.06)",border:"1px solid rgba(163,230,53,0.2)",borderRadius:14,padding:"14px 20px",marginBottom:16}}>
+                <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:17,color:"#a3e635",marginBottom:5}}>📅 10-Year Performance</div>
+                <div style={{fontSize:12,color:"#94a3b8",lineHeight:1.7}}>Annual returns 2015-2025. How this stock performed in each macro regime — Risk On, Caution, Risk Off, and Crisis years — compared to SPY.</div>
+              </div>
+              <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:15,padding:"18px 20px",marginBottom:12}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                  {lbl("📅 Annual Returns 2015–2025","#38bdf8")}
+                  <div style={{display:"flex",gap:6}}>
+                    {["Annual","6M (approx)","Quarterly (approx)"].map(v=>(
+                      <button key={v} onClick={()=>setHistView(v)} style={{padding:"4px 10px",borderRadius:6,fontSize:13,fontWeight:600,fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",background:histView===v?"rgba(56,189,248,0.15)":"#0d1826",border:`1px solid ${histView===v?"#38bdf8":"#101c2e"}`,color:histView===v?"#38bdf8":"#94a3b8",cursor:"pointer",transition:"all 0.15s"}}>{v}</button>
+                    ))}
+                  </div>
+                </div>
+                {histView==="Annual"&&<>
+                  <div style={{fontSize:11,color:"#94a3b8",marginBottom:16}}>Green = up year · Red = down year · Includes 2025 where data available</div>
+                  <HistBars returns={stock.r}/>
+                </>}
+                {histView!=="Annual"&&(
+                  <div style={{padding:"14px",background:"rgba(56,189,248,0.05)",border:"1px solid rgba(56,189,248,0.15)",borderRadius:10}}>
+                    <div style={{fontSize:13,color:"#38bdf8",fontWeight:600,marginBottom:8}}>{histView} view — Approximate breakdown from annual returns</div>
+                    <div style={{display:"grid",gridTemplateColumns:histView==="6M (approx)"?"repeat(2,1fr)":"repeat(4,1fr)",gap:8}}>
+                      {Object.entries(stock.r).sort((a,b)=>+a[0]-+b[0]).flatMap(([yr,ret])=>{
+                        const periods = histView==="6M (approx)"
+                          ? [{p:`H1 ${yr}`,v:(ret*0.48).toFixed(1)},{p:`H2 ${yr}`,v:(ret*0.52).toFixed(1)}]
+                          : [{p:`Q1 ${yr}`,v:(ret*0.22).toFixed(1)},{p:`Q2 ${yr}`,v:(ret*0.28).toFixed(1)},{p:`Q3 ${yr}`,v:(ret*0.24).toFixed(1)},{p:`Q4 ${yr}`,v:(ret*0.26).toFixed(1)}];
+                        return periods.map(({p,v})=>{
+                          const pos=parseFloat(v)>=0;
+                          return(<div key={p} style={{background:pos?"rgba(52,211,153,0.06)":"rgba(248,113,113,0.06)",border:`1px solid ${pos?"rgba(52,211,153,0.15)":"rgba(248,113,113,0.15)"}`,borderRadius:8,padding:"8px 10px",textAlign:"center"}}>
+                            <div style={{fontSize:11,color:"#94a3b8",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:700}}>{p}</div>
+                            <div style={{fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:18,color:pos?"#34d399":"#f87171",marginTop:3}}>{pos?"+":""}{v}%</div>
+                          </div>);
+                        });
+                      })}
+                    </div>
+                    <div style={{marginTop:10,fontSize:11,color:"#94a3b8"}}>⚠️ Sub-annual breakdowns are approximate estimates derived from annual returns. For real quarterly data, connect to Finnhub candle API.</div>
+                  </div>
+                )}
+              </div>
+              <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:15,padding:"17px 20px"}}>
+                {lbl("Year-by-Year","#38bdf8")}
+                <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:8,marginBottom:12}}>
+                  {Object.entries(stock.r).sort((a,b)=>+a[0]-+b[0]).map(([yr,ret])=>{
+                    const pos=ret>=0;
+                    return(
+                      <div key={yr} style={{background:pos?"rgba(52,211,153,0.06)":"rgba(248,113,113,0.06)",border:`1px solid ${pos?"rgba(52,211,153,0.15)":"rgba(248,113,113,0.15)"}`,borderRadius:9,padding:"9px 10px",textAlign:"center"}}>
+                        <div style={{fontSize:15,color:"#7dd3fc",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:700}}>{yr}</div>
+                        <div style={{fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:18,color:pos?"#34d399":"#f87171",marginTop:3}}>{pos?"+":""}{ret.toFixed(1)}%</div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:8}}>
+                  {[["10yr Avg",avg10.toFixed(1)+"%","#38bdf8"],["Best Year","+"+Math.max(...vals).toFixed(1)+"%","#34d399"],["Worst Year",Math.min(...vals).toFixed(1)+"%","#f87171"],["Up Years",vals.filter(v=>v>0).length+"/10","#fbbf24"]].map(([l,v,c],i)=>(
+                    <div key={i} style={{background:"#08111e",border:"1px solid #101c2e",borderRadius:9,padding:"9px 11px",textAlign:"center"}}>
+                      {lbl(l)}<div style={{fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:800,fontSize:18,color:c}}>{v}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── NEWS ── */}
+          {tab==="news"&&(
+            <div style={{animation:"fadeUp 0.3s ease"}}>
+
+              <div style={{background:"rgba(148,163,184,0.06)",border:"1px solid rgba(148,163,184,0.2)",borderRadius:14,padding:"14px 20px",marginBottom:16}}>
+                <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:17,color:"#94a3b8",marginBottom:5}}>📰 Latest News</div>
+                <div style={{fontSize:12,color:"#94a3b8",lineHeight:1.7}}>Latest company news from Finnhub. Earnings announcements, analyst upgrades/downgrades, product launches, and macro events affecting this stock.</div>
+              </div>
+              <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:14,padding:"15px 18px",marginBottom:12,borderLeft:"3px solid #38bdf8"}}>
+                {lbl("🤖 News Summary","#38bdf8")}
+                <div style={{fontSize:13,color:"#cbd5e1",lineHeight:1.85}}>
+                  {q.comp>=70?`Recent news for ${ticker} is broadly positive with strong business momentum and growing investor confidence.`:q.comp>=50?`News flow for ${ticker} is mixed-to-positive. Fundamentals look solid but some near-term headwinds exist.`:q.comp>=35?`${ticker} faces some near-term challenges. Monitor closely before adding.`:`Recent news suggests significant headwinds for ${ticker}. Risk is elevated — wait for clarity.`}
+                </div>
+              </div>
+              {/* Live news from Finnhub or fallback to curated */}
+              {lbl("📰 Latest Headlines · "+ticker+" · Live via Finnhub","#38bdf8")}
+              {(newsCache[ticker]&&newsCache[ticker].length>0)?newsCache[ticker].map((n,i)=>(
+                <div key={i} style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:12,padding:"13px 16px",display:"flex",gap:12,alignItems:"flex-start",marginBottom:8,cursor:"pointer"}} onClick={()=>n.url&&window.open(n.url,"_blank")}>
+                  <div style={{width:26,height:26,background:"rgba(56,189,248,0.1)",border:"1px solid rgba(56,189,248,0.2)",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,color:"#38bdf8",fontWeight:700,flexShrink:0}}>📰</div>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:13,color:"#e2e8f0",lineHeight:1.65,fontWeight:500,marginBottom:4}}>{n.headline}</div>
+                    <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                      <div style={{fontSize:13,color:"#34d399",fontWeight:600}}>{n.source}</div>
+                      <div style={{fontSize:11,color:"#94a3b8"}}>·</div>
+                      <div style={{fontSize:11,color:"#94a3b8"}}>{n.datetime}</div>
+                      {n.url&&<div style={{fontSize:17,color:"#38bdf8"}}>↗ Read full story</div>}
+                    </div>
+                  </div>
+                </div>
+              )):(stNews.map((h,i)=>(
+                <div key={i} style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:12,padding:"13px 16px",display:"flex",gap:12,alignItems:"flex-start",marginBottom:8}}>
+                  <div style={{width:26,height:26,background:"rgba(56,189,248,0.1)",border:"1px solid rgba(56,189,248,0.2)",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,color:"#38bdf8",fontWeight:700,flexShrink:0}}>📰</div>
+                  <div>
+                    <div style={{fontSize:13,color:"#e2e8f0",lineHeight:1.65,fontWeight:500}}>{h}</div>
+                    <div style={{fontSize:17,color:"#fbbf24",marginTop:4}}>⚠️ Cached — live news loading…</div>
+                  </div>
+                </div>
+              )))}
+              <div style={{padding:"10px 14px",background:"rgba(52,211,153,0.04)",border:"1px solid rgba(52,211,153,0.1)",borderRadius:10,fontSize:13,color:"#166534",lineHeight:1.6,marginTop:4}}>
+                ✅ News powered by <strong>Finnhub</strong> — real headlines from the last 7 days. Click any headline to read the full story.
+              </div>
+            </div>
+          )}
+
+          {/* ── FINANCIALS ── */}
+          {tab==="financials"&&(
+            <div style={{animation:"fadeUp 0.3s ease"}}>
+
+              <div style={{background:"rgba(52,211,153,0.06)",border:"1px solid rgba(52,211,153,0.2)",borderRadius:14,padding:"14px 20px",marginBottom:16}}>
+                <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:800,fontSize:17,color:"#34d399",marginBottom:5}}>💰 Financial Health</div>
+                <div style={{fontSize:12,color:"#94a3b8",lineHeight:1.7}}>Company financial health. Revenue growth, profit margins, free cash flow, debt-to-equity, and key metrics driving the quality pillar of the quant score.</div>
+              </div>
+              {!fin?(
+                <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:14,padding:24,textAlign:"center",color:"#cbd5e1"}}>No financial data available.</div>
+              ):fin.note&&!fin.is.length?(
+                <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:14,padding:24,textAlign:"center"}}>
+                  <div style={{fontSize:22,marginBottom:10}}>📊</div>
+                  <div style={{fontSize:13,color:"#cbd5e1",lineHeight:1.8}}>{fin.note}</div>
+                </div>
+              ):(
+                <>
+                  <div style={{display:"flex",gap:8,marginBottom:14}}>
+                    {[["is","📈 Income Statement","#38bdf8"],["bs","🏦 Balance Sheet","#818cf8"],["cf","💵 Cash Flow","#34d399"]].map(([key,label,color])=>(
+                      <button key={key} onClick={()=>setActiveFS(key)} style={{padding:"8px 16px",borderRadius:9,fontSize:13,fontWeight:600,fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",border:`1px solid ${activeFS===key?color:"#101c2e"}`,background:activeFS===key?`${color+"18"}`:"transparent",color:activeFS===key?color:"#7dd3fc",transition:"all 0.15s"}}>{label}</button>
+                    ))}
+                  </div>
+                  <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:14,padding:"16px 18px",marginBottom:12}}>
+                    {lbl(`${stock.name} · FY2022–FY2025 · USD Billions`,"#94a3b8")}
+                    <table style={{width:"100%",borderCollapse:"collapse"}}>
+                      <thead>
+                        <tr>
+                          <th style={{textAlign:"left",padding:"8px 12px",fontSize:11,color:"#cbd5e1",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:700,textTransform:"uppercase",borderBottom:"1px solid #101c2e"}}>Item</th>
+                          {[2022,2023,2024,2025].map(y=><th key={y} style={{textAlign:"right",padding:"8px 12px",fontSize:11,color:"#94a3b8",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:700,borderBottom:"1px solid #101c2e"}}>FY{y}</th>)}
+                          <th style={{textAlign:"right",padding:"8px 12px",fontSize:11,color:"#94a3b8",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:700,borderBottom:"1px solid #101c2e"}}>YoY</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(fin[activeFS]||[]).map((row,i)=>{
+                          const latestY=row[2025]!=null?2025:2024; const prevY=latestY===2025?2024:2023; const yoy=row[latestY]!=null&&row[prevY]!=null&&row[prevY]!==0?((row[latestY]-row[prevY])/Math.abs(row[prevY])*100):null;
+                          return(
+                            <tr key={i} style={{borderBottom:"1px solid #0d1826"}}>
+                              <td style={{padding:"10px 12px",fontSize:13,color:"#cbd5e1"}}>{row.i}</td>
+                              {[2022,2023,2024,2025].map(y=>(
+                                <td key={y} style={{textAlign:"right",padding:"10px 12px",fontFamily:"Avenir Next,Avenir,Nunito,sans-serif",fontWeight:700,fontSize:13,color:row[y]<0?"#f87171":"#7dd3fc"}}>
+                                  {row[y]!=null?(row[y]<0?`(${Math.abs(row[y]).toFixed(1)})`:`$${row[y].toFixed(1)}B`):"—"}
+                                </td>
+                              ))}
+                              <td style={{textAlign:"right",padding:"10px 12px",fontSize:13,fontWeight:700,color:yoy==null?"#94a3b8":yoy>=0?"#34d399":"#f87171"}}>
+                                {yoy!=null?`${yoy>=0?"+":""}${yoy.toFixed(1)}%`:"—"}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div style={{padding:"10px 14px",background:"rgba(56,189,248,0.04)",border:"1px solid rgba(56,189,248,0.1)",borderRadius:10,fontSize:11,color:"#94a3b8",lineHeight:1.7}}>
+                    📌 Figures approximate and rounded. Negative numbers in parentheses. YoY = FY2023→FY2024 change. Source: Company annual reports & SEC filings.
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+
+          {/* ── GUIDE TAB ── */}
+          {/* ── PORTFOLIO TAB ── */}
+          {/* ── PORTFOLIO TAB ── */}
           {tab==="portfolio"&&(()=>{
             // ── SINGLE SOURCE OF TRUTH ──────────────────────────────────────
             const livePortfolioEnriched = autoPortfolio?.positions
@@ -3298,8 +3962,8 @@ function StockSense(){
               <div style={{background:"#0a1421",border:"1px solid #101c2e",borderRadius:12,padding:"16px 18px",marginBottom:12}}>
                 <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:700,fontSize:11,color:"#475569",textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:10}}>📊 Performance KPIs</div>
                 {(()=>{
-                  const lB2        = livePortfolio.reduce((s,p)=>s+p.shares*p.entryPrice,0)||1;
-                  const w2         = livePortfolio.map(p=>p.shares*p.entryPrice/lB2);
+                  const lB2        = livePortfolioEnriched.reduce((s,p)=>s+p.shares*p.entryPrice,0)||1;
+                  const w2         = livePortfolioEnriched.map(p=>p.shares*p.entryPrice/lB2);
                   const pVol2      = Math.sqrt(w2.reduce((s,w,i)=>s+Math.pow(w*(DB[livePortfolio[i]?.ticker]?.vol||25),2),0))/100;
                   const dH2        = Math.max(1,Math.round((Date.now()-new Date("2026-03-13"))/86400000));
                   const aRet2      = (totalRetPct/100)*(365/dH2);
@@ -3309,8 +3973,8 @@ function StockSense(){
                   let pk2=100000,dd2=0; allV2.forEach(v=>{pk2=Math.max(pk2,v);dd2=Math.max(dd2,(pk2-v)/pk2);});
                   const maxDD2     = dd2;
                   const aVol2      = pVol2*Math.sqrt(252)*100;
-                  const beta2      = livePortfolio.reduce((s,p)=>{const w=p.value/Math.max(1,portfolioValue);return s+w*(DB[p.ticker]?.beta||1);},0);
-                  const posPerf2   = livePortfolio.map(p=>({t:p.ticker,pct:p.pnlPct}));
+                  const beta2      = livePortfolioEnriched.reduce((s,p)=>{const w=p.value/Math.max(1,portfolioValue);return s+w*(DB[p.ticker]?.beta||1);},0);
+                  const posPerf2   = livePortfolioEnriched.map(p=>({t:p.ticker,pct:p.pnlPct}));
                   const best2      = posPerf2.length?posPerf2.reduce((a,b)=>b.pct>a.pct?b:a):{t:"—",pct:0};
                   const worst2     = posPerf2.length?posPerf2.reduce((a,b)=>b.pct<a.pct?b:a):{t:"—",pct:0};
                   const secs2      = [...new Set(livePortfolio.map(p=>(DB[p.ticker]||{}).s).filter(Boolean))];
@@ -3422,7 +4086,7 @@ function StockSense(){
               {/* ── INVESTMENT BRIEF ── */}
               {(()=>{
                 // Sector allocation from live portfolio
-                const totalInvested = livePortfolio.reduce((s,p)=>s+p.value,0);
+                const totalInvested = livePortfolioEnriched.reduce((s,p)=>s+p.value,0);
                 const sectorMap = {};
                 livePortfolio.forEach(p=>{
                   const sec = DB[p.ticker]?.s || DB[p.ticker]?.sector || "Other";
