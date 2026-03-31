@@ -1,5 +1,5 @@
 {
-  "updated": "2026-03-31 15:30 ET",
+  "updated": "2026-03-31 16:01 ET",
   "started": "2026-03-13",
   "regime": "RISK_OFF",
   "portfolio_value": 128777.06,
@@ -490,12 +490,12 @@
     },
     {
       "date": "2026-03-31",
-      "value": 98567.63,
-      "spy_price": 640.75,
-      "spy_ret": -3.25,
-      "pnl_pct": -1.43,
-      "alpha": 1.82,
-      "regime": "CRISIS"
+      "value": 130254.28,
+      "spy_price": 650.4,
+      "spy_ret": -1.8,
+      "pnl_pct": 30.25,
+      "alpha": 32.05,
+      "regime": "RISK_OFF"
     }
   ],
   "quant_diagnostics": {},
