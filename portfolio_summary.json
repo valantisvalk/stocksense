@@ -1,53 +1,35 @@
 {
-  "updated": "2026-03-31 14:33 ET",
+  "updated": "2026-03-31 14:56 ET",
   "started": "2026-03-13",
   "regime": "RISK_OFF",
-  "portfolio_value": 135073.57,
-  "cash": 29527.97,
-  "total_pnl": 35073.57,
-  "total_pnl_pct": 35.07,
-  "net_pnl": 34708.3,
-  "net_pnl_pct": 34.71,
-  "total_costs": 365.27,
-  "cost_drag_pct": 0.3653,
-  "monthly_trades": 28,
+  "portfolio_value": 135319.37,
+  "cash": 42372.54,
+  "total_pnl": 35319.37,
+  "total_pnl_pct": 35.32,
+  "net_pnl": 34943.81,
+  "net_pnl_pct": 34.94,
+  "total_costs": 375.56,
+  "cost_drag_pct": 0.3756,
+  "monthly_trades": 33,
   "spy_ret": -0.63,
-  "alpha": 35.71,
+  "alpha": 35.95,
   "positions": [
     {
       "ticker": "SLV",
-      "shares": 222,
+      "shares": 167,
       "avg_cost": 31.0,
       "cur_price": 65.83,
       "pnl_pct": 112.35,
-      "value": 14614.26,
+      "value": 10993.61,
       "entry_date": "2026-03-13"
     },
     {
       "ticker": "GLD",
-      "shares": 32,
+      "shares": 24,
       "avg_cost": 295.0,
       "cur_price": 418.24,
       "pnl_pct": 41.78,
-      "value": 13383.68,
-      "entry_date": "2026-03-13"
-    },
-    {
-      "ticker": "XOM",
-      "shares": 59,
-      "avg_cost": 115.0,
-      "cur_price": 163.81,
-      "pnl_pct": 42.44,
-      "value": 9664.79,
-      "entry_date": "2026-03-13"
-    },
-    {
-      "ticker": "JNJ",
-      "shares": 39,
-      "avg_cost": 158.0,
-      "cur_price": 241.38,
-      "pnl_pct": 52.77,
-      "value": 9413.82,
+      "value": 10037.76,
       "entry_date": "2026-03-13"
     },
     {
@@ -78,12 +60,21 @@
       "entry_date": "2026-03-13"
     },
     {
-      "ticker": "GOOGL",
-      "shares": 18,
-      "avg_cost": 163.0,
-      "cur_price": 291.61,
-      "pnl_pct": 78.9,
-      "value": 5248.98,
+      "ticker": "XOM",
+      "shares": 45,
+      "avg_cost": 115.0,
+      "cur_price": 163.81,
+      "pnl_pct": 42.44,
+      "value": 7371.45,
+      "entry_date": "2026-03-13"
+    },
+    {
+      "ticker": "JNJ",
+      "shares": 30,
+      "avg_cost": 158.0,
+      "cur_price": 241.38,
+      "pnl_pct": 52.77,
+      "value": 7241.4,
       "entry_date": "2026-03-13"
     },
     {
@@ -102,6 +93,15 @@
       "cur_price": 919.56,
       "pnl_pct": 12.14,
       "value": 4597.8,
+      "entry_date": "2026-03-13"
+    },
+    {
+      "ticker": "GOOGL",
+      "shares": 14,
+      "avg_cost": 163.0,
+      "cur_price": 291.61,
+      "pnl_pct": 78.9,
+      "value": 4082.54,
       "entry_date": "2026-03-13"
     },
     {
@@ -160,61 +160,6 @@
     }
   ],
   "recent_trades": [
-    {
-      "date": "2026-03-26 13:59 ET",
-      "action": "BUY",
-      "ticker": "JNJ",
-      "name": "Johnson&Johnson",
-      "shares": 31,
-      "price": 241.03,
-      "value": 7471.93,
-      "transaction_cost": 5.98,
-      "reason": "4-LAYER CONFLUENCE | Macro:CRISIS | Quant:79 | Tech score 70/100 | RSI~50.0 | PASS | RSI proxy 50 \u2014 neutral zone, healthy | Flat day (0.5%) \u2014 consolidation, neutral | Earnings safe | Moat: wide"
-    },
-    {
-      "date": "2026-03-26 13:59 ET",
-      "action": "BUY",
-      "ticker": "PG",
-      "name": "Procter&Gamble",
-      "shares": 69,
-      "price": 142.91,
-      "value": 9860.79,
-      "transaction_cost": 7.89,
-      "reason": "4-LAYER CONFLUENCE | Macro:CRISIS | Quant:75 | Tech score 58/100 | RSI~50.0 | PASS | RSI proxy 50 \u2014 neutral zone, healthy | Mid-range (23% from high, 43% from low) \u2014 healthy zone | Earnings safe | Moat: wide"
-    },
-    {
-      "date": "2026-03-26 13:59 ET",
-      "action": "BUY",
-      "ticker": "XOM",
-      "name": "Exxon Mobil",
-      "shares": 23,
-      "price": 165.03,
-      "value": 3795.69,
-      "transaction_cost": 3.04,
-      "reason": "4-LAYER CONFLUENCE | Macro:CRISIS | Quant:74 | Tech score 81/100 | RSI~50.0 | PASS | RSI proxy 50 \u2014 neutral zone, healthy | Positive momentum: +1.1% today | Earnings safe | Moat: narrow"
-    },
-    {
-      "date": "2026-03-26 13:59 ET",
-      "action": "BUY",
-      "ticker": "CVX",
-      "name": "Chevron",
-      "shares": 18,
-      "price": 208.65,
-      "value": 3755.7,
-      "transaction_cost": 3.0,
-      "reason": "4-LAYER CONFLUENCE | Macro:CRISIS | Quant:74 | Tech score 81/100 | RSI~50.0 | PASS | RSI proxy 50 \u2014 neutral zone, healthy | Positive momentum: +1.7% today | Earnings safe | Moat: narrow"
-    },
-    {
-      "date": "2026-03-26 13:59 ET",
-      "action": "BUY",
-      "ticker": "UNH",
-      "name": "UnitedHealth",
-      "shares": 26,
-      "price": 268.34,
-      "value": 6976.84,
-      "transaction_cost": 5.58,
-      "reason": "4-LAYER CONFLUENCE | Macro:CRISIS | Quant:73 | Tech score 58/100 | RSI~50.0 | PASS | RSI proxy 50 \u2014 neutral zone, healthy | Mid-range (23% from high, 43% from low) \u2014 healthy zone | Earnings safe | Moat: wide"
-    },
     {
       "date": "2026-03-26 13:59 ET",
       "action": "BUY",
@@ -394,6 +339,76 @@
       "net_pnl": -4179.93,
       "pnl_pct": -44.85,
       "reason": "STOP LOSS \u2014 down -44.9% from entry"
+    },
+    {
+      "date": "2026-03-31 14:56 ET",
+      "action": "SELL",
+      "ticker": "GLD",
+      "name": "Gold ETF",
+      "shares": 8,
+      "price": 428.91,
+      "value": 3431.28,
+      "transaction_cost": 2.75,
+      "pnl": 1071.28,
+      "net_pnl": 1068.53,
+      "pnl_pct": 45.39,
+      "reason": "TAKE PROFIT \u2014 up 45.4%, trimming 25%"
+    },
+    {
+      "date": "2026-03-31 14:56 ET",
+      "action": "SELL",
+      "ticker": "SLV",
+      "name": "Silver ETF",
+      "shares": 55,
+      "price": 67.9,
+      "value": 3734.5,
+      "transaction_cost": 2.99,
+      "pnl": 2029.5,
+      "net_pnl": 2026.51,
+      "pnl_pct": 119.03,
+      "reason": "TAKE PROFIT \u2014 up 119.0%, trimming 25%"
+    },
+    {
+      "date": "2026-03-31 14:56 ET",
+      "action": "SELL",
+      "ticker": "JNJ",
+      "name": "Johnson&Johnson",
+      "shares": 9,
+      "price": 243.4,
+      "value": 2190.6,
+      "transaction_cost": 1.75,
+      "pnl": 768.6,
+      "net_pnl": 766.85,
+      "pnl_pct": 54.05,
+      "reason": "TAKE PROFIT \u2014 up 54.1%, trimming 25%"
+    },
+    {
+      "date": "2026-03-31 14:56 ET",
+      "action": "SELL",
+      "ticker": "XOM",
+      "name": "Exxon Mobil",
+      "shares": 14,
+      "price": 167.92,
+      "value": 2350.88,
+      "transaction_cost": 1.88,
+      "pnl": 740.88,
+      "net_pnl": 739.0,
+      "pnl_pct": 46.02,
+      "reason": "TAKE PROFIT \u2014 up 46.0%, trimming 25%"
+    },
+    {
+      "date": "2026-03-31 14:56 ET",
+      "action": "SELL",
+      "ticker": "GOOGL",
+      "name": "Alphabet",
+      "shares": 4,
+      "price": 286.9,
+      "value": 1147.6,
+      "transaction_cost": 0.92,
+      "pnl": 495.6,
+      "net_pnl": 494.68,
+      "pnl_pct": 76.01,
+      "reason": "TAKE PROFIT \u2014 up 76.0%, trimming 25%"
     }
   ],
   "daily_snapshots": [
@@ -499,6 +514,6 @@
     }
   ],
   "quant_diagnostics": {},
-  "total_trades": 38,
+  "total_trades": 43,
   "version": "4.0"
 }
