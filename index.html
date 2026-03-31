@@ -359,18 +359,43 @@ async function fetchMarketStatus() {
   }
 }
 
+// Price bounds — reject Finnhub prices outside realistic ETF/stock ranges
+const PRICE_BOUNDS = {
+  GLD:[200,380], SLV:[20,40], USO:[20,100], TLT:[60,120], VIXY:[5,150],
+  AAPL:[150,280], MSFT:[280,550], GOOGL:[120,230], META:[400,750],
+  NVDA:[80,200],  AVGO:[150,400], ASML:[600,1300], AMD:[80,210],
+  LLY:[600,1100], UNH:[200,650], JNJ:[140,260],
+  JPM:[180,310],  BLK:[800,1300],V:[230,360], BRK_B:[380,570],
+  WMT:[70,140],   COST:[800,1300],KO:[55,85], PG:[130,200],
+  XOM:[85,175],   CVX:[130,220],
+  AMZN:[150,280], TSLA:[150,500], NFLX:[500,1200], DIS:[75,135],
+  PLTR:[50,200],  CRM:[180,400], SPY:[400,700],
+};
+
+function validatePrice(ticker, price, prevClose) {
+  const b = PRICE_BOUNDS[ticker];
+  if (!b) return price; // no bounds for this ticker
+  const [lo, hi] = b;
+  if (price < lo || price > hi) {
+    console.warn(`[PRICE GUARD] ${ticker} $${price.toFixed(2)} outside bounds ($${lo}-$${hi}) — using prevClose`);
+    return prevClose && prevClose > lo && prevClose < hi ? prevClose : (lo+hi)/2;
+  }
+  return price;
+}
+
 async function fetchFinnhub(ticker) {
   if(!DB[ticker] && !['SPY','QQQ','GLD','USO','VIXY','TLT','UUP'].includes(ticker)) return;
   const sym = FINNHUB_MAP[ticker] || ticker;
   try {
     const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${sym}&token=${FINNHUB_KEY}`);
     if (!res.ok){
-      if(res.status===429) await new Promise(r=>setTimeout(r,6000)); // wait 6s on rate limit
+      if(res.status===429) await new Promise(r=>setTimeout(r,6000));
       throw new Error(`HTTP ${res.status}`);
     }
     const d = await res.json();
     if (!d.c || d.c === 0) throw new Error("No data");
-    liveCache[ticker] = {price:d.c, changePct:((d.c-d.pc)/d.pc)*100, dayHigh:d.h, dayLow:d.l, prevClose:d.pc, change:d.c-d.pc};
+    const validatedPrice = validatePrice(ticker, d.c, d.pc);
+    liveCache[ticker] = {price:validatedPrice, changePct:((validatedPrice-d.pc)/d.pc)*100, dayHigh:d.h, dayLow:d.l, prevClose:d.pc, change:validatedPrice-d.pc};
     return liveCache[ticker];
   } catch(e) {
     console.warn(`Finnhub ${ticker}:`, e.message);
