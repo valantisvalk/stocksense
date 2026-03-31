@@ -1,18 +1,18 @@
 {
-  "updated": "2026-03-31 12:59 ET",
+  "updated": "2026-03-31 14:24 ET",
   "started": "2026-03-13",
   "regime": "RISK_OFF",
-  "portfolio_value": 135255.07,
-  "cash": 70286.5,
-  "total_pnl": 35255.07,
-  "total_pnl_pct": 35.26,
-  "net_pnl": 34946.42,
-  "net_pnl_pct": 34.95,
-  "total_costs": 308.65,
-  "cost_drag_pct": 0.3087,
-  "monthly_trades": 45,
+  "portfolio_value": 135274.5,
+  "cash": 72140.73,
+  "total_pnl": 35274.5,
+  "total_pnl_pct": 35.27,
+  "net_pnl": 34964.37,
+  "net_pnl_pct": 34.96,
+  "total_costs": 310.13,
+  "cost_drag_pct": 0.3101,
+  "monthly_trades": 48,
   "spy_ret": -0.63,
-  "alpha": 35.89,
+  "alpha": 35.91,
   "positions": [
     {
       "ticker": "SLV",
@@ -61,20 +61,20 @@
     },
     {
       "ticker": "XOM",
-      "shares": 23,
+      "shares": 18,
       "avg_cost": 115.0,
       "cur_price": 163.81,
       "pnl_pct": 42.44,
-      "value": 3767.63,
+      "value": 2948.58,
       "entry_date": "2026-03-13"
     },
     {
       "ticker": "JNJ",
-      "shares": 15,
+      "shares": 12,
       "avg_cost": 158.0,
       "cur_price": 241.38,
       "pnl_pct": 52.77,
-      "value": 3620.7,
+      "value": 2896.56,
       "entry_date": "2026-03-13"
     },
     {
@@ -93,15 +93,6 @@
       "cur_price": 91.5,
       "pnl_pct": 0.0,
       "value": 2470.5,
-      "entry_date": "2026-03-13"
-    },
-    {
-      "ticker": "GOOGL",
-      "shares": 7,
-      "avg_cost": 163.0,
-      "cur_price": 291.61,
-      "pnl_pct": 78.9,
-      "value": 2041.27,
       "entry_date": "2026-03-13"
     },
     {
@@ -129,6 +120,15 @@
       "cur_price": 295.43,
       "pnl_pct": 33.08,
       "value": 1772.58,
+      "entry_date": "2026-03-13"
+    },
+    {
+      "ticker": "GOOGL",
+      "shares": 6,
+      "avg_cost": 163.0,
+      "cur_price": 291.61,
+      "pnl_pct": 78.9,
+      "value": 1749.66,
       "entry_date": "2026-03-13"
     },
     {
@@ -160,42 +160,6 @@
     }
   ],
   "recent_trades": [
-    {
-      "date": "2026-03-27 11:22 ET",
-      "action": "BUY",
-      "ticker": "BLK",
-      "name": "BlackRock",
-      "shares": 1,
-      "price": 952.02,
-      "value": 952.02,
-      "transaction_cost": 0.76,
-      "reason": "4-LAYER CONFLUENCE | Macro:CRISIS | Quant:66 | Tech score 58/100 | RSI~50.0 | PASS | RSI proxy 50 \u2014 neutral zone, healthy | Mid-range (23% from high, 43% from low) \u2014 healthy zone | Earnings safe | Moat: wide"
-    },
-    {
-      "date": "2026-03-27 12:23 ET",
-      "action": "BUY",
-      "ticker": "MSFT",
-      "name": "Microsoft",
-      "shares": 5,
-      "price": 360.37,
-      "value": 1801.85,
-      "transaction_cost": 1.44,
-      "reason": "4-LAYER CONFLUENCE | Macro:CRISIS | Quant:71 | Tech score 58/100 | RSI~50.0 | PASS | RSI proxy 50 \u2014 neutral zone, healthy | Mid-range (23% from high, 43% from low) \u2014 healthy zone | Earnings safe | Moat: wide"
-    },
-    {
-      "date": "2026-03-31 12:59 ET",
-      "action": "SELL",
-      "ticker": "JNJ",
-      "name": "Johnson&Johnson",
-      "shares": 9,
-      "price": 243.55,
-      "value": 2191.95,
-      "transaction_cost": 1.75,
-      "pnl": 769.95,
-      "net_pnl": 768.2,
-      "pnl_pct": 54.15,
-      "reason": "TAKE PROFIT \u2014 up 54.1%, trimming 25%"
-    },
     {
       "date": "2026-03-31 12:59 ET",
       "action": "SELL",
@@ -433,6 +397,48 @@
       "net_pnl": 88.92,
       "pnl_pct": 8.11,
       "reason": "Regime trim 50% \u2014 not in RISK_OFF targets but score 71 \u2014 keeping half"
+    },
+    {
+      "date": "2026-03-31 14:24 ET",
+      "action": "SELL",
+      "ticker": "JNJ",
+      "name": "Johnson&Johnson",
+      "shares": 3,
+      "price": 243.06,
+      "value": 729.18,
+      "transaction_cost": 0.58,
+      "pnl": 255.18,
+      "net_pnl": 254.6,
+      "pnl_pct": 53.84,
+      "reason": "TAKE PROFIT \u2014 up 53.8%, trimming 25%"
+    },
+    {
+      "date": "2026-03-31 14:24 ET",
+      "action": "SELL",
+      "ticker": "XOM",
+      "name": "Exxon Mobil",
+      "shares": 5,
+      "price": 167.9,
+      "value": 839.5,
+      "transaction_cost": 0.67,
+      "pnl": 264.5,
+      "net_pnl": 263.83,
+      "pnl_pct": 46.0,
+      "reason": "TAKE PROFIT \u2014 up 46.0%, trimming 25%"
+    },
+    {
+      "date": "2026-03-31 14:24 ET",
+      "action": "SELL",
+      "ticker": "GOOGL",
+      "name": "Alphabet",
+      "shares": 1,
+      "price": 287.03,
+      "value": 287.03,
+      "transaction_cost": 0.23,
+      "pnl": 124.03,
+      "net_pnl": 123.8,
+      "pnl_pct": 76.09,
+      "reason": "TAKE PROFIT \u2014 up 76.1%, trimming 25%"
     }
   ],
   "daily_snapshots": [
@@ -538,6 +544,6 @@
     }
   ],
   "quant_diagnostics": {},
-  "total_trades": 55,
+  "total_trades": 58,
   "version": "4.0"
 }
