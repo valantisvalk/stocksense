@@ -1,5 +1,5 @@
 {
-  "updated": "2026-03-31 16:01 ET",
+  "updated": "2026-04-02 11:12 ET",
   "started": "2026-03-13",
   "regime": "RISK_OFF",
   "portfolio_value": 128777.06,
@@ -10,7 +10,7 @@
   "net_pnl_pct": 28.4,
   "total_costs": 375.56,
   "cost_drag_pct": 0.3756,
-  "monthly_trades": 28,
+  "monthly_trades": 0,
   "spy_ret": -0.63,
   "alpha": 29.41,
   "positions": [
@@ -495,6 +495,15 @@
       "spy_ret": -1.8,
       "pnl_pct": 30.25,
       "alpha": 32.05,
+      "regime": "RISK_OFF"
+    },
+    {
+      "date": "2026-04-02",
+      "value": 129080.23,
+      "spy_price": 655.78,
+      "spy_ret": -0.98,
+      "pnl_pct": 29.08,
+      "alpha": 30.06,
       "regime": "RISK_OFF"
     }
   ],
