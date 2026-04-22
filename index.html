@@ -360,25 +360,21 @@ async function fetchMarketStatus() {
 }
 
 // Price bounds — reject Finnhub prices outside realistic ETF/stock ranges
-const PRICE_BOUNDS = {
-  GLD:[200,380], SLV:[20,40], USO:[20,100], TLT:[60,120], VIXY:[5,150],
-  AAPL:[150,280], MSFT:[280,550], GOOGL:[120,230], META:[400,750],
-  NVDA:[80,200],  AVGO:[150,400], ASML:[600,1300], AMD:[80,210],
-  LLY:[600,1100], UNH:[200,650], JNJ:[140,260],
-  JPM:[180,310],  BLK:[800,1300],V:[230,360], BRK_B:[380,570],
-  WMT:[70,140],   COST:[800,1300],KO:[55,85], PG:[130,200],
-  XOM:[85,175],   CVX:[130,220],
-  AMZN:[150,280], TSLA:[150,500], NFLX:[500,1200], DIS:[75,135],
-  PLTR:[50,200],  CRM:[180,400], SPY:[400,700],
-};
+// Relative price validation — reject only if price differs >50% from prevClose
+// Real moves almost never exceed 30% in a day. 50%+ = Finnhub data error.
+// Only applied to commodity ETFs which are the main source of bad data.
+const COMMODITY_ETFS = new Set(['GLD','SLV','USO']);
 
 function validatePrice(ticker, price, prevClose) {
-  const b = PRICE_BOUNDS[ticker];
-  if (!b) return price; // no bounds for this ticker
-  const [lo, hi] = b;
-  if (price < lo || price > hi) {
-    console.warn(`[PRICE GUARD] ${ticker} $${price.toFixed(2)} outside bounds ($${lo}-$${hi}) — using prevClose`);
-    return prevClose && prevClose > lo && prevClose < hi ? prevClose : (lo+hi)/2;
+  // No validation if no prevClose reference
+  if (!prevClose || prevClose <= 0) return price;
+  // Only strict validation on commodity ETFs (Finnhub returns wrong prices for these)
+  if (!COMMODITY_ETFS.has(ticker)) return price;
+  // Reject if price differs by more than 50% from previous close
+  const pctDiff = Math.abs((price - prevClose) / prevClose);
+  if (pctDiff > 0.50) {
+    console.warn(`[PRICE GUARD] ${ticker} $${price.toFixed(2)} differs ${(pctDiff*100).toFixed(0)}% from prevClose $${prevClose.toFixed(2)} — using prevClose`);
+    return prevClose;
   }
   return price;
 }
