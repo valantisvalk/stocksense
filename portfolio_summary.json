@@ -1,15 +1,15 @@
 {
-  "updated": "2026-04-23 10:30 ET",
+  "updated": "2026-04-23 10:50 ET",
   "started": "2026-03-13",
   "regime": "RISK_OFF",
-  "portfolio_value": 128777.06,
+  "portfolio_value": 128781.38,
   "cash": 24397.9,
-  "total_pnl": 28777.06,
+  "total_pnl": 28781.38,
   "total_pnl_pct": 28.78,
-  "net_pnl": 28401.5,
-  "net_pnl_pct": 28.4,
-  "total_costs": 375.56,
-  "cost_drag_pct": 0.3756,
+  "net_pnl": 28781.38,
+  "net_pnl_pct": 28.78,
+  "total_costs": 0,
+  "cost_drag_pct": 0.0,
   "monthly_trades": 0,
   "spy_ret": -0.63,
   "alpha": 29.41,
@@ -17,515 +17,151 @@
     {
       "ticker": "SLV",
       "shares": 222,
-      "avg_cost": 31.0,
+      "avg_cost": 69.03,
       "cur_price": 65.83,
-      "pnl_pct": 112.35,
+      "pnl_pct": -4.64,
       "value": 14614.26,
-      "entry_date": "2026-03-13"
+      "entry_date": "2026-04-23"
     },
     {
       "ticker": "GLD",
       "shares": 32,
-      "avg_cost": 295.0,
+      "avg_cost": 434.05,
       "cur_price": 418.24,
-      "pnl_pct": 41.78,
+      "pnl_pct": -3.64,
       "value": 13383.68,
-      "entry_date": "2026-03-13"
+      "entry_date": "2026-04-23"
     },
     {
       "ticker": "XOM",
       "shares": 59,
-      "avg_cost": 115.0,
+      "avg_cost": 149.77,
       "cur_price": 163.81,
-      "pnl_pct": 42.44,
+      "pnl_pct": 9.37,
       "value": 9664.79,
-      "entry_date": "2026-03-13"
+      "entry_date": "2026-04-23"
     },
     {
       "ticker": "JNJ",
       "shares": 39,
-      "avg_cost": 158.0,
+      "avg_cost": 229.05,
       "cur_price": 241.38,
-      "pnl_pct": 52.77,
+      "pnl_pct": 5.38,
       "value": 9413.82,
-      "entry_date": "2026-03-13"
+      "entry_date": "2026-04-23"
     },
     {
       "ticker": "KO",
       "shares": 117,
-      "avg_cost": 66.0,
+      "avg_cost": 76.29,
       "cur_price": 75.35,
-      "pnl_pct": 14.17,
+      "pnl_pct": -1.23,
       "value": 8815.95,
-      "entry_date": "2026-03-13"
+      "entry_date": "2026-04-23"
     },
     {
       "ticker": "CVX",
       "shares": 42,
-      "avg_cost": 155.0,
+      "avg_cost": 186.52,
       "cur_price": 205.83,
-      "pnl_pct": 32.79,
+      "pnl_pct": 10.35,
       "value": 8644.86,
-      "entry_date": "2026-03-13"
+      "entry_date": "2026-04-23"
     },
     {
       "ticker": "PG",
       "shares": 55,
-      "avg_cost": 166.0,
+      "avg_cost": 144.89,
       "cur_price": 143.26,
-      "pnl_pct": -13.7,
+      "pnl_pct": -1.12,
       "value": 7879.3,
-      "entry_date": "2026-03-13"
+      "entry_date": "2026-04-23"
     },
     {
       "ticker": "BIL",
       "shares": 54,
-      "avg_cost": 91.5,
-      "cur_price": 91.5,
+      "avg_cost": 91.58,
+      "cur_price": 91.58,
       "pnl_pct": 0.0,
-      "value": 4941.0,
-      "entry_date": "2026-03-13"
+      "value": 4945.32,
+      "entry_date": "2026-04-23"
     },
     {
       "ticker": "LLY",
       "shares": 5,
-      "avg_cost": 820.0,
+      "avg_cost": 923.48,
       "cur_price": 919.56,
-      "pnl_pct": 12.14,
+      "pnl_pct": -0.42,
       "value": 4597.8,
-      "entry_date": "2026-03-13"
+      "entry_date": "2026-04-23"
     },
     {
       "ticker": "GOOGL",
       "shares": 14,
-      "avg_cost": 163.0,
+      "avg_cost": 340.03,
       "cur_price": 291.61,
-      "pnl_pct": 78.9,
+      "pnl_pct": -14.24,
       "value": 4082.54,
-      "entry_date": "2026-03-13"
+      "entry_date": "2026-04-23"
     },
     {
       "ticker": "WMT",
       "shares": 31,
-      "avg_cost": 93.0,
+      "avg_cost": 131.4,
       "cur_price": 122.9,
-      "pnl_pct": 32.15,
+      "pnl_pct": -6.47,
       "value": 3809.9,
-      "entry_date": "2026-03-13"
+      "entry_date": "2026-04-23"
     },
     {
       "ticker": "MSFT",
       "shares": 10,
-      "avg_cost": 380.0,
+      "avg_cost": 419.16,
       "cur_price": 371.12,
-      "pnl_pct": -2.34,
+      "pnl_pct": -11.46,
       "value": 3711.2,
-      "entry_date": "2026-03-13"
+      "entry_date": "2026-04-23"
     },
     {
       "ticker": "JPM",
       "shares": 11,
-      "avg_cost": 222.0,
+      "avg_cost": 314.0,
       "cur_price": 295.43,
-      "pnl_pct": 33.08,
+      "pnl_pct": -5.91,
       "value": 3249.73,
-      "entry_date": "2026-03-13"
+      "entry_date": "2026-04-23"
     },
     {
       "ticker": "BRK_B",
       "shares": 6,
-      "avg_cost": 465.0,
+      "avg_cost": 470.29,
       "cur_price": 477.95,
-      "pnl_pct": 2.78,
+      "pnl_pct": 1.63,
       "value": 2867.7,
-      "entry_date": "2026-03-13"
+      "entry_date": "2026-04-23"
     },
     {
       "ticker": "V",
       "shares": 9,
-      "avg_cost": 277.0,
+      "avg_cost": 307.49,
       "cur_price": 305.49,
-      "pnl_pct": 10.29,
+      "pnl_pct": -0.65,
       "value": 2749.41,
-      "entry_date": "2026-03-13"
+      "entry_date": "2026-04-23"
     },
     {
       "ticker": "BLK",
       "shares": 2,
-      "avg_cost": 940.0,
+      "avg_cost": 1061.38,
       "cur_price": 976.61,
-      "pnl_pct": 3.89,
+      "pnl_pct": -7.99,
       "value": 1953.22,
-      "entry_date": "2026-03-13"
+      "entry_date": "2026-04-23"
     }
   ],
-  "recent_trades": [
-    {
-      "date": "2026-03-26 13:59 ET",
-      "action": "BUY",
-      "ticker": "JNJ",
-      "name": "Johnson&Johnson",
-      "shares": 31,
-      "price": 241.03,
-      "value": 7471.93,
-      "transaction_cost": 5.98,
-      "reason": "4-LAYER CONFLUENCE | Macro:CRISIS | Quant:79 | Tech score 70/100 | RSI~50.0 | PASS | RSI proxy 50 \u2014 neutral zone, healthy | Flat day (0.5%) \u2014 consolidation, neutral | Earnings safe | Moat: wide"
-    },
-    {
-      "date": "2026-03-26 13:59 ET",
-      "action": "BUY",
-      "ticker": "PG",
-      "name": "Procter&Gamble",
-      "shares": 69,
-      "price": 142.91,
-      "value": 9860.79,
-      "transaction_cost": 7.89,
-      "reason": "4-LAYER CONFLUENCE | Macro:CRISIS | Quant:75 | Tech score 58/100 | RSI~50.0 | PASS | RSI proxy 50 \u2014 neutral zone, healthy | Mid-range (23% from high, 43% from low) \u2014 healthy zone | Earnings safe | Moat: wide"
-    },
-    {
-      "date": "2026-03-26 13:59 ET",
-      "action": "BUY",
-      "ticker": "XOM",
-      "name": "Exxon Mobil",
-      "shares": 23,
-      "price": 165.03,
-      "value": 3795.69,
-      "transaction_cost": 3.04,
-      "reason": "4-LAYER CONFLUENCE | Macro:CRISIS | Quant:74 | Tech score 81/100 | RSI~50.0 | PASS | RSI proxy 50 \u2014 neutral zone, healthy | Positive momentum: +1.1% today | Earnings safe | Moat: narrow"
-    },
-    {
-      "date": "2026-03-26 13:59 ET",
-      "action": "BUY",
-      "ticker": "CVX",
-      "name": "Chevron",
-      "shares": 18,
-      "price": 208.65,
-      "value": 3755.7,
-      "transaction_cost": 3.0,
-      "reason": "4-LAYER CONFLUENCE | Macro:CRISIS | Quant:74 | Tech score 81/100 | RSI~50.0 | PASS | RSI proxy 50 \u2014 neutral zone, healthy | Positive momentum: +1.7% today | Earnings safe | Moat: narrow"
-    },
-    {
-      "date": "2026-03-26 13:59 ET",
-      "action": "BUY",
-      "ticker": "UNH",
-      "name": "UnitedHealth",
-      "shares": 26,
-      "price": 268.34,
-      "value": 6976.84,
-      "transaction_cost": 5.58,
-      "reason": "4-LAYER CONFLUENCE | Macro:CRISIS | Quant:73 | Tech score 58/100 | RSI~50.0 | PASS | RSI proxy 50 \u2014 neutral zone, healthy | Mid-range (23% from high, 43% from low) \u2014 healthy zone | Earnings safe | Moat: wide"
-    },
-    {
-      "date": "2026-03-26 13:59 ET",
-      "action": "BUY",
-      "ticker": "KO",
-      "name": "Coca-Cola",
-      "shares": 128,
-      "price": 75.33,
-      "value": 9642.24,
-      "transaction_cost": 7.71,
-      "reason": "4-LAYER CONFLUENCE | Macro:CRISIS | Quant:73 | Tech score 70/100 | RSI~50.0 | PASS | RSI proxy 50 \u2014 neutral zone, healthy | Flat day (0.1%) \u2014 consolidation, neutral | Earnings safe | Moat: wide"
-    },
-    {
-      "date": "2026-03-26 13:59 ET",
-      "action": "BUY",
-      "ticker": "V",
-      "name": "Visa",
-      "shares": 6,
-      "price": 305.13,
-      "value": 1830.78,
-      "transaction_cost": 1.46,
-      "reason": "4-LAYER CONFLUENCE | Macro:CRISIS | Quant:70 | Tech score 70/100 | RSI~50.0 | PASS | RSI proxy 50 \u2014 neutral zone, healthy | Flat day (0.1%) \u2014 consolidation, neutral | Earnings safe | Moat: wide"
-    },
-    {
-      "date": "2026-03-26 13:59 ET",
-      "action": "BUY",
-      "ticker": "BLK",
-      "name": "BlackRock",
-      "shares": 1,
-      "price": 971.21,
-      "value": 971.21,
-      "transaction_cost": 0.78,
-      "reason": "4-LAYER CONFLUENCE | Macro:CRISIS | Quant:68 | Tech score 58/100 | RSI~50.0 | PASS | RSI proxy 50 \u2014 neutral zone, healthy | Mid-range (23% from high, 43% from low) \u2014 healthy zone | Earnings safe | Moat: wide"
-    },
-    {
-      "date": "2026-03-26 14:11 ET",
-      "action": "SELL",
-      "ticker": "GOOGL",
-      "name": "Alphabet",
-      "shares": 33,
-      "price": 281.1,
-      "value": 9276.3,
-      "transaction_cost": 7.42,
-      "pnl": -397.32,
-      "net_pnl": -404.74,
-      "pnl_pct": -4.11,
-      "reason": "Regime rotation \u2014 not in CRISIS targets"
-    },
-    {
-      "date": "2026-03-26 14:11 ET",
-      "action": "BUY",
-      "ticker": "AAPL",
-      "name": "Apple",
-      "shares": 7,
-      "price": 254.77,
-      "value": 1783.39,
-      "transaction_cost": 1.43,
-      "reason": "4-LAYER CONFLUENCE | Macro:CRISIS | Quant:71 | Tech score 81/100 | RSI~50.0 | PASS | RSI proxy 50 \u2014 neutral zone, healthy | Positive momentum: +0.9% today | Earnings safe | Moat: wide"
-    },
-    {
-      "date": "2026-03-27 11:22 ET",
-      "action": "SELL",
-      "ticker": "MSFT",
-      "name": "Microsoft",
-      "shares": 25,
-      "price": 359.5,
-      "value": 8987.5,
-      "transaction_cost": 7.19,
-      "pnl": -986.0,
-      "net_pnl": -993.19,
-      "pnl_pct": -9.89,
-      "reason": "Regime rotation \u2014 not in CRISIS targets"
-    },
-    {
-      "date": "2026-03-27 11:22 ET",
-      "action": "SELL",
-      "ticker": "V",
-      "name": "Visa",
-      "shares": 6,
-      "price": 297.12,
-      "value": 1782.72,
-      "transaction_cost": 1.43,
-      "pnl": -48.06,
-      "net_pnl": -49.49,
-      "pnl_pct": -2.63,
-      "reason": "Regime rotation \u2014 not in CRISIS targets"
-    },
-    {
-      "date": "2026-03-27 11:22 ET",
-      "action": "SELL",
-      "ticker": "AAPL",
-      "name": "Apple",
-      "shares": 7,
-      "price": 252.22,
-      "value": 1765.54,
-      "transaction_cost": 1.41,
-      "pnl": -17.85,
-      "net_pnl": -19.26,
-      "pnl_pct": -1.0,
-      "reason": "Regime rotation \u2014 not in CRISIS targets"
-    },
-    {
-      "date": "2026-03-27 11:22 ET",
-      "action": "BUY",
-      "ticker": "GOOGL",
-      "name": "Alphabet",
-      "shares": 7,
-      "price": 277.64,
-      "value": 1943.48,
-      "transaction_cost": 1.55,
-      "reason": "4-LAYER CONFLUENCE | Macro:CRISIS | Quant:76 | Tech score 58/100 | RSI~50.0 | PASS | RSI proxy 50 \u2014 neutral zone, healthy | Mid-range (23% from high, 43% from low) \u2014 healthy zone | Earnings safe | Moat: wide"
-    },
-    {
-      "date": "2026-03-27 11:22 ET",
-      "action": "BUY",
-      "ticker": "GLD",
-      "name": "Gold ETF",
-      "shares": 29,
-      "price": 417.65,
-      "value": 12111.85,
-      "transaction_cost": 9.69,
-      "reason": "4-LAYER CONFLUENCE | Macro:CRISIS | Quant:69 | Tech score 78/100 | RSI~50.0 | PASS | RSI proxy 50 \u2014 neutral zone, healthy | Strong momentum: +4.2% today \u2014 buyers in control | Earnings safe | Moat: none"
-    },
-    {
-      "date": "2026-03-27 11:22 ET",
-      "action": "BUY",
-      "ticker": "BRK_B",
-      "name": "Berkshire",
-      "shares": 4,
-      "price": 474.43,
-      "value": 1897.72,
-      "transaction_cost": 1.52,
-      "reason": "4-LAYER CONFLUENCE | Macro:CRISIS | Quant:67 | Tech score 70/100 | RSI~50.0 | PASS | RSI proxy 50 \u2014 neutral zone, healthy | Flat day (-0.2%) \u2014 consolidation, neutral | Earnings safe | Moat: wide"
-    },
-    {
-      "date": "2026-03-27 11:22 ET",
-      "action": "BUY",
-      "ticker": "SLV",
-      "name": "Silver ETF",
-      "shares": 186,
-      "price": 64.68,
-      "value": 12030.48,
-      "transaction_cost": 9.62,
-      "reason": "4-LAYER CONFLUENCE | Macro:CRISIS | Quant:67 | Tech score 73/100 | RSI~50.0 | PASS | RSI proxy 50 \u2014 neutral zone, healthy | Strong momentum: +6.4% today \u2014 buyers in control | Earnings safe | Moat: none"
-    },
-    {
-      "date": "2026-03-27 11:22 ET",
-      "action": "BUY",
-      "ticker": "BLK",
-      "name": "BlackRock",
-      "shares": 1,
-      "price": 952.02,
-      "value": 952.02,
-      "transaction_cost": 0.76,
-      "reason": "4-LAYER CONFLUENCE | Macro:CRISIS | Quant:66 | Tech score 58/100 | RSI~50.0 | PASS | RSI proxy 50 \u2014 neutral zone, healthy | Mid-range (23% from high, 43% from low) \u2014 healthy zone | Earnings safe | Moat: wide"
-    },
-    {
-      "date": "2026-03-27 12:23 ET",
-      "action": "BUY",
-      "ticker": "MSFT",
-      "name": "Microsoft",
-      "shares": 5,
-      "price": 360.37,
-      "value": 1801.85,
-      "transaction_cost": 1.44,
-      "reason": "4-LAYER CONFLUENCE | Macro:CRISIS | Quant:71 | Tech score 58/100 | RSI~50.0 | PASS | RSI proxy 50 \u2014 neutral zone, healthy | Mid-range (23% from high, 43% from low) \u2014 healthy zone | Earnings safe | Moat: wide"
-    },
-    {
-      "date": "2026-03-31 14:33 ET",
-      "action": "SELL",
-      "ticker": "UNH",
-      "name": "UnitedHealth",
-      "shares": 19,
-      "price": 270.22,
-      "value": 5134.18,
-      "transaction_cost": 4.11,
-      "pnl": -4175.82,
-      "net_pnl": -4179.93,
-      "pnl_pct": -44.85,
-      "reason": "STOP LOSS \u2014 down -44.9% from entry"
-    }
-  ],
-  "daily_snapshots": [
-    {
-      "date": "2026-03-23",
-      "session": "open",
-      "value": 101261.55,
-      "pnl": 1261.55,
-      "pnl_pct": 1.26,
-      "spy_ret": 17.51,
-      "alpha": -16.24,
-      "regime": "RISK_OFF",
-      "positions": 10
-    },
-    {
-      "date": "2026-03-23",
-      "session": "open",
-      "value": 100780.15,
-      "pnl": 780.15,
-      "pnl_pct": 0.78,
-      "spy_ret": 16.73,
-      "alpha": -15.95,
-      "regime": "RISK_OFF",
-      "positions": 10
-    },
-    {
-      "date": "2026-03-23",
-      "session": "open",
-      "value": 100695.44,
-      "pnl": 695.44,
-      "pnl_pct": 0.7,
-      "spy_ret": 16.82,
-      "alpha": -16.12,
-      "regime": "RISK_OFF",
-      "positions": 10
-    },
-    {
-      "date": "2026-03-23",
-      "session": "close",
-      "value": 100479.06,
-      "pnl": 479.06,
-      "pnl_pct": 0.48,
-      "spy_ret": 0.0,
-      "alpha": 0.48,
-      "regime": "RISK_OFF",
-      "positions": 10
-    },
-    {
-      "date": "2026-03-24",
-      "session": "open",
-      "value": 100319.79,
-      "pnl": 319.79,
-      "pnl_pct": 0.32,
-      "spy_ret": 0.0,
-      "alpha": 0.32,
-      "regime": "RISK_OFF",
-      "positions": 10
-    },
-    {
-      "date": "2026-03-25",
-      "session": "open",
-      "value": 100490.84,
-      "pnl": 490.84,
-      "pnl_pct": 0.49,
-      "spy_ret": 17.01,
-      "alpha": -16.52,
-      "regime": "RISK_OFF",
-      "positions": 10
-    },
-    {
-      "date": "2026-03-26",
-      "value": 97870.78,
-      "spy_price": 646.86,
-      "spy_ret": -2.33,
-      "pnl_pct": -2.13,
-      "regime": "CRISIS"
-    },
-    {
-      "date": "2026-03-27",
-      "value": 97507.19,
-      "spy_price": 639.29,
-      "spy_ret": -3.47,
-      "pnl_pct": -2.49,
-      "regime": "CRISIS"
-    },
-    {
-      "date": "2026-03-30",
-      "value": 97934.51,
-      "spy_price": 637.05,
-      "spy_ret": -3.81,
-      "pnl_pct": -2.07,
-      "alpha": 1.75,
-      "regime": "CRISIS"
-    },
-    {
-      "date": "2026-03-31",
-      "value": 130254.28,
-      "spy_price": 650.4,
-      "spy_ret": -1.8,
-      "pnl_pct": 30.25,
-      "alpha": 32.05,
-      "regime": "RISK_OFF"
-    },
-    {
-      "date": "2026-04-02",
-      "value": 129080.23,
-      "spy_price": 655.78,
-      "spy_ret": -0.98,
-      "pnl_pct": 29.08,
-      "alpha": 30.06,
-      "regime": "RISK_OFF"
-    },
-    {
-      "date": "2026-04-06",
-      "value": 129192.05,
-      "spy_price": 658.88,
-      "spy_ret": -0.51,
-      "pnl_pct": 29.19,
-      "alpha": 29.71,
-      "regime": "RISK_OFF"
-    },
-    {
-      "date": "2026-04-23",
-      "value": 129404.95,
-      "spy_price": 709.21,
-      "spy_ret": 7.08,
-      "pnl_pct": 29.4,
-      "alpha": 22.32,
-      "regime": "RISK_OFF"
-    }
-  ],
+  "recent_trades": [],
+  "daily_snapshots": [],
   "quant_diagnostics": {},
-  "total_trades": 38,
+  "total_trades": 0,
   "version": "4.0"
 }
