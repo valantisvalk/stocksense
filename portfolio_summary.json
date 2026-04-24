@@ -1,5 +1,5 @@
 {
-  "updated": "2026-04-24 15:43 ET",
+  "updated": "2026-04-24 16:13 ET",
   "started": "2026-03-13",
   "regime": "RISK_OFF",
   "portfolio_value": 128781.38,
@@ -172,11 +172,11 @@
     },
     {
       "date": "2026-04-24",
-      "value": 129501.88,
-      "spy_price": 710.38,
-      "spy_ret": 7.26,
-      "pnl_pct": 29.5,
-      "alpha": 22.24,
+      "value": 129545.17,
+      "spy_price": 714.06,
+      "spy_ret": 7.82,
+      "pnl_pct": 29.55,
+      "alpha": 21.73,
       "regime": "RISK_OFF"
     }
   ],
