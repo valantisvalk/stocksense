@@ -1,18 +1,18 @@
 {
-  "updated": "2026-04-27 16:03 ET",
+  "updated": "2026-04-28 09:31 ET",
   "started": "2026-03-13",
   "regime": "RISK_OFF",
   "portfolio_value": 128781.38,
   "cash": 24397.9,
-  "total_pnl": 28781.38,
-  "total_pnl_pct": 28.78,
-  "net_pnl": 28781.38,
-  "net_pnl_pct": 28.78,
+  "total_pnl": -1082.93,
+  "total_pnl_pct": -0.83,
+  "net_pnl": -1082.93,
+  "net_pnl_pct": -0.83,
   "total_costs": 0,
   "cost_drag_pct": 0.0,
   "monthly_trades": 0,
   "spy_ret": -0.63,
-  "alpha": 29.41,
+  "alpha": -0.2,
   "positions": [
     {
       "ticker": "SLV",
@@ -186,6 +186,15 @@
       "spy_ret": 7.95,
       "pnl_pct": 29.17,
       "alpha": 21.21,
+      "regime": "RISK_OFF"
+    },
+    {
+      "date": "2026-04-28",
+      "value": 129321.57,
+      "spy_price": 710.87,
+      "spy_ret": 7.33,
+      "pnl_pct": -0.42,
+      "alpha": -7.75,
       "regime": "RISK_OFF"
     }
   ],
