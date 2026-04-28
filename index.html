@@ -1404,11 +1404,13 @@ function StockSense(){
   const livePortfolio = Array.isArray(autoPortfolio?.positions) ? autoPortfolio.positions : [];
   const liveCash      = autoPortfolio?.cash ?? 24157.22;
   const totalCosts    = autoPortfolio?.total_costs ?? 0;
-  const spyNow        = prices["SPY"]?.price || 662.29;
-  const spyRet        = (spyNow - 662.29) / 662.29 * 100;
+  const startingCapital = autoPortfolio?.starting_capital ?? 129864.31;
+  const spyEntry      = autoPortfolio?.spy_entry ?? 545.00;
+  const spyNow        = prices["SPY"]?.price || spyEntry;
+  const spyRet        = (spyNow - spyEntry) / spyEntry * 100;
   const totalStockVal = livePortfolio.reduce((s,p)=>s+(prices[p.ticker]?.price||p.avg_cost)*p.shares,0);
   const portfolioValue= totalStockVal + liveCash;
-  const totalRetPct   = (portfolioValue - 100000) / 100000 * 100;
+  const totalRetPct   = (portfolioValue - startingCapital) / startingCapital * 100;
   const alpha         = totalRetPct - spyRet;
   // ── END TOP-LEVEL DERIVED STATE ─────────────────────────────────────────────
   const fetchAutoPortfolio=useCallback(async()=>{
@@ -3921,7 +3923,7 @@ function StockSense(){
                     {l:"Total Value",   v:"$"+portfolioValue.toLocaleString("en-US",{maximumFractionDigits:0}), c:"#e2e8f0"},
                     {l:"Cash",          v:"$"+Math.round(liveCash).toLocaleString(),                             c:"#fbbf24"},
                     {l:"Invested",      v:"$"+Math.round(totalStockVal).toLocaleString(),                        c:"#38bdf8"},
-                    {l:"P&L vs $100k",  v:(totalPnL>=0?"+":"")+totalPnL.toLocaleString("en-US",{maximumFractionDigits:0})+" ("+(totalRetPct>=0?"+":"")+totalRetPct.toFixed(2)+"%)", c:totalPnL>=0?"#34d399":"#f87171"},
+                    {l:"P&L vs $"+(startingCapital/1000).toFixed(0)+"k",  v:(totalPnL>=0?"+":"")+totalPnL.toLocaleString("en-US",{maximumFractionDigits:0})+" ("+(totalRetPct>=0?"+":"")+totalRetPct.toFixed(2)+"%)", c:totalPnL>=0?"#34d399":"#f87171"},
                   ].map((s,i)=>(
                     <div key={i} style={{background:"#060d18",borderRadius:8,padding:"10px 12px",textAlign:"center"}}>
                       <div style={{fontSize:10,color:"#475569",marginBottom:4}}>{s.l}</div>
@@ -3989,9 +3991,9 @@ function StockSense(){
                   const dH2        = Math.max(1,Math.round((Date.now()-new Date("2026-03-13"))/86400000));
                   const aRet2      = (totalRetPct/100)*(365/dH2);
                   const sharpe2    = pVol2>0?(aRet2-0.043)/pVol2:null;
-                  const snaps2     = (autoPortfolio?.daily_snapshots||[]).map(s=>s.value||100000);
-                  const allV2      = [100000,...snaps2,portfolioValue];
-                  let pk2=100000,dd2=0; allV2.forEach(v=>{pk2=Math.max(pk2,v);dd2=Math.max(dd2,(pk2-v)/pk2);});
+                  const snaps2     = (autoPortfolio?.daily_snapshots||[]).map(s=>s.value||startingCapital);
+                  const allV2      = [startingCapital,...snaps2,portfolioValue];
+                  let pk2=startingCapital,dd2=0; allV2.forEach(v=>{pk2=Math.max(pk2,v);dd2=Math.max(dd2,(pk2-v)/pk2);});
                   const maxDD2     = dd2;
                   const aVol2      = pVol2*Math.sqrt(252)*100;
                   const beta2      = livePortfolioEnriched.reduce((s,p)=>{const w=p.value/Math.max(1,portfolioValue);return s+w*(DB[p.ticker]?.beta||1);},0);
