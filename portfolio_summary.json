@@ -1,5 +1,5 @@
 {
-  "updated": "2026-04-28 11:01 ET",
+  "updated": "2026-04-28 11:28 ET",
   "started": "2026-03-13",
   "regime": "CRISIS",
   "portfolio_value": 128781.38,
@@ -200,5 +200,8 @@
   ],
   "quant_diagnostics": {},
   "total_trades": 0,
+  "starting_capital": 129864.31,
+  "spy_entry": 662.29,
+  "entry_date": "2026-04-23",
   "version": "4.0"
 }
