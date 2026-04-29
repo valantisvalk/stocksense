@@ -380,23 +380,37 @@ function validatePrice(ticker, price, prevClose) {
 }
 
 async function fetchFinnhub(ticker) {
-  if(!DB[ticker] && !['SPY','QQQ','GLD','USO','VIXY','TLT','UUP'].includes(ticker)) return;
-  const sym = FINNHUB_MAP[ticker] || ticker;
-  try {
-    const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${sym}&token=${FINNHUB_KEY}`);
-    if (!res.ok){
-      if(res.status===429) await new Promise(r=>setTimeout(r,6000));
-      throw new Error(`HTTP ${res.status}`);
-    }
-    const d = await res.json();
-    if (!d.c || d.c === 0) throw new Error("No data");
-    const validatedPrice = validatePrice(ticker, d.c, d.pc);
-    liveCache[ticker] = {price:validatedPrice, changePct:((validatedPrice-d.pc)/d.pc)*100, dayHigh:d.h, dayLow:d.l, prevClose:d.pc, change:validatedPrice-d.pc};
-    return liveCache[ticker];
-  } catch(e) {
-    console.warn(`Finnhub ${ticker}:`, e.message);
-    return liveCache[ticker] || {price:DB[ticker].baseP, changePct:0, dayHigh:DB[ticker].baseP*1.01, dayLow:DB[ticker].baseP*0.99, prevClose:DB[ticker].baseP, change:0};
+  // Disabled: prices now come from trader-published JSON (single source of truth).
+  // This function is kept as a no-op for backward compatibility with existing calls.
+  // Returns the cached price if available.
+  if (liveCache[ticker]) return liveCache[ticker];
+  if (DB[ticker] && DB[ticker].baseP) {
+    return {price: DB[ticker].baseP, changePct: 0, prevClose: DB[ticker].baseP, change: 0};
   }
+  return null;
+}
+
+// Sync prices from trader-published portfolio_summary.json into liveCache.
+// This is the SINGLE SOURCE of price data — no browser-side fetching.
+function syncPricesFromTrader(traderPrices) {
+  if (!traderPrices || typeof traderPrices !== "object") return 0;
+  let count = 0;
+  for (const ticker in traderPrices) {
+    const tp = traderPrices[ticker];
+    if (tp && tp.price > 0) {
+      liveCache[ticker] = {
+        price:     tp.price,
+        prevClose: tp.prev_close || tp.price,
+        changePct: tp.change_pct || 0,
+        change:    (tp.price - (tp.prev_close || tp.price)),
+        dayHigh:   tp.price * 1.005,
+        dayLow:    tp.price * 0.995,
+        quality:   tp.quality || "unknown"
+      };
+      count++;
+    }
+  }
+  return count;
 }
 
 // Simulation removed — Finnhub live data only
@@ -1420,6 +1434,27 @@ function StockSense(){
       const r=await fetch(url+"?t="+Date.now());
       if(!r.ok) throw new Error("File not found — run paper_trader_v4.py first");
       const data=await r.json();
+      // CRITICAL: prices are now ONLY from trader. No browser-side fetching.
+      if (data.prices) {
+        const synced = syncPricesFromTrader(data.prices);
+        console.log("[Sync] " + synced + " prices loaded from trader JSON");
+        // Force re-render of price-dependent UI by updating prices state
+        setPrices(prev => {
+          const n = {...prev};
+          Object.keys(data.prices).forEach(t => {
+            const tp = data.prices[t];
+            if (tp && tp.price > 0) {
+              n[t] = {
+                price: tp.price,
+                changePct: tp.change_pct || 0,
+                prevClose: tp.prev_close || tp.price,
+                quality: tp.quality || "unknown"
+              };
+            }
+          });
+          return n;
+        });
+      }
       setAutoPortfolio(data);
     }catch(e){setAutoError(e.message);}
     finally{setAutoLoading(false);}
@@ -1454,7 +1489,7 @@ function StockSense(){
     {ticker:"JPM",   shares:31, entryPrice:283.44, entryDate:"2026-03-13", weight:8.8},
   ];
   const STARTING_CASH = 2157.22;
-  const TOTAL_BUDGET  = 100000;
+  const TOTAL_BUDGET  = startingCapital || 100000;
 
   // Calculate dividends received since entry date
   const calcDividends = (ticker, shares2, entryDate) => {
@@ -1522,11 +1557,8 @@ function StockSense(){
     // Full universe every 3rd cycle (~4.5 min), priority only otherwise
     const ALL = (window._fetchCycle % 3 === 0) ? [...PRIORITY, ...REST] : PRIORITY;
 
-    // 1 call per 1.2s = 50 calls/min — safe buffer below 60
-    for(let i=0;i<ALL.length;i++){
-      await fetchFinnhub(ALL[i]);
-      await new Promise(r=>setTimeout(r,1200));
-    }
+    // DISABLED: Browser no longer fetches prices. Trader is single source.
+    // Only enrichment data (news, candles, metrics) fetched on-demand for selected ticker.
     window._fetchLock = false;
     // Use Finnhub live data only — no simulation tick()
     setPrices(prev=>{
@@ -1790,6 +1822,32 @@ function StockSense(){
                   </span>
                 : <span style={{fontSize:10,color:"#f87171",fontWeight:700}}>⚠️ No live data — using entry prices</span>
             }
+            {/* Data Quality Indicator — green/yellow/red based on trader-validated prices */}
+            {autoPortfolio?.data_quality && (()=>{
+              const dq = autoPortfolio.data_quality;
+              const validated = dq.validated_count || 0;
+              const single    = dq.single_source || 0;
+              const cached    = dq.cached || 0;
+              const rejected  = (dq.rejected || []).length;
+              const total     = validated + single + cached + rejected;
+              if (total === 0) return null;
+              let color = "#34d399"; // green
+              let label = "✓ Data OK";
+              if (cached > 0 || rejected > 0) {
+                color = "#fbbf24"; // yellow
+                label = `⚠ ${cached} cached, ${rejected} rejected`;
+              }
+              if (cached >= 3 || rejected >= 3) {
+                color = "#f87171"; // red
+                label = `🚨 Data quality degraded`;
+              }
+              return (
+                <span title={`Validated: ${validated} | Single source: ${single} | Cached: ${cached} | Rejected: ${rejected}`}
+                      style={{fontSize:10,color:color,fontWeight:700,marginLeft:8}}>
+                  {label}
+                </span>
+              );
+            })()}
             {/* Staleness warning — if last push > 45 min ago during market hours */}
             {(()=>{
               if(!updated||!autoPortfolio) return null;
@@ -3866,7 +3924,7 @@ function StockSense(){
                 }));
 
             // Using top-level: liveCash, portfolioValue, totalCosts, spyRet, alpha, regime, updated
-            const INITIAL_CAP   = 100000;
+            const INITIAL_CAP   = startingCapital || 100000;
             const totalStockVal = livePortfolioEnriched.reduce((s,p)=>s+p.value,0);
             const totalPnL      = portfolioValue - INITIAL_CAP;
             const portTotalRetPct = totalPnL / INITIAL_CAP * 100;
@@ -4017,7 +4075,7 @@ function StockSense(){
                     {l:"Cost Drag",       v:"-$"+totalCosts.toFixed(0),                             c:"#f87171",                                               sub:(totalCosts/INITIAL_CAP*100).toFixed(3)+"%"},
                     {l:"Diversification", v:divSc2+"/100",                                          c:divSc2>=75?"#34d399":divSc2>=50?"#fbbf24":"#f87171",sub:secs2.length+" sectors"},
                     {l:"Price Return",    v:(priceRetPct>=0?"+":"")+priceRetPct.toFixed(2)+"%",    c:priceRetPct>=0?"#34d399":"#f87171",                      sub:"excl. dividends"},
-                    {l:"Dividend Income", v:"$"+divInc2.toFixed(2),                                 c:"#38bdf8",                                               sub:"+"+(divInc2/100000*100).toFixed(3)+"%"},
+                    {l:"Dividend Income", v:"$"+divInc2.toFixed(2),                                 c:"#38bdf8",                                               sub:"+"+(divInc2/(startingCapital||100000)*100).toFixed(3)+"%"},
                     {l:"Best Position",   v:best2.t,                                                c:"#34d399",                                               sub:(best2.pct>=0?"+":"")+best2.pct.toFixed(1)+"%"},
                     {l:"Worst Position",  v:worst2.t,                                               c:"#f87171",                                               sub:(worst2.pct>=0?"+":"")+worst2.pct.toFixed(1)+"%"},
                   ];
@@ -4338,8 +4396,8 @@ function StockSense(){
                       <div style={{fontFamily:"Avenir Next,sans-serif",fontWeight:700,fontSize:12,color:"#34d399",marginBottom:6}}>🎯 Target Scenario — Beat SPY by +5% by June 2026</div>
                       <div style={{fontSize:12,color:"#64748b",lineHeight:1.8}}>
                         SPY is currently {spyRet>=0?"up":"down"} {Math.abs(spyRet).toFixed(2)}% from our entry.
-                        Our portfolio needs to reach <strong style={{color:"#e2e8f0"}}>${Math.round(100000*(1+(spyRet+5)/100)).toLocaleString()}</strong> to achieve the +5% alpha target.
-                        Current gap: <strong style={{color:alpha>=5?"#34d399":"#f87171"}}>{alpha>=5?"✅ Target achieved":"$"+(Math.round(100000*(1+(spyRet+5)/100))-Math.round(portfolioValue)).toLocaleString()+" to go"}</strong>.
+                        Our portfolio needs to reach <strong style={{color:"#e2e8f0"}}>${Math.round(startingCapital*(1+(spyRet+5)/100)).toLocaleString()}</strong> to achieve the +5% alpha target.
+                        Current gap: <strong style={{color:alpha>=5?"#34d399":"#f87171"}}>{alpha>=5?"✅ Target achieved":"$"+(Math.round(startingCapital*(1+(spyRet+5)/100))-Math.round(portfolioValue)).toLocaleString()+" to go"}</strong>.
                         When the macro regime flips back to RISK_ON, the cash reserve deploys into discounted growth names — that rotation is historically the highest-return phase of the cycle.
                       </div>
                     </div>
@@ -5238,7 +5296,7 @@ function StockSense(){
               }));
               const cash    = autoPortfolio?.cash ?? 2157.22;
               const portVal = livePos.reduce((s,p)=>s+p.value,0)+cash;
-              const pnlPct  = (portVal-100000)/100000*100;
+              const pnlPct  = (portVal-startingCapital)/startingCapital*100;
               const spyP    = prices["SPY"]?.price||662.29;
               const spyR    = (spyP-662.29)/662.29*100;
               // alpha and regime from top-level state
